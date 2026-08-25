@@ -1,0 +1,108 @@
+name: Release & Build DMG
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    name: Build Universal App & Publish Release
+    runs-on: macos-14
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup macOS Environment & Swift
+        run: |
+          swift --version
+
+      - name: Build Universal App (Apple Silicon + Intel)
+        run: |
+          chmod +x ./scripts/build_app.sh
+          ./scripts/build_app.sh --universal
+
+      - name: Package DMG and Homebrew ZIP
+        id: package
+        run: |
+          mkdir -p dist
+          
+          # 1. Package DMG for manual download
+          hdiutil create -volname "NudgeLine" \
+            -srcfolder build/NudgeLine.app \
+            -ov -format UDZO dist/NudgeLine.dmg
+          
+          # 2. Package ZIP for Homebrew Cask
+          (cd build && zip -r -y ../dist/NudgeLine.zip NudgeLine.app)
+          
+          # 3. Generate Checksums
+          cd dist
+          shasum -a 256 NudgeLine.dmg NudgeLine.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          
+          ZIP_SHA=$(shasum -a 256 NudgeLine.zip | awk '{print $1}')
+          echo "zip_sha=${ZIP_SHA}" >> "$GITHUB_OUTPUT"
+          
+          # Extract clean version (v0.1 -> 0.1)
+          RAW_TAG="${GITHUB_REF_NAME}"
+          CLEAN_VERSION="${RAW_TAG#v}"
+          echo "version=${CLEAN_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/NudgeLine.dmg
+            dist/NudgeLine.zip
+            dist/SHA256SUMS.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew Tap (Cask)
+        if: env.HAS_TAP_TOKEN == 'true'
+        env:
+          HAS_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ steps.package.outputs.version }}
+          SHA256: ${{ steps.package.outputs.zip_sha }}
+        run: |
+          echo ">> Updating Homebrew Tap (rareram/homebrew-tap)..."
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git clone https://x-access-token:${TAP_TOKEN}@github.com/rareram/homebrew-tap.git /tmp/homebrew-tap
+          cd /tmp/homebrew-tap
+          mkdir -p Casks
+          
+          cat << EOF > Casks/nudgeline.rb
+          cask "nudgeline" do
+            version "${VERSION}"
+            sha256 "${SHA256}"
+
+            url "https://github.com/rareram/NudgeLine/releases/download/v#{version}/NudgeLine.zip"
+            name "NudgeLine"
+            desc "Subtle macOS screen-edge timeline bar for today's calendar events"
+            homepage "https://github.com/rareram/NudgeLine"
+
+            depends_on macos: ">= :sonoma"
+
+            app "NudgeLine.app"
+
+            zap trash: [
+              "~/Library/Application Support/NudgeLine",
+              "~/Library/Preferences/com.rareram.NudgeLine.plist",
+            ]
+          end
+          EOF
+          
+          git add Casks/nudgeline.rb
+          git commit -m "Update nudgeline to v${VERSION}" || echo "No changes to commit"
+          git push origin main
+          echo ">> Homebrew Tap updated successfully!"

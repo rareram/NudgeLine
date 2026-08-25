@@ -1,0 +1,417 @@
+// 캘린더 이벤트 모델, 화상회의 링크 정규식 파서, 일정 클러스터링 및 세그먼트 슬라이싱
+import Foundation
+import SwiftUI
+import EventKit
+
+// 지원 화상회의 플랫폼
+public enum MeetingPlatform: String, Hashable {
+    case googleMeet = "Google Meet"
+    case zoom = "Zoom"
+    case teams = "Microsoft Teams"
+    case webex = "Webex"
+    case generic = "Meeting"
+
+    public var iconName: String {
+        switch self {
+        case .googleMeet: return "video.fill"
+        case .zoom: return "video.badge.waveform.fill"
+        case .teams: return "person.2.wave.2.fill"
+        case .webex: return "video.circle.fill"
+        case .generic: return "video"
+        }
+    }
+
+    public var brandColor: Color {
+        switch self {
+        case .googleMeet: return Color(red: 0.0, green: 0.65, blue: 0.35)
+        case .zoom: return Color(red: 0.18, green: 0.53, blue: 0.98)
+        case .teams: return Color(red: 0.38, green: 0.40, blue: 0.85)
+        case .webex: return Color(red: 0.0, green: 0.70, blue: 0.75)
+        case .generic: return .blue
+        }
+    }
+}
+
+// 화상회의 바로가기 정보
+public struct MeetingInfo: Hashable {
+    public let platform: MeetingPlatform
+    public let url: URL
+}
+
+// EventKit 래퍼 일정 데이터 모델
+public struct CalendarEvent: Identifiable, Hashable {
+    public let id: String
+    public let rawTitle: String
+    public let startDate: Date
+    public let endDate: Date
+    public let isAllDay: Bool
+    public let calendarIdentifier: String
+    public let calendarTitle: String
+    public let rawSourceTitle: String
+    public let defaultColor: Color
+    public let location: String?
+    public let url: URL?
+    public let notes: String?
+    public let status: EKEventStatus
+    public let meetingInfo: MeetingInfo?
+
+    public init(from ekEvent: EKEvent) {
+        self.id = ekEvent.eventIdentifier ?? UUID().uuidString
+        self.rawTitle = (ekEvent.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        self.startDate = ekEvent.startDate
+        self.endDate = ekEvent.endDate
+        self.isAllDay = ekEvent.isAllDay
+        self.calendarIdentifier = ekEvent.calendar.calendarIdentifier
+        self.calendarTitle = ekEvent.calendar.title
+        self.rawSourceTitle = (ekEvent.calendar.source?.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if let cgColor = ekEvent.calendar.cgColor {
+            self.defaultColor = Color(cgColor: cgColor)
+        } else {
+            self.defaultColor = .blue
+        }
+        self.location = ekEvent.location?.strippingHTMLTags()
+        self.url = ekEvent.url
+        self.notes = ekEvent.notes?.strippingHTMLTags()
+        self.status = ekEvent.status
+        self.meetingInfo = CalendarEvent.extractMeetingInfo(url: ekEvent.url, location: ekEvent.location, notes: ekEvent.notes)
+    }
+
+    // 본문/위치/URL 내 화상회의 링크 정규식 추출
+    private static func extractMeetingInfo(url: URL?, location: String?, notes: String?) -> MeetingInfo? {
+        let combined = [url?.absoluteString, location, notes].compactMap { $0 }.joined(separator: "\n")
+        guard !combined.isEmpty else { return nil }
+
+        // HTML 엔티티 복원
+        let sanitized = combined
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+
+        // URL 끝단 특수문자 정제
+        func sanitizeUrl(_ raw: String) -> URL? {
+            var trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trailingPunctuation = CharacterSet(charactersIn: ".,;:)>]}'\"`")
+            while let last = trimmed.unicodeScalars.last, trailingPunctuation.contains(last) {
+                trimmed.removeLast()
+            }
+            if let validUrl = URL(string: trimmed),
+               let scheme = validUrl.scheme?.lowercased(),
+               (scheme == "http" || scheme == "https") {
+                return validUrl
+            }
+            if let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+               let validUrl = URL(string: encoded),
+               let scheme = validUrl.scheme?.lowercased(),
+               (scheme == "http" || scheme == "https") {
+                return validUrl
+            }
+            return nil
+        }
+
+        // 1. Microsoft Teams URL
+        if let match = matchRegex(pattern: "https?://(?:[a-zA-Z0-9-]+\\.)?teams\\.(?:microsoft\\.com|live\\.com|cloud\\.microsoft)/[^\\s<>\"]+", in: sanitized),
+           let meetingUrl = sanitizeUrl(match) {
+            return MeetingInfo(platform: .teams, url: meetingUrl)
+        }
+
+        // 2. Google Meet URL
+        if let match = matchRegex(pattern: "https?://meet\\.google\\.com/[a-z0-9-]+[^\\s<>\"]*", in: sanitized),
+           let meetingUrl = sanitizeUrl(match) {
+            return MeetingInfo(platform: .googleMeet, url: meetingUrl)
+        }
+
+        // 3. Zoom URL
+        if let match = matchRegex(pattern: "https?://(?:[a-zA-Z0-9-]+\\.)?zoom\\.(?:us|com|gov|com\\.cn)/(?:j|my|wc|join)/[^\\s<>\"]+", in: sanitized),
+           let meetingUrl = sanitizeUrl(match) {
+            return MeetingInfo(platform: .zoom, url: meetingUrl)
+        }
+
+        // 4. Webex / Cisco URL
+        if let match = matchRegex(pattern: "https?://(?:[a-zA-Z0-9-]+\\.)?webex\\.com/[^\\s<>\"]+", in: sanitized),
+           let meetingUrl = sanitizeUrl(match) {
+            return MeetingInfo(platform: .webex, url: meetingUrl)
+        }
+
+        // 5. 기타 화상회의 플랫폼 (Gather, Discord, Lark, VooV 등)
+        if let match = matchRegex(pattern: "https?://(?:[a-zA-Z0-9-]+\\.)?(?:gather\\.town|discord\\.gg|larksuite\\.com|voovmeeting\\.com|meeting\\.tencent\\.com)/[^\\s<>\"]+", in: sanitized),
+           let meetingUrl = sanitizeUrl(match) {
+            return MeetingInfo(platform: .generic, url: meetingUrl)
+        }
+
+        // 6. 호스트 키워드 기반 화상회의 URL 대체 감지
+        if let match = matchRegex(pattern: "https?://[^\\s<>\"]+", in: sanitized),
+           let meetingUrl = sanitizeUrl(match) {
+            let host = meetingUrl.host?.lowercased() ?? ""
+            if host.contains("meet") || host.contains("zoom") || host.contains("teams") || host.contains("webex") || host.contains("call") || host.contains("video") || host.contains("conference") {
+                return MeetingInfo(platform: .generic, url: meetingUrl)
+            }
+        }
+
+        // 7. EKEvent 기본 URL 검사
+        if let url = url, url.scheme == "http" || url.scheme == "https" {
+            let host = url.host?.lowercased() ?? ""
+            if host.contains("teams") {
+                return MeetingInfo(platform: .teams, url: url)
+            } else if host.contains("meet.google") {
+                return MeetingInfo(platform: .googleMeet, url: url)
+            } else if host.contains("zoom") {
+                return MeetingInfo(platform: .zoom, url: url)
+            } else if host.contains("webex") {
+                return MeetingInfo(platform: .webex, url: url)
+            } else {
+                return MeetingInfo(platform: .generic, url: url)
+            }
+        }
+
+        return nil
+    }
+
+    private static func matchRegex(pattern: String, in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
+        let nsString = text as NSString
+        let results = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
+        guard let first = results.first else { return nil }
+        return nsString.substring(with: first.range)
+    }
+
+    public func title(lang: AppLanguage = AppSettings.shared.language) -> String {
+        rawTitle.isEmpty ? L10n.tr(.untitledEvent, lang: lang) : rawTitle
+    }
+
+    public var title: String {
+        title(lang: AppSettings.shared.language)
+    }
+
+    public func sourceTitle(lang: AppLanguage = AppSettings.shared.language) -> String {
+        rawSourceTitle.isEmpty ? L10n.tr(.otherSource, lang: lang) : rawSourceTitle
+    }
+
+    public var sourceTitle: String {
+        sourceTitle(lang: AppSettings.shared.language)
+    }
+
+    public func effectiveColor(settings: AppSettings) -> Color {
+        if let custom = settings.customColor(for: calendarIdentifier) {
+            return custom
+        }
+        return defaultColor
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    public func formattedTimeRange(lang: AppLanguage = AppSettings.shared.language) -> String {
+        if isAllDay {
+            return L10n.tr(.allDayText, lang: lang)
+        }
+        let startStr = Self.timeFormatter.string(from: startDate)
+        let endStr = Self.timeFormatter.string(from: endDate)
+        return "\(startStr) ~ \(endStr)"
+    }
+
+    public var formattedTimeRange: String {
+        formattedTimeRange(lang: AppSettings.shared.language)
+    }
+
+    public var durationMinutes: Int {
+        let diff = endDate.timeIntervalSince(startDate)
+        return max(1, Int(diff / 60))
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    public static func == (lhs: CalendarEvent, rhs: CalendarEvent) -> Bool {
+        return lhs.id == rhs.id
+    }
+}
+
+// MARK: - 중첩 일정 클러스터 모델
+public struct EventCluster: Identifiable, Equatable {
+    public let id: String
+    public let start: Date
+    public let end: Date
+    public let events: [CalendarEvent]
+
+    public static func == (lhs: EventCluster, rhs: EventCluster) -> Bool {
+        return lhs.id == rhs.id
+    }
+}
+
+// MARK: - 타임라인 단위 세그먼트 슬라이스 모델
+public struct TimelineSegment: Identifiable {
+    public let id: String
+    public let start: Date
+    public let end: Date
+    public let events: [CalendarEvent]
+    public let cluster: EventCluster
+
+    public var isOverlap: Bool {
+        return events.count > 1
+    }
+}
+
+// MARK: - 일정 중첩 분석 및 시간 구간 슬라이싱
+extension CalendarEvent {
+    public static func buildSegments(from rawEvents: [CalendarEvent], dayStart: Date, dayEnd: Date) -> [TimelineSegment] {
+        let timedEvents = rawEvents.filter { !$0.isAllDay }.compactMap { event -> CalendarEvent? in
+            let s = max(dayStart, event.startDate)
+            let e = min(dayEnd, event.endDate)
+            guard e > s else { return nil }
+            return event
+        }.sorted { $0.startDate < $1.startDate }
+
+        guard !timedEvents.isEmpty else { return [] }
+
+        // 1. 연속된 중첩 일정 클러스터링
+        var clusters: [EventCluster] = []
+        var currentClusterEvents: [CalendarEvent] = []
+        var clusterStart = timedEvents[0].startDate
+        var clusterEnd = timedEvents[0].endDate
+
+        for event in timedEvents {
+            if event.startDate < clusterEnd {
+                currentClusterEvents.append(event)
+                if event.endDate > clusterEnd {
+                    clusterEnd = event.endDate
+                }
+            } else {
+                if !currentClusterEvents.isEmpty {
+                    let stableId = currentClusterEvents.map { $0.id }.sorted().joined(separator: "_")
+                    clusters.append(EventCluster(
+                        id: stableId,
+                        start: max(dayStart, clusterStart),
+                        end: min(dayEnd, clusterEnd),
+                        events: currentClusterEvents
+                    ))
+                }
+                currentClusterEvents = [event]
+                clusterStart = event.startDate
+                clusterEnd = event.endDate
+            }
+        }
+
+        if !currentClusterEvents.isEmpty {
+            let stableId = currentClusterEvents.map { $0.id }.sorted().joined(separator: "_")
+            clusters.append(EventCluster(
+                id: stableId,
+                start: max(dayStart, clusterStart),
+                end: min(dayEnd, clusterEnd),
+                events: currentClusterEvents
+            ))
+        }
+
+        // 2. 시간 교차점 기준 세그먼트 분할
+        var segments: [TimelineSegment] = []
+
+        for cluster in clusters {
+            var timePoints = Set<TimeInterval>()
+            timePoints.insert(cluster.start.timeIntervalSinceReferenceDate)
+            timePoints.insert(cluster.end.timeIntervalSinceReferenceDate)
+            for ev in cluster.events {
+                let s = max(cluster.start, min(cluster.end, ev.startDate)).timeIntervalSinceReferenceDate
+                let e = max(cluster.start, min(cluster.end, ev.endDate)).timeIntervalSinceReferenceDate
+                timePoints.insert(s)
+                timePoints.insert(e)
+            }
+
+            let sortedPoints = Array(timePoints).sorted()
+            for i in 0..<(sortedPoints.count - 1) {
+                let segStartSec = sortedPoints[i]
+                let segEndSec = sortedPoints[i + 1]
+                guard segEndSec > segStartSec else { continue }
+
+                let segStart = Date(timeIntervalSinceReferenceDate: segStartSec)
+                let segEnd = Date(timeIntervalSinceReferenceDate: segEndSec)
+                let midSec = (segStartSec + segEndSec) / 2
+                let midDate = Date(timeIntervalSinceReferenceDate: midSec)
+
+                let active = cluster.events.filter { ev in
+                    ev.startDate <= midDate && ev.endDate >= midDate
+                }
+
+                if !active.isEmpty {
+                    let segmentId = "\(cluster.id)_\(Int(segStartSec))_\(Int(segEndSec))"
+                    segments.append(TimelineSegment(
+                        id: segmentId,
+                        start: segStart,
+                        end: segEnd,
+                        events: active,
+                        cluster: cluster
+                    ))
+                }
+            }
+        }
+
+        return segments
+    }
+}
+
+// MARK: - HTML 태그 및 엔티티 정제 확장
+public extension String {
+    func strippingHTMLTags() -> String {
+        var text = self
+            .replacingOccurrences(of: "<br\\s*/?>", with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: "</p>", with: "\n", options: .caseInsensitive)
+            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&#x27;", with: "'")
+
+        text = text.replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+// MARK: - Apple 캘린더 앱 연동 실행기
+public enum CalendarAppLauncher {
+    public static func open(event: CalendarEvent? = nil) {
+        // 날짜 지정 시 AppleScript로 해당 날짜 화면 이동
+        if let event = event {
+            let cal = Calendar.current
+            let y = cal.component(.year, from: event.startDate)
+            let m = cal.component(.month, from: event.startDate)
+            let d = cal.component(.day, from: event.startDate)
+
+            let scriptSource = """
+            tell application "Calendar"
+                activate
+                view date (date ("\(m)/\(d)/\(y)"))
+            end tell
+            """
+            if let script = NSAppleScript(source: scriptSource) {
+                var errorDict: NSDictionary?
+                script.executeAndReturnError(&errorDict)
+                if errorDict == nil {
+                    return
+                }
+            }
+        }
+
+        // 기본 번들 ID 기반 캘린더 앱 실행
+        if let appUrl = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal") {
+            NSWorkspace.shared.openApplication(at: appUrl, configuration: NSWorkspace.OpenConfiguration())
+        } else {
+            let defaultPath = URL(fileURLWithPath: "/System/Applications/Calendar.app")
+            if FileManager.default.fileExists(atPath: defaultPath.path) {
+                NSWorkspace.shared.open(defaultPath)
+            }
+        }
+    }
+}
+
+// MARK: - 배열 안전 인덱스 참조 확장
+extension Array {
+    public subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
+}

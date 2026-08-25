@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.rareram.NudgeLine</string>
+    <key>CFBundleName</key>
+    <string>NudgeLine</string>
+    <key>CFBundleDisplayName</key>
+    <string>NudgeLine</string>
+    <key>CFBundleExecutable</key>
+    <string>NudgeLine</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>NudgeLine needs calendar access to visualize today's schedule along your screen edges.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>NudgeLine needs calendar access to visualize today's schedule along your screen edges.</string>
+</dict>
+</plist>
