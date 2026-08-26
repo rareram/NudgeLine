@@ -33,8 +33,31 @@
 NudgeLine(귀띔)은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 띄워주는 macOS 앰비언트 유틸리티입니다.
 
 <p align="center">
-  <img src="docs/images/demo_zero_interference.gif" width="126" height="162" alt="NudgeLine 무간섭 데모" /><br>
-  <em><strong>작업창 무간섭 & 펫 회피 동작</strong>: 마우스 클릭이 뒤쪽 창으로 그대로 통과되며, 커서 접근 시 펫이 베젤 뒤로 숨어 조작을 전혀 가리지 않습니다.</em>
+  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
+    <strong>1. 왼쪽으로 숨기</strong><br>
+    <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" alt="왼쪽으로 숨기" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
+    <strong>2. 오른쪽으로 숨기</strong><br>
+    <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" alt="오른쪽으로 숨기" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
+    <strong>3. 팝/소멸</strong><br>
+    <img src="docs/images/pet_hide_pop.gif" width="126" height="162" alt="팝/소멸" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
+    <strong>4. 회오리</strong><br>
+    <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" alt="회오리" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
+    <strong>5. 슬라임</strong><br>
+    <img src="docs/images/pet_hide_squish.gif" width="126" height="162" alt="슬라임" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
+    <strong>6. 연기</strong><br>
+    <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" alt="연기" />
+  </span><br>
+  <em><strong>작업창 무간섭 & 6종 펫 회피 동작</strong>: 마우스 클릭이 뒤쪽 창으로 그대로 통과되며, 커서 접근 시 펫이 지정된 모션으로 베젤 뒤로 숨어 조작을 전혀 가리지 않습니다.</em>
 </p>
 
 작업을 방해하는 전체 화면 팝업 대신, 화면 가장자리에서 오늘 일정을 한눈에 파악할 수 있습니다:
@@ -94,34 +117,6 @@ brew install rareram/tap/nudgeline
   - `vortex` (없어지기 - 회오리): 720도 회전하며 소용돌이 속으로 사라짐
   - `squish` (없어지기 - 슬라임): 젤리처럼 납작하게 찌그러지며 사라짐
   - `smoke` (없어지기 - 연기): 흐려지고 퍼지며 연기처럼 사라짐
-
-<p align="center">
-  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
-    <strong>1. 왼쪽으로 숨기</strong><br><code>tailPeek</code><br>
-    <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" alt="tailPeek" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
-    <strong>2. 오른쪽으로 숨기</strong><br><code>headPeek</code><br>
-    <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" alt="headPeek" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
-    <strong>3. 팝/소멸</strong><br><code>pop</code><br>
-    <img src="docs/images/pet_hide_pop.gif" width="126" height="162" alt="pop" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
-    <strong>4. 회오리</strong><br><code>vortex</code><br>
-    <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" alt="vortex" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
-    <strong>5. 슬라임</strong><br><code>squish</code><br>
-    <img src="docs/images/pet_hide_squish.gif" width="126" height="162" alt="squish" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
-    <strong>6. 연기</strong><br><code>smoke</code><br>
-    <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" alt="smoke" />
-  </span>
-</p>
-
 - **커스텀 펫 편집기**: PNG 프레임 시퀀스 등록, 속도(FPS) 조절, 좌/우 숨김 오프셋 튜닝 및 실시간 미리보기 지원
 
 ### 4. 팝오버 카드
