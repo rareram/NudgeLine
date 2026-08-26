@@ -94,6 +94,34 @@ brew install rareram/tap/nudgeline
   - `vortex` (없어지기 - 회오리): 720도 회전하며 소용돌이 속으로 사라짐
   - `squish` (없어지기 - 슬라임): 젤리처럼 납작하게 찌그러지며 사라짐
   - `smoke` (없어지기 - 연기): 흐려지고 퍼지며 연기처럼 사라짐
+
+<p align="center">
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>1. 왼쪽으로 숨기</strong><br><code>tailPeek</code><br>
+    <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" alt="tailPeek" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>2. 오른쪽으로 숨기</strong><br><code>headPeek</code><br>
+    <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" alt="headPeek" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>3. 팝/소멸</strong><br><code>pop</code><br>
+    <img src="docs/images/pet_hide_pop.gif" width="126" height="162" alt="pop" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>4. 회오리</strong><br><code>vortex</code><br>
+    <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" alt="vortex" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>5. 슬라임</strong><br><code>squish</code><br>
+    <img src="docs/images/pet_hide_squish.gif" width="126" height="162" alt="squish" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>6. 연기</strong><br><code>smoke</code><br>
+    <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" alt="smoke" />
+  </span>
+</p>
+
 - **커스텀 펫 편집기**: PNG 프레임 시퀀스 등록, 속도(FPS) 조절, 좌/우 숨김 오프셋 튜닝 및 실시간 미리보기 지원
 
 ### 4. 팝오버 카드

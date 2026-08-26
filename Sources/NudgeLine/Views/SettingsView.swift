@@ -214,6 +214,7 @@ private struct TimelineTab: View {
                         Text(L10n.tr(.backgroundStyle, lang: settings.language))
                             .frame(minWidth: 95, alignment: .trailing)
                     }
+                    .pickerStyle(.menu)
 
                     if settings.barStyleMode == .custom {
                         LabeledContent {
@@ -286,6 +287,7 @@ private struct AppearanceTab: View {
                         Text(L10n.tr(.cardStyleLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
+                    .pickerStyle(.menu)
 
                     Picker(selection: $settings.eventCardTheme) {
                         ForEach(EventCardTheme.allCases, id: \.self) { theme in
@@ -295,6 +297,7 @@ private struct AppearanceTab: View {
                         Text(L10n.tr(.cardThemeLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
+                    .pickerStyle(.menu)
 
                     LabeledContent {
                         HStack(spacing: 8) {
@@ -320,6 +323,7 @@ private struct AppearanceTab: View {
                         Text(L10n.tr(.indicatorStyleLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
+                    .pickerStyle(.menu)
 
                     LabeledContent {
                         HStack {
@@ -370,6 +374,7 @@ private struct AppearanceTab: View {
                         Text(L10n.tr(.petCharacterLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
+                    .pickerStyle(.menu)
                     .disabled(!settings.isPetEnabled || settings.barPosition == .bottom)
 
                     Picker(selection: $settings.petHideStyle) {
@@ -380,6 +385,7 @@ private struct AppearanceTab: View {
                         Text(L10n.tr(.petHideMotionLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
+                    .pickerStyle(.menu)
                     .disabled(!settings.isPetEnabled || settings.barPosition == .bottom)
 
                     // Custom Pet Management & List
@@ -698,11 +704,15 @@ private struct GeneralTab: View {
             // 시스템 환경설정 폼
             Form {
                 Section(header: Text(L10n.tr(.systemPreferencesSection, lang: settings.language)).fontWeight(.semibold)) {
-                    Picker(L10n.tr(.languageLabel, lang: settings.language), selection: $settings.language) {
+                    Picker(selection: $settings.language) {
                         ForEach(AppLanguage.allCases, id: \.self) { lang in
                             Text(lang.title).tag(lang)
                         }
+                    } label: {
+                        Text(L10n.tr(.languageLabel, lang: settings.language))
+                            .frame(minWidth: 100, alignment: .trailing)
                     }
+                    .pickerStyle(.menu)
 
                     Toggle(L10n.tr(.launchAtLogin, lang: settings.language), isOn: Binding(
                         get: { launchHelper.isEnabled },

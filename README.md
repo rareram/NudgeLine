@@ -94,6 +94,34 @@ brew install rareram/tap/nudgeline
   - `vortex`: Fast 720° spin vortex disappearance.
   - `squish`: Squishes horizontally like jelly.
   - `smoke`: Expands with blur and disappears.
+
+<p align="center">
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>1. Tail Peek</strong><br><code>tailPeek</code><br>
+    <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" alt="tailPeek" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>2. Head Peek</strong><br><code>headPeek</code><br>
+    <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" alt="headPeek" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>3. Pop</strong><br><code>pop</code><br>
+    <img src="docs/images/pet_hide_pop.gif" width="126" height="162" alt="pop" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>4. Vortex</strong><br><code>vortex</code><br>
+    <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" alt="vortex" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>5. Squish</strong><br><code>squish</code><br>
+    <img src="docs/images/pet_hide_squish.gif" width="126" height="162" alt="squish" />
+  </span>
+  <span style="display: inline-block; vertical-align: top; margin: 4px; text-align: center;">
+    <strong>6. Smoke</strong><br><code>smoke</code><br>
+    <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" alt="smoke" />
+  </span>
+</p>
+
 - **Custom Pets**: Import PNG frame sequences, adjust FPS, tune left/right hide offsets with live preview.
 
 ### 4. Event Popovers

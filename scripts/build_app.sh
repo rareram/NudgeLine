@@ -61,24 +61,30 @@ CONTENTS_DIR="${APP_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 
-echo ">> 2. 버전 및 빌드 번호 갱신 (version.json)..."
+echo ">> 2. 버전 및 빌드 번호 동기화 (version.json)..."
 VERSION_FILE="${ROOT_DIR}/version.json"
 if [[ -f "${VERSION_FILE}" ]]; then
     CURRENT_VERSION=$(osascript -l JavaScript -e "JSON.parse($.NSString.stringWithContentsOfFileEncodingError('${VERSION_FILE}', $.NSUTF8StringEncoding, null).js).version" 2>/dev/null || echo "0.1")
-    CURRENT_BUILD=$(osascript -l JavaScript -e "JSON.parse($.NSString.stringWithContentsOfFileEncodingError('${VERSION_FILE}', $.NSUTF8StringEncoding, null).js).build" 2>/dev/null || echo "140")
-    NEXT_BUILD=$((CURRENT_BUILD + 1))
+    CURRENT_BUILD=$(osascript -l JavaScript -e "JSON.parse($.NSString.stringWithContentsOfFileEncodingError('${VERSION_FILE}', $.NSUTF8StringEncoding, null).js).build" 2>/dev/null || echo "150")
     
-    cat << EOF > "${VERSION_FILE}"
+    if [[ "${IS_DEV}" == true ]]; then
+        TARGET_BUILD=$((CURRENT_BUILD + 1))
+        cat << EOF > "${VERSION_FILE}"
 {
   "version": "${CURRENT_VERSION}",
-  "build": ${NEXT_BUILD}
+  "build": ${TARGET_BUILD}
 }
 EOF
-    echo "   • Version: ${CURRENT_VERSION}"
-    echo "   • Build: ${NEXT_BUILD}"
+        echo "   • Version: ${CURRENT_VERSION}"
+        echo "   • Build: ${TARGET_BUILD} (개발 빌드 누적 증가)"
+    else
+        TARGET_BUILD="${CURRENT_BUILD}"
+        echo "   • Version: ${CURRENT_VERSION}"
+        echo "   • Build: ${TARGET_BUILD} (릴리즈 고정)"
+    fi
 else
     CURRENT_VERSION="0.1"
-    NEXT_BUILD="1"
+    TARGET_BUILD="1"
 fi
 
 echo ">> 3. App 번들 생성: ${APP_DIR}..."
@@ -101,8 +107,8 @@ cp "${ROOT_DIR}/Resources/Info.plist" "${CONTENTS_DIR}/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${CURRENT_VERSION}" "${CONTENTS_DIR}/Info.plist" 2>/dev/null || \
 /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string ${CURRENT_VERSION}" "${CONTENTS_DIR}/Info.plist"
 
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${NEXT_BUILD}" "${CONTENTS_DIR}/Info.plist" 2>/dev/null || \
-/usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${NEXT_BUILD}" "${CONTENTS_DIR}/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${TARGET_BUILD}" "${CONTENTS_DIR}/Info.plist" 2>/dev/null || \
+/usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${TARGET_BUILD}" "${CONTENTS_DIR}/Info.plist"
 
 # 아이콘 탑재 (DEV 모드 시 DEV 리본 배지 합성)
 if [[ "${IS_DEV}" == true ]]; then
@@ -145,6 +151,6 @@ if [[ "${IS_DEV}" == true ]]; then
     echo ">> 5. LaunchServices 등록: ${APP_NAME} 런치패드/Spotlight 등록 완료"
 fi
 
-echo "=== 빌드 및 번들 패키징 완료 (${APP_NAME} v${CURRENT_VERSION} Build ${NEXT_BUILD}) ==="
+echo "=== 빌드 및 번들 패키징 완료 (${APP_NAME} v${CURRENT_VERSION} Build ${TARGET_BUILD}) ==="
 echo "생성된 앱 경로: ${APP_DIR}"
 echo "직접 실행 명령어: open \"${APP_DIR}\""
