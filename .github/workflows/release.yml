@@ -91,7 +91,7 @@ jobs:
             desc "Subtle macOS screen-edge timeline bar for today's calendar events"
             homepage "https://github.com/rareram/NudgeLine"
 
-            depends_on macos: ">= :sonoma"
+            depends_on macos: :sonoma
 
             app "NudgeLine.app"
 

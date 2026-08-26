@@ -20,24 +20,39 @@
   <img src="https://img.shields.io/badge/License-MIT-lightgrey.svg" alt="License" />
 </p>
 
+<p align="center">
+  <a href="docs/images/settings_timeline_kr.png"><img src="docs/images/settings_timeline_kr.png" width="32%" alt="타임라인 설정" /></a>
+  <a href="docs/images/settings_indicator_kr.png"><img src="docs/images/settings_indicator_kr.png" width="32%" alt="인디케이터 설정" /></a>
+  <a href="docs/images/custom_pet_editor_kr.png"><img src="docs/images/custom_pet_editor_kr.png" width="32%" alt="사용자 설정 펫 편집기" /></a>
+</p>
+
 ---
 
 ## 소개
 
 NudgeLine(귀띔)은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 띄워주는 macOS 앰비언트 유틸리티입니다.
 
-작업을 방해하는 시끄러운 전체 화면 팝업 대신, 마우스를 스칠 때 부드럽게 일정을 넌지시 알려줍니다:
+<p align="center">
+  <img src="docs/images/demo_zero_interference.gif" width="50%" alt="NudgeLine 무간섭 데모" /><br>
+  <em><strong>작업창 무간섭 & 펫 회피 동작</strong>: 마우스 클릭이 뒤쪽 창으로 그대로 통과되며, 커서 접근 시 펫이 베젤 뒤로 숨어 조작을 전혀 가리지 않습니다.</em>
+</p>
 
-- **마우스 패스스루**: 얇은 바 영역 바깥의 클릭이나 스크롤은 뒤에 있는 창(IDE, 브라우저 등)으로 그대로 통과됩니다.
-- **깔끔한 시각 요소**: 차콜 다크 배경, 1px 이벤트 구분선, 커스텀 시간 표시자를 사용합니다.
-- **겹치는 일정 표시**: 같은 시간대에 겹치는 일정은 부드럽게 색이 번갈아 바뀝니다.
-- **마스코트 캐릭터**: 마우스 커서가 다가오면 화면 밖으로 자연스럽게 돌아 숨는 애니메이션 펫 3종(6가지 숨김 모션)과 사용자 정의 펫 불러오기를 지원합니다.
-- **화상회의 바로가기**: Google Meet, Zoom, MS Teams, Webex 회의 링크를 자동으로 인식해 바로 접속할 수 있는 버튼을 띄웁니다.
-- **가볍고 낮은 전력 소모**: 외부 라이브러리 없이 순수 Swift/SwiftUI와 AppKit, EventKit만으로 동작합니다.
+작업을 방해하는 전체 화면 팝업 대신, 화면 가장자리에서 오늘 일정을 한눈에 파악할 수 있습니다:
+
+- **마우스 패스스루**: 물리 바 두께 외 영역 마우스 클릭/스크롤 100% 관통 (뒤쪽 작업창 조작 보존)
+- **미니멀 디자인**: 다크 배경 트랙, 1px 이벤트 구분선, 4종 기하학 인디케이터
+- **일정 중복 처리**: 동시간대 겹치는 일정 간 부드러운 색상 교차 전환
+- **마스코트 펫**: 마우스 접근 시 베젤 뒤로 회피하는 애니메이션 펫 3종 및 커스텀 펫 등록
+- **화상회의 원클릭 연동**: Google Meet, Zoom, MS Teams, Webex 링크 자동 감지 및 바로 참여 버튼
+- **초경량 네이티브**: 외부 라이브러리 0개, Apple 순정 프레임워크(SwiftUI, AppKit, EventKit) 기반 저전력 동작
 
 ---
 
-## Homebrew로 설치하기
+## 설치 방법
+
+### 1. Homebrew 설치 (가장 권장)
+
+터미널에서 한 줄로 간편하게 설치하고 업데이트할 수 있습니다:
 
 ```bash
 brew install rareram/tap/nudgeline
@@ -45,19 +60,30 @@ brew install rareram/tap/nudgeline
 
 ---
 
+### 2. DMG 파일 직접 다운로드
+
+1. [GitHub Releases](https://github.com/rareram/NudgeLine/releases)에서 `NudgeLine.dmg`를 다운로드하여 설치합니다.
+2. **보안 경고 발생 시 (최초 1회)**:
+   - 애플 개발자 등록이 되어있지 않은 오픈소스 앱이므로, 처음 열 때 확인 메시지가 나타날 수 있습니다.
+   - **해결 방법**: `NudgeLine.app`을 **우클릭(Control+클릭) > [열기]**를 선택하거나, 터미널에서 아래 명령어를 실행합니다:
+     ```bash
+     xattr -cr /Applications/NudgeLine.app
+     ```
+
+---
+
 ## 주요 기능
 
 ### 1. 화면 테두리 타임라인 바
-- **위치**: 화면 좌측, 우측, 하단 중 선택
-- **다중 모니터**: 메인 디스플레이에만 띄우거나 연결된 모든 모니터에 동시 표시
-- **두께 조절**: 1px~10px 조절 및 마우스 올렸을 때 두께 자동 확장 옵션
-- **겹침 처리**: 겹치는 일정 간 크로스페이드 전환
+- **위치**: 화면 좌측, 우측, 하단
+- **다중 디스플레이**: 주 모니터 전용 또는 연결된 모든 모니터 동시 표시
+- **두께 조절**: 1px~10px 기본 두께 및 마우스 호버 시 확장 두께 설정
+- **겹침 처리**: 동시간대 중복 일정 자동 교차 전환
 
 ### 2. 시간 표시자 (인디케이터)
-- **모양**: 삼각 틱, 라운드 돔, 돌출 블록, 포인트 링
-- **커스텀**: 표시자 색상 변경, 테두리 강조, 네온 효과 토글
-- **시간 툴팁**: 표시자에 마우스를 올리면 현재 시각과 남은 업무/하루 시간 확인
-- **단기 일정 포커스**: 여러 일정이 겹친 곳을 가리킬 때 더 짧은 일정을 자동으로 우선 강조
+- **표시자 모양**: 삼각 틱, 라운드 돔, 돌출 블록, 포인트 링
+- **시각 효과**: 표시자 색상 변경, 테두리 강조, 네온 효과 토글
+- **단기 일정 우선 포커스**: 여러 일정이 겹친 구간 호버 시 소요 시간이 가장 짧은 일정 우선 강조
 
 ### 3. 마스코트 펫과 숨김 모션
 - **기본 펫 3종**: 삼색고양이, 진도백구, 백호 (16프레임 애니메이션)
@@ -95,11 +121,13 @@ brew install rareram/tap/nudgeline
 git clone https://github.com/rareram/NudgeLine.git
 cd NudgeLine
 
-# 2. 릴리즈 번들 빌드
+# 2. 로컬 개발 빌드 (격리된 NudgeLine (Dev).app)
 ./scripts/build_app.sh
+open "build/NudgeLine (Dev).app"
 
-# 3. 앱 실행
-open build/NudgeLine.app
+# 또는 정식 배포용 빌드
+./scripts/build_app.sh --release
+open "build/NudgeLine.app"
 ```
 
 ---

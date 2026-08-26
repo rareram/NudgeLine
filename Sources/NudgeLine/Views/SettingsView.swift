@@ -676,13 +676,13 @@ private struct GeneralTab: View {
                         .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
                 }
 
-                Text("NudgeLine")
+                Text(settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine")
                     .font(.title3)
                     .fontWeight(.bold)
 
                 let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
                 let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "60"
-                Text("Version \(appVersion) (Build \(buildNumber))")
+                Text("Version \(appVersion) (Build \(buildNumber))\(settings.isDevBuild ? " [DEV]" : "")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

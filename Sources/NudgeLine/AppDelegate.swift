@@ -13,6 +13,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private let calendarService = CalendarService.shared
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        // 런치패드/Spotlight 노출 및 실행 후 Dock 아이콘 숨김 (.accessory)
+        NSApp.setActivationPolicy(.accessory)
+
         setupStatusItem()
         setupOverlayPanels()
         observeDataChanges()
@@ -35,9 +38,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             button.title = "NudgeLine"
         }
-        button.toolTip = "NudgeLine"
+        button.toolTip = settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine"
 
         let menu = NSMenu()
+
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
+        let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        let titleItem = NSMenuItem(title: settings.isDevBuild ? "NudgeLine (Dev) v\(appVersion) (Build \(buildNumber))" : "NudgeLine v\(appVersion) (Build \(buildNumber))", action: nil, keyEquivalent: "")
+        titleItem.isEnabled = false
+        menu.addItem(titleItem)
+        menu.addItem(NSMenuItem.separator())
 
         let updateItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshCalendars), keyEquivalent: "r")
         menu.addItem(updateItem)

@@ -20,28 +20,55 @@
   <img src="https://img.shields.io/badge/License-MIT-lightgrey.svg" alt="License" />
 </p>
 
+<p align="center">
+  <a href="docs/images/settings_timeline_en.png"><img src="docs/images/settings_timeline_en.png" width="32%" alt="Timeline Settings" /></a>
+  <a href="docs/images/settings_indicator_en.png"><img src="docs/images/settings_indicator_en.png" width="32%" alt="Indicator Settings" /></a>
+  <a href="docs/images/custom_pet_editor_en.png"><img src="docs/images/custom_pet_editor_en.png" width="32%" alt="Custom Pet Editor" /></a>
+</p>
+
 ---
 
 ## Overview
 
 NudgeLine shows your daily schedule as a subtle ambient bar along the edge of your screen (Left, Right, or Bottom).
 
-It doesn't disrupt your workflow with aggressive full-screen popups. Instead, it quietly nudges you with today's events at a glance:
+<p align="center">
+  <img src="docs/images/demo_zero_interference.gif" width="50%" alt="NudgeLine Zero Interference Ambient Demo" /><br>
+  <em><strong>Zero-Interference Ambient Design</strong>: Mouse clicks pass directly through to background windows, while the pet companion hides behind the bezel upon cursor proximity to never obstruct your workspace.</em>
+</p>
 
-- **Mouse Passthrough**: Clicks and scrolls outside the thin bar pass directly to windows behind it (`ignoresMouseEvents` toggle + AppKit `hitTest`).
-- **Clean Visuals**: Dark gradient track, 1px event boundaries, and geometric time indicators.
-- **Overlapping Events**: Breathing cross-fade between concurrent events.
-- **Mascot Companions**: 3 built-in animated pets with 6 hide motions, plus a custom sprite importer.
+Instead of intrusive full-screen popups, NudgeLine keeps you effortlessly aware of today's schedule along your screen edge:
+
+- **Mouse Passthrough**: 100% click & scroll passthrough outside physical bar thickness (preserves background app focus).
+- **Clean Visuals**: Dark gradient track, 1px event boundaries, and 4 geometric indicators.
+- **Overlapping Events**: Seamless color breathing transition between concurrent events.
+- **Mascot Companions**: 3 built-in animated pets with 6 hide motions, plus custom sprite importer.
 - **Meeting Links**: Auto-detects Google Meet, Zoom, MS Teams, and Webex links with one-click launch buttons.
-- **Native & Low Power**: Built with EventKit, AppKit, and Combine directly with zero third-party dependencies.
+- **Native & Low Power**: Zero third-party dependencies, built entirely on SwiftUI, AppKit, and EventKit.
 
 ---
 
-## Installation via Homebrew
+## Installation
+
+### 1. via Homebrew (Recommended)
+
+Install and update seamlessly with a single command:
 
 ```bash
 brew install rareram/tap/nudgeline
 ```
+
+---
+
+### 2. Direct Download (.dmg)
+
+1. Download `NudgeLine.dmg` from [GitHub Releases](https://github.com/rareram/NudgeLine/releases) and move `NudgeLine.app` to `/Applications`.
+2. **Gatekeeper Notice (First launch only)**:
+   - Since this is an unsigned open-source app, macOS may prompt a security warning on first open.
+   - **To open**: Right-click (Control + Click) `NudgeLine.app` > select **Open**, or run:
+     ```bash
+     xattr -cr /Applications/NudgeLine.app
+     ```
 
 ---
 
@@ -51,13 +78,12 @@ brew install rareram/tap/nudgeline
 - **Position**: Left, Right, or Bottom screen edge.
 - **Multi-Monitor**: Show on the primary display or across all connected screens.
 - **Thickness**: Adjustable from 1px to 10px, with optional expansion on hover.
-- **Overlaps**: Breathing cross-fade between concurrent events.
+- **Overlaps**: Seamless breathing cross-fade between concurrent events.
 
 ### 2. Time Indicators
 - **Styles**: Triangle Tick, Round Dome, Protruding Block, and Point Ring.
-- **Customization**: Custom indicator color, rim highlight, and neon glow toggles.
-- **Time Tooltip**: Shows current date/time and remaining hours on hover.
-- **Focus Lift**: Automatically highlights the shortest event when hovering over overlapping meetings.
+- **Visual Effects**: Custom indicator color, rim highlight, and neon glow toggles.
+- **Focus Lift**: Automatically prioritizes the shortest event when hovering over overlapping meetings.
 
 ### 3. Mascot Indicators & Custom Pets
 - **Built-in Pets**: Calico Cat, White Jindo Dog, and White Tiger (16-frame loop).
@@ -95,11 +121,13 @@ brew install rareram/tap/nudgeline
 git clone https://github.com/rareram/NudgeLine.git
 cd NudgeLine
 
-# 2. Build release bundle
+# 2. Local development build (Isolated NudgeLine (Dev).app)
 ./scripts/build_app.sh
+open "build/NudgeLine (Dev).app"
 
-# 3. Launch app
-open build/NudgeLine.app
+# Or production release build
+./scripts/build_app.sh --release
+open "build/NudgeLine.app"
 ```
 
 ---
@@ -117,7 +145,7 @@ NudgeLine/
 ├── Sources/
 │   └── NudgeLine/
 │       ├── AppDelegate.swift             # App lifecycle and screen change observers
-│       ├── main.swift                    # Entry point
+│       ├── main.swift                    # Entry point & single instance guard
 │       ├── Models/
 │       │   ├── AppSettings.swift         # Settings persistence via UserDefaults
 │       │   └── CalendarEvent.swift       # Event model, meeting parser, safe indexing
@@ -142,9 +170,11 @@ NudgeLine/
 │               ├── JindoDogPetAsset.swift
 │               └── WhiteTigerPetAsset.swift
 └── scripts/
-    ├── generate_app_icon.sh              # Icon generator script
-    ├── build_app.sh                      # Release build & bundle script
-    └── check_security.sh                 # Static secret check script
+    ├── build_app.sh                      # Local Dev & Release bundle packager
+    ├── generate_dev_icon.swift           # DEV icon badging script
+    ├── generate_app_icon.sh              # Production icon generator script
+    ├── generate_custom_pet.py            # CLI sprite generator for Swift models
+    └── check_security.sh                 # Static secret scan script
 ```
 
 ---

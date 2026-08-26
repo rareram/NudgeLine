@@ -109,62 +109,72 @@ public struct CalendarEvent: Identifiable, Hashable {
             return nil
         }
 
-        // 1. Microsoft Teams URL
-        if let match = matchRegex(pattern: "https?://(?:[a-zA-Z0-9-]+\\.)?teams\\.(?:microsoft\\.com|live\\.com|cloud\\.microsoft)/[^\\s<>\"]+", in: sanitized),
-           let meetingUrl = sanitizeUrl(match) {
-            return MeetingInfo(platform: .teams, url: meetingUrl)
-        }
-
-        // 2. Google Meet URL
-        if let match = matchRegex(pattern: "https?://meet\\.google\\.com/[a-z0-9-]+[^\\s<>\"]*", in: sanitized),
-           let meetingUrl = sanitizeUrl(match) {
-            return MeetingInfo(platform: .googleMeet, url: meetingUrl)
-        }
-
-        // 3. Zoom URL
-        if let match = matchRegex(pattern: "https?://(?:[a-zA-Z0-9-]+\\.)?zoom\\.(?:us|com|gov|com\\.cn)/(?:j|my|wc|join)/[^\\s<>\"]+", in: sanitized),
-           let meetingUrl = sanitizeUrl(match) {
-            return MeetingInfo(platform: .zoom, url: meetingUrl)
-        }
-
-        // 4. Webex / Cisco URL
-        if let match = matchRegex(pattern: "https?://(?:[a-zA-Z0-9-]+\\.)?webex\\.com/[^\\s<>\"]+", in: sanitized),
-           let meetingUrl = sanitizeUrl(match) {
-            return MeetingInfo(platform: .webex, url: meetingUrl)
-        }
-
-        // 5. 기타 화상회의 플랫폼 (Gather, Discord, Lark, VooV 등)
-        if let match = matchRegex(pattern: "https?://(?:[a-zA-Z0-9-]+\\.)?(?:gather\\.town|discord\\.gg|larksuite\\.com|voovmeeting\\.com|meeting\\.tencent\\.com)/[^\\s<>\"]+", in: sanitized),
-           let meetingUrl = sanitizeUrl(match) {
-            return MeetingInfo(platform: .generic, url: meetingUrl)
-        }
-
-        // 6. 호스트 키워드 기반 화상회의 URL 대체 감지
-        if let match = matchRegex(pattern: "https?://[^\\s<>\"]+", in: sanitized),
-           let meetingUrl = sanitizeUrl(match) {
-            let host = meetingUrl.host?.lowercased() ?? ""
-            if host.contains("meet") || host.contains("zoom") || host.contains("teams") || host.contains("webex") || host.contains("call") || host.contains("video") || host.contains("conference") {
-                return MeetingInfo(platform: .generic, url: meetingUrl)
+        // 도메인 위조 피싱 방어: URL host 끝자리 일치 검사 (예: teams.microsoft.com.evil.com 차단)
+        func matchesDomain(_ host: String, targets: [String]) -> Bool {
+            targets.contains { target in
+                host == target || host.hasSuffix("." + target)
             }
         }
 
-        // 7. EKEvent 기본 URL 검사
-        if let url = url, url.scheme == "http" || url.scheme == "https" {
-            let host = url.host?.lowercased() ?? ""
-            if host.contains("teams") {
-                return MeetingInfo(platform: .teams, url: url)
-            } else if host.contains("meet.google") {
-                return MeetingInfo(platform: .googleMeet, url: url)
-            } else if host.contains("zoom") {
-                return MeetingInfo(platform: .zoom, url: url)
-            } else if host.contains("webex") {
-                return MeetingInfo(platform: .webex, url: url)
-            } else {
-                return MeetingInfo(platform: .generic, url: url)
+        // 정규식 앵커 취약점(CodeQL) 해결: 파싱된 Host 기준 화상회의 플랫폼 판별
+        func identifyPlatform(for candidateUrl: URL) -> MeetingInfo? {
+            guard let host = candidateUrl.host?.lowercased() else { return nil }
+
+            // Microsoft Teams
+            if matchesDomain(host, targets: ["teams.microsoft.com", "teams.live.com", "teams.cloud.microsoft"]) {
+                return MeetingInfo(platform: .teams, url: candidateUrl)
             }
+
+            // Google Meet
+            if matchesDomain(host, targets: ["meet.google.com"]) {
+                return MeetingInfo(platform: .googleMeet, url: candidateUrl)
+            }
+
+            // Zoom
+            if matchesDomain(host, targets: ["zoom.us", "zoom.com", "zoom.gov", "zoom.com.cn"]) {
+                return MeetingInfo(platform: .zoom, url: candidateUrl)
+            }
+
+            // Webex
+            if matchesDomain(host, targets: ["webex.com"]) {
+                return MeetingInfo(platform: .webex, url: candidateUrl)
+            }
+
+            // 기타 플랫폼 (Gather, Discord, Lark 등)
+            if matchesDomain(host, targets: ["gather.town", "discord.gg", "larksuite.com", "voovmeeting.com", "meeting.tencent.com"]) {
+                return MeetingInfo(platform: .generic, url: candidateUrl)
+            }
+
+            return nil
+        }
+
+        // 본문 내 URL 목록 추출 후 화상회의 링크 탐색
+        let urlPattern = "https?://[^\\s<>\"]+"
+        if let matches = matchAllRegex(pattern: urlPattern, in: sanitized) {
+            for rawUrl in matches {
+                if let validUrl = sanitizeUrl(rawUrl),
+                   let info = identifyPlatform(for: validUrl) {
+                    return info
+                }
+            }
+        }
+
+        // EKEvent 기본 URL 검사
+        if let url = url,
+           let validUrl = sanitizeUrl(url.absoluteString),
+           let info = identifyPlatform(for: validUrl) {
+            return info
         }
 
         return nil
+    }
+
+    private static func matchAllRegex(pattern: String, in text: String) -> [String]? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
+        let nsString = text as NSString
+        let results = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
+        guard !results.isEmpty else { return nil }
+        return results.map { nsString.substring(with: $0.range) }
     }
 
     private static func matchRegex(pattern: String, in text: String) -> String? {

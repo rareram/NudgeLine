@@ -235,6 +235,15 @@ public final class AppSettings: ObservableObject {
     // 마우스 커서 펫 인접 여부 (숨김 모션 트리거)
     @Published public var isPetProximityHovered: Bool = false
 
+    // 로컬 개발 빌드 판별 (Bundle ID 접미사 및 컴파일 플래그)
+    public var isDevBuild: Bool {
+        #if LOCAL_DEV
+        return true
+        #else
+        return Bundle.main.bundleIdentifier?.hasSuffix(".dev") ?? false
+        #endif
+    }
+
     @Published public var barStyleMode: BarStyleMode {
         didSet { defaults.set(barStyleMode.rawValue, forKey: Keys.barStyleMode) }
     }
