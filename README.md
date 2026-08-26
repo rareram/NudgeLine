@@ -33,31 +33,13 @@
 NudgeLine shows your daily schedule as a subtle ambient bar along the edge of your screen (Left, Right, or Bottom).
 
 <p align="center">
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>1. Tail Peek</strong><br>
-    <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" alt="Tail Peek" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>2. Head Peek</strong><br>
-    <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" alt="Head Peek" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>3. Pop</strong><br>
-    <img src="docs/images/pet_hide_pop.gif" width="126" height="162" alt="Pop" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>4. Vortex</strong><br>
-    <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" alt="Vortex" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>5. Squish</strong><br>
-    <img src="docs/images/pet_hide_squish.gif" width="126" height="162" alt="Squish" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>6. Smoke</strong><br>
-    <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" alt="Smoke" />
-  </span><br>
-  <em><strong>Zero-Interference Ambient Design & 6 Mascot Hide Motions</strong>: Mouse clicks pass directly through to background windows, while the pet companion hides behind the bezel upon cursor proximity with your selected motion.</em>
+  <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" title="1. Tail Peek (tailPeek)" alt="1. Tail Peek (tailPeek)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" title="2. Head Peek (headPeek)" alt="2. Head Peek (headPeek)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_pop.gif" width="126" height="162" title="3. Pop (pop)" alt="3. Pop (pop)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" title="4. Vortex (vortex)" alt="4. Vortex (vortex)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_squish.gif" width="126" height="162" title="5. Squish (squish)" alt="5. Squish (squish)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" title="6. Smoke (smoke)" alt="6. Smoke (smoke)" style="margin: 0 4px;" /><br>
+  <em><strong>Zero-Interference Ambient Design & 6 Mascot Hide Motions</strong>: Mouse clicks pass directly through to background windows, while the pet companion hides behind the bezel upon cursor proximity.</em>
 </p>
 
 Instead of intrusive full-screen popups, NudgeLine keeps you effortlessly aware of today's schedule along your screen edge:

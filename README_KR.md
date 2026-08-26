@@ -33,31 +33,13 @@
 NudgeLine(귀띔)은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 띄워주는 macOS 앰비언트 유틸리티입니다.
 
 <p align="center">
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>1. 왼쪽으로 숨기</strong><br>
-    <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" alt="왼쪽으로 숨기" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>2. 오른쪽으로 숨기</strong><br>
-    <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" alt="오른쪽으로 숨기" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>3. 팝/소멸</strong><br>
-    <img src="docs/images/pet_hide_pop.gif" width="126" height="162" alt="팝/소멸" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>4. 회오리</strong><br>
-    <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" alt="회오리" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>5. 슬라임</strong><br>
-    <img src="docs/images/pet_hide_squish.gif" width="126" height="162" alt="슬라임" />
-  </span>
-  <span style="display: inline-block; vertical-align: top; margin: 2px; text-align: center;">
-    <strong>6. 연기</strong><br>
-    <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" alt="연기" />
-  </span><br>
-  <em><strong>작업창 무간섭 & 6종 펫 회피 동작</strong>: 마우스 클릭이 뒤쪽 창으로 그대로 통과되며, 커서 접근 시 펫이 지정된 모션으로 베젤 뒤로 숨어 조작을 전혀 가리지 않습니다.</em>
+  <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" title="1. 왼쪽으로 숨기 (tailPeek)" alt="1. 왼쪽으로 숨기 (tailPeek)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" title="2. 오른쪽으로 숨기 (headPeek)" alt="2. 오른쪽으로 숨기 (headPeek)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_pop.gif" width="126" height="162" title="3. 팝/소멸 (pop)" alt="3. 팝/소멸 (pop)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" title="4. 회오리 (vortex)" alt="4. 회오리 (vortex)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_squish.gif" width="126" height="162" title="5. 슬라임 (squish)" alt="5. 슬라임 (squish)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" title="6. 연기 (smoke)" alt="6. 연기 (smoke)" style="margin: 0 4px;" /><br>
+  <em><strong>작업창 무간섭 & 6종 펫 회피 동작</strong>: 마우스 클릭이 뒤쪽 창으로 그대로 통과되며, 커서 접근 시 펫이 베젤 뒤로 숨어 조작을 전혀 가리지 않습니다.</em>
 </p>
 
 작업을 방해하는 전체 화면 팝업 대신, 화면 가장자리에서 오늘 일정을 한눈에 파악할 수 있습니다:
