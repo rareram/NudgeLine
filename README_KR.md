@@ -33,7 +33,7 @@
 NudgeLine(귀띔)은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 띄워주는 macOS 앰비언트 유틸리티입니다.
 
 <p align="center">
-  <img src="docs/images/demo_zero_interference.gif" width="50%" alt="NudgeLine 무간섭 데모" /><br>
+  <img src="docs/images/demo_zero_interference.gif" width="126" height="162" alt="NudgeLine 무간섭 데모" /><br>
   <em><strong>작업창 무간섭 & 펫 회피 동작</strong>: 마우스 클릭이 뒤쪽 창으로 그대로 통과되며, 커서 접근 시 펫이 베젤 뒤로 숨어 조작을 전혀 가리지 않습니다.</em>
 </p>
 

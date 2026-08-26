@@ -33,7 +33,7 @@
 NudgeLine shows your daily schedule as a subtle ambient bar along the edge of your screen (Left, Right, or Bottom).
 
 <p align="center">
-  <img src="docs/images/demo_zero_interference.gif" width="50%" alt="NudgeLine Zero Interference Ambient Demo" /><br>
+  <img src="docs/images/demo_zero_interference.gif" width="126" height="162" alt="NudgeLine Zero Interference Ambient Demo" /><br>
   <em><strong>Zero-Interference Ambient Design</strong>: Mouse clicks pass directly through to background windows, while the pet companion hides behind the bezel upon cursor proximity to never obstruct your workspace.</em>
 </p>
 
