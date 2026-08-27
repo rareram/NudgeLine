@@ -26,15 +26,29 @@ jobs:
           chmod +x ./scripts/build_app.sh
           ./scripts/build_app.sh --universal
 
+      - name: Install DMG Builder Tool
+        run: |
+          brew install create-dmg
+
       - name: Package DMG and Homebrew ZIP
         id: package
         run: |
           mkdir -p dist
           
-          # 1. Package DMG for manual download
-          hdiutil create -volname "NudgeLine" \
-            -srcfolder build/NudgeLine.app \
-            -ov -format UDZO dist/NudgeLine.dmg
+          # 1. Package Styled DMG with create-dmg
+          create-dmg \
+            --volname "NudgeLine" \
+            --volicon "build/NudgeLine.app/Contents/Resources/AppIcon.icns" \
+            --background "Resources/dmg_background.png" \
+            --window-pos 200 120 \
+            --window-size 640 400 \
+            --icon-size 180 \
+            --icon "NudgeLine.app" 160 200 \
+            --app-drop-link 480 200 \
+            --hide-extension "NudgeLine.app" \
+            --no-internet-enable \
+            dist/NudgeLine.dmg \
+            build/NudgeLine.app || true
           
           # 2. Package ZIP for Homebrew Cask
           (cd build && zip -r -y ../dist/NudgeLine.zip NudgeLine.app)

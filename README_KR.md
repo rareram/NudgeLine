@@ -33,12 +33,12 @@
 NudgeLine(귀띔)은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 띄워주는 macOS 앰비언트 유틸리티입니다.
 
 <p align="center">
-  <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" title="1. 왼쪽으로 숨기 (tailPeek)" alt="1. 왼쪽으로 숨기 (tailPeek)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" title="2. 오른쪽으로 숨기 (headPeek)" alt="2. 오른쪽으로 숨기 (headPeek)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_pop.gif" width="126" height="162" title="3. 팝/소멸 (pop)" alt="3. 팝/소멸 (pop)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" title="4. 회오리 (vortex)" alt="4. 회오리 (vortex)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_squish.gif" width="126" height="162" title="5. 슬라임 (squish)" alt="5. 슬라임 (squish)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" title="6. 연기 (smoke)" alt="6. 연기 (smoke)" style="margin: 0 4px;" /><br>
+  <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" title="1. 숨기 (꼬리 살랑)" alt="1. 숨기 (꼬리 살랑)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" title="2. 숨기 (머리 빼꼼)" alt="2. 숨기 (머리 빼꼼)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_pop.gif" width="126" height="162" title="3. 사라지기 (퐁!)" alt="3. 사라지기 (퐁!)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" title="4. 사라지기 (빙글빙글)" alt="4. 사라지기 (빙글빙글)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_squish.gif" width="126" height="162" title="5. 사라지기 (쫀득)" alt="5. 사라지기 (쫀득)" style="margin: 0 4px;" />
+  <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" title="6. 사라지기 (스르륵)" alt="6. 사라지기 (스르륵)" style="margin: 0 4px;" /><br>
   <em><strong>작업창 무간섭 & 6종 펫 회피 동작</strong>: 마우스 클릭이 뒤쪽 창으로 그대로 통과되며, 커서 접근 시 펫이 베젤 뒤로 숨어 조작을 전혀 가리지 않습니다.</em>
 </p>
 
@@ -93,12 +93,12 @@ brew install rareram/tap/nudgeline
 ### 3. 마스코트 펫과 숨김 모션
 - **기본 펫 3종**: 삼색고양이, 진도백구, 백호 (16프레임 애니메이션)
 - **6가지 숨김 동작**:
-  - `tailPeek` (왼쪽으로 숨기): 머리부터 베젤 뒤로 숨고 꼬리만 살랑거림
-  - `headPeek` (오른쪽으로 숨기): 몸은 숨고 머리와 눈만 쏙 빼꼼 내밈
-  - `pop` (없어지기 - 팝/소멸): 작아지며 톡 터지듯 사라짐
-  - `vortex` (없어지기 - 회오리): 720도 회전하며 소용돌이 속으로 사라짐
-  - `squish` (없어지기 - 슬라임): 젤리처럼 납작하게 찌그러지며 사라짐
-  - `smoke` (없어지기 - 연기): 흐려지고 퍼지며 연기처럼 사라짐
+  - `tailPeek` (숨기 - 꼬리 살랑): 머리부터 베젤 뒤로 숨고 꼬리만 살랑거림
+  - `headPeek` (숨기 - 머리 빼꼼): 몸은 숨고 머리와 눈만 쏙 빼꼼 내밈
+  - `pop` (사라지기 - 퐁!): 작아지며 톡 터지듯 사라짐
+  - `vortex` (사라지기 - 빙글빙글): 720도 회전하며 소용돌이 속으로 사라짐
+  - `squish` (사라지기 - 쫀득): 젤리처럼 납작하게 찌그러지며 사라짐
+  - `smoke` (사라지기 - 스르륵): 흐려지고 퍼지며 연기처럼 사라짐
 - **커스텀 펫 편집기**: PNG 프레임 시퀀스 등록, 속도(FPS) 조절, 좌/우 숨김 오프셋 튜닝 및 실시간 미리보기 지원
 
 ### 4. 팝오버 카드

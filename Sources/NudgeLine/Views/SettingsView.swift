@@ -206,15 +206,22 @@ private struct TimelineTab: View {
 
                 // 3. 타임라인 배경
                 Section(header: Text(L10n.tr(.barBackgroundSection, lang: settings.language)).fontWeight(.semibold)) {
-                    Picker(selection: $settings.barStyleMode) {
-                        ForEach(BarStyleMode.allCases, id: \.self) { mode in
-                            Text(mode.title(lang: settings.language)).tag(mode)
+                    LabeledContent {
+                        HStack {
+                            Picker("", selection: $settings.barStyleMode) {
+                                ForEach(BarStyleMode.allCases, id: \.self) { mode in
+                                    Text(mode.title(lang: settings.language)).tag(mode)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .fixedSize()
+                            Spacer()
                         }
                     } label: {
                         Text(L10n.tr(.backgroundStyle, lang: settings.language))
                             .frame(minWidth: 95, alignment: .trailing)
                     }
-                    .pickerStyle(.menu)
 
                     if settings.barStyleMode == .custom {
                         LabeledContent {
@@ -279,25 +286,39 @@ private struct AppearanceTab: View {
             Form {
                 // 1. Event Card Style (일정 카드)
                 Section(header: Text(L10n.tr(.hoverCardStyleSection, lang: settings.language)).fontWeight(.semibold)) {
-                    Picker(selection: $settings.eventHoverStyle) {
-                        ForEach(EventHoverStyle.allCases, id: \.self) { style in
-                            Text(style.title(lang: settings.language)).tag(style)
+                    LabeledContent {
+                        HStack {
+                            Picker("", selection: $settings.eventHoverStyle) {
+                                ForEach(EventHoverStyle.allCases, id: \.self) { style in
+                                    Text(style.title(lang: settings.language)).tag(style)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .fixedSize()
+                            Spacer()
                         }
                     } label: {
                         Text(L10n.tr(.cardStyleLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
-                    .pickerStyle(.menu)
 
-                    Picker(selection: $settings.eventCardTheme) {
-                        ForEach(EventCardTheme.allCases, id: \.self) { theme in
-                            Text(theme.title(lang: settings.language)).tag(theme)
+                    LabeledContent {
+                        HStack {
+                            Picker("", selection: $settings.eventCardTheme) {
+                                ForEach(EventCardTheme.allCases, id: \.self) { theme in
+                                    Text(theme.title(lang: settings.language)).tag(theme)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .fixedSize()
+                            Spacer()
                         }
                     } label: {
                         Text(L10n.tr(.cardThemeLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
-                    .pickerStyle(.menu)
 
                     LabeledContent {
                         HStack(spacing: 8) {
@@ -315,15 +336,22 @@ private struct AppearanceTab: View {
 
                 // 2. Time Indicator Style (시간 표시자)
                 Section(header: Text(L10n.tr(.timeIndicatorSection, lang: settings.language)).fontWeight(.semibold)) {
-                    Picker(selection: $settings.currentTimeIndicatorStyle) {
-                        ForEach(CurrentTimeIndicatorStyle.allCases, id: \.self) { style in
-                            Text(style.title(lang: settings.language)).tag(style)
+                    LabeledContent {
+                        HStack {
+                            Picker("", selection: $settings.currentTimeIndicatorStyle) {
+                                ForEach(CurrentTimeIndicatorStyle.allCases, id: \.self) { style in
+                                    Text(style.title(lang: settings.language)).tag(style)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .fixedSize()
+                            Spacer()
                         }
                     } label: {
                         Text(L10n.tr(.indicatorStyleLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
-                    .pickerStyle(.menu)
 
                     LabeledContent {
                         HStack {
@@ -360,32 +388,46 @@ private struct AppearanceTab: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Picker(selection: petSelectionBinding) {
-                        ForEach(HangingPetType.allCases.filter { $0 != .custom }, id: \.self) { pet in
-                            Text(pet.title(lang: settings.language)).tag(pet.rawValue)
-                        }
-                        if !petService.customPets.isEmpty {
-                            Divider()
-                            ForEach(petService.customPets) { pet in
-                                Text(pet.name).tag("custom_\(pet.id)")
+                    LabeledContent {
+                        HStack {
+                            Picker("", selection: petSelectionBinding) {
+                                ForEach(HangingPetType.allCases.filter { $0 != .custom }, id: \.self) { pet in
+                                    Text(pet.title(lang: settings.language)).tag(pet.rawValue)
+                                }
+                                if !petService.customPets.isEmpty {
+                                    Divider()
+                                    ForEach(petService.customPets) { pet in
+                                        Text(pet.name).tag("custom_\(pet.id)")
+                                    }
+                                }
                             }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .fixedSize()
+                            Spacer()
                         }
                     } label: {
                         Text(L10n.tr(.petCharacterLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
-                    .pickerStyle(.menu)
                     .disabled(!settings.isPetEnabled || settings.barPosition == .bottom)
 
-                    Picker(selection: $settings.petHideStyle) {
-                        ForEach(PetHideStyle.allCases, id: \.self) { style in
-                            Text(style.title(lang: settings.language)).tag(style)
+                    LabeledContent {
+                        HStack {
+                            Picker("", selection: $settings.petHideStyle) {
+                                ForEach(PetHideStyle.allCases, id: \.self) { style in
+                                    Text(style.title(lang: settings.language)).tag(style)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .fixedSize()
+                            Spacer()
                         }
                     } label: {
                         Text(L10n.tr(.petHideMotionLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
-                    .pickerStyle(.menu)
                     .disabled(!settings.isPetEnabled || settings.barPosition == .bottom)
 
                     // Custom Pet Management & List
@@ -704,15 +746,22 @@ private struct GeneralTab: View {
             // 시스템 환경설정 폼
             Form {
                 Section(header: Text(L10n.tr(.systemPreferencesSection, lang: settings.language)).fontWeight(.semibold)) {
-                    Picker(selection: $settings.language) {
-                        ForEach(AppLanguage.allCases, id: \.self) { lang in
-                            Text(lang.title).tag(lang)
+                    LabeledContent {
+                        HStack {
+                            Picker("", selection: $settings.language) {
+                                ForEach(AppLanguage.allCases, id: \.self) { lang in
+                                    Text(lang.title).tag(lang)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .fixedSize()
+                            Spacer()
                         }
                     } label: {
                         Text(L10n.tr(.languageLabel, lang: settings.language))
                             .frame(minWidth: 100, alignment: .trailing)
                     }
-                    .pickerStyle(.menu)
 
                     Toggle(L10n.tr(.launchAtLogin, lang: settings.language), isOn: Binding(
                         get: { launchHelper.isEnabled },
