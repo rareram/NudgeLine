@@ -162,7 +162,6 @@ public final class AppSettings: ObservableObject {
         static let hoverWidth = "settings_hover_width"
         static let calendarVisibility = "settings_calendar_visibility"
         static let calendarCustomColors = "settings_calendar_custom_colors"
-        static let isBarVisible = "settings_is_bar_visible"
         static let barStyleMode = "settings_bar_style_mode"
         static let trackColorHex = "settings_track_color_hex"
         static let trackOpacity = "settings_track_opacity"
@@ -177,6 +176,8 @@ public final class AppSettings: ObservableObject {
         static let petHideStyle = "settings_pet_hide_style"
         static let enableSegmentRim = "settings_enable_segment_rim"
         static let enableSegmentGlow = "settings_enable_segment_glow"
+        static let hideOnScreenShare = "settings_hide_on_screen_share"
+        static let hideOnFullScreen = "settings_hide_on_full_screen"
     }
 
     private let defaults = UserDefaults.standard
@@ -283,6 +284,14 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(showOnAllScreens, forKey: Keys.showOnAllScreens) }
     }
 
+    @Published public var hideOnScreenShare: Bool {
+        didSet { defaults.set(hideOnScreenShare, forKey: Keys.hideOnScreenShare) }
+    }
+
+    @Published public var hideOnFullScreen: Bool {
+        didSet { defaults.set(hideOnFullScreen, forKey: Keys.hideOnFullScreen) }
+    }
+
     @Published public var startHour: Int {
         didSet { defaults.set(startHour, forKey: Keys.startHour) }
     }
@@ -328,10 +337,6 @@ public final class AppSettings: ObservableObject {
 
     @Published public var calendarCustomColors: [String: String] {
         didSet { defaults.set(calendarCustomColors, forKey: Keys.calendarCustomColors) }
-    }
-
-    @Published public var isBarVisible: Bool {
-        didSet { defaults.set(isBarVisible, forKey: Keys.isBarVisible) }
     }
 
     @Published public var enableSegmentRim: Bool {
@@ -399,6 +404,8 @@ public final class AppSettings: ObservableObject {
         }
 
         self.showOnAllScreens = defaults.bool(forKey: Keys.showOnAllScreens)
+        self.hideOnScreenShare = defaults.object(forKey: Keys.hideOnScreenShare) != nil ? defaults.bool(forKey: Keys.hideOnScreenShare) : true
+        self.hideOnFullScreen = defaults.object(forKey: Keys.hideOnFullScreen) != nil ? defaults.bool(forKey: Keys.hideOnFullScreen) : true
 
         let sHour = defaults.object(forKey: Keys.startHour) != nil ? defaults.integer(forKey: Keys.startHour) : 9
         self.startHour = max(0, min(23, sHour))
@@ -425,7 +432,6 @@ public final class AppSettings: ObservableObject {
         self.calendarVisibility = (defaults.dictionary(forKey: Keys.calendarVisibility) as? [String: Bool]) ?? [:]
         self.calendarCustomColors = (defaults.dictionary(forKey: Keys.calendarCustomColors) as? [String: String]) ?? [:]
 
-        self.isBarVisible = defaults.object(forKey: Keys.isBarVisible) != nil ? defaults.bool(forKey: Keys.isBarVisible) : true
         self.enableSegmentRim = defaults.object(forKey: Keys.enableSegmentRim) != nil ? defaults.bool(forKey: Keys.enableSegmentRim) : false
         self.enableSegmentGlow = defaults.object(forKey: Keys.enableSegmentGlow) != nil ? defaults.bool(forKey: Keys.enableSegmentGlow) : false
     }

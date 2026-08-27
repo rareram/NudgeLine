@@ -1,11 +1,11 @@
-# NudgeLine (귀띔)
+# NudgeLine
 
 <p align="center">
   <img src="docs/images/app_icon.png" width="128" height="128" alt="NudgeLine Icon" />
 </p>
 
 <p align="center">
-  <strong>화면 가장자리에서 오늘 일정을 살며시 귀띔해 주는 macOS 캘린더 타임라인 바</strong><br>
+  <strong>화면 가장자리에서 오늘 일정을 살며시 안내해 주는 macOS 캘린더 타임라인 바</strong><br>
   <em>macOS 14+ (Sonoma / Sequoia) 환경을 위해 Swift 6 및 SwiftUI로 제작</em>
 </p>
 
@@ -30,16 +30,13 @@
 
 ## 소개
 
-NudgeLine(귀띔)은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 띄워주는 macOS 앰비언트 유틸리티입니다.
+NudgeLine은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 띄워주는 macOS 앰비언트 유틸리티입니다.
 
 <p align="center">
-  <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" title="1. 숨기 (꼬리 살랑)" alt="1. 숨기 (꼬리 살랑)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" title="2. 숨기 (머리 빼꼼)" alt="2. 숨기 (머리 빼꼼)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_pop.gif" width="126" height="162" title="3. 사라지기 (퐁!)" alt="3. 사라지기 (퐁!)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" title="4. 사라지기 (빙글빙글)" alt="4. 사라지기 (빙글빙글)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_squish.gif" width="126" height="162" title="5. 사라지기 (쫀득)" alt="5. 사라지기 (쫀득)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" title="6. 사라지기 (스르륵)" alt="6. 사라지기 (스르륵)" style="margin: 0 4px;" /><br>
-  <em><strong>작업창 무간섭 & 6종 펫 회피 동작</strong>: 마우스 클릭이 뒤쪽 창으로 그대로 통과되며, 커서 접근 시 펫이 베젤 뒤로 숨어 조작을 전혀 가리지 않습니다.</em>
+  <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="숨기 (꼬리 살랑)" alt="숨기 (꼬리 살랑)" style="margin: 0 10px;" />
+  <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="숨기 (머리 빼꼼)" alt="숨기 (머리 빼꼼)" style="margin: 0 10px;" />
+  <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="사라지기 (퐁!)" alt="사라지기 (퐁!)" style="margin: 0 10px;" /><br>
+  <em><strong>작업창 무간섭 & 마스코트 회피 동작</strong>: 마우스 커서 접근 시 펫이 베젤 뒤로 숨거나 사라집니다. (퐁!, 빙글빙글, 쫀득, 스르륵 등 6종 지원)</em>
 </p>
 
 작업을 방해하는 전체 화면 팝업 대신, 화면 가장자리에서 오늘 일정을 한눈에 파악할 수 있습니다:
@@ -48,7 +45,8 @@ NudgeLine(귀띔)은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형�
 - **미니멀 디자인**: 다크 배경 트랙, 1px 이벤트 구분선, 4종 기하학 인디케이터
 - **일정 중복 처리**: 동시간대 겹치는 일정 간 부드러운 색상 교차 전환
 - **마스코트 펫**: 마우스 접근 시 베젤 뒤로 회피하는 애니메이션 펫 3종 및 커스텀 펫 등록
-- **화상회의 원클릭 연동**: Google Meet, Zoom, MS Teams, Webex 링크 자동 감지 및 바로 참여 버튼
+- **화상회의 스마트 연동**: 10대 주요 화상회의(Google Meet, Zoom, MS Teams, Webex, Naver Whale ON, Discord, Lark, Jitsi, Whereby, Amazon Chime) 1클릭 입장 및 미검증 링크 보안 안내 배지
+- **스마트 프라이버시**: 화면 공유/녹화 시 타임라인 자동 은폐 및 전체 화면 앱 전환 시 간섭 배제
 - **초경량 네이티브**: 외부 라이브러리 0개, Apple 순정 프레임워크(SwiftUI, AppKit, EventKit) 기반 저전력 동작
 
 ---
@@ -102,14 +100,14 @@ brew install rareram/tap/nudgeline
 - **커스텀 펫 편집기**: PNG 프레임 시퀀스 등록, 속도(FPS) 조절, 좌/우 숨김 오프셋 튜닝 및 실시간 미리보기 지원
 
 ### 4. 팝오버 카드
-- **상세 액션 카드**: 일정 상세 내용, 화상회의 원클릭 버튼, Apple 캘린더 바로가기 (0.22초 호버 브릿지)
+- **상세 액션 카드**: 일정 상세 내용, 화상회의 원클릭 입장 버튼, 미검증 링크 주의 안내 배지, Apple 캘린더 바로가기 (0.22초 호버 브릿지)
 - **심플 툴팁**: 제목과 시간만 간결하게 보여주는 말풍선 (마우스 벗어나면 0.04초 만에 즉시 닫힘)
 
 ### 5. 환경설정 (4개 탭)
 - **타임라인**: 바 위치, 두께, 호버 확장, 배경 스타일(자동/다크/라이트/커스텀) 및 투명도
 - **인디케이터**: 일정 카드 스타일/테마, 시간 표시자 모양/색상, 펫 선택, 숨김 동작, 커스텀 펫 관리
 - **시간 및 캘린더**: 24시간 모드, 업무 시작/종료 시각, 표시할 캘린더 선택 및 캘린더별 색상 지정
-- **일반**: 언어 선택 (시스템 기본/한국어/영어), 로그인 시 자동 실행, 다중 모니터 표시, 앱 정보
+- **일반**: 언어 선택 (시스템 기본/한국어/영어), 로그인 시 자동 실행, 다중 모니터 표시, 화면 공유 시 숨김, 전체 화면 시 숨김, 앱 정보
 
 ---
 

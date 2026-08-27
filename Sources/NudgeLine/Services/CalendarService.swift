@@ -3,6 +3,7 @@ import Foundation
 import EventKit
 import SwiftUI
 import Combine
+import AppKit
 
 // 개별 캘린더 메타데이터 모델
 public struct CalendarInfo: Identifiable {
@@ -33,24 +34,23 @@ public final class CalendarService: ObservableObject {
     @Published public var errorMessage: String? = nil
 
     private init() {
-        checkAuthorizationStatus()
+        let initialStatus = EKEventStore.authorizationStatus(for: .event)
+        self.authorizationStatus = initialStatus
         setupEventStoreObserver()
     }
 
-    // 캘린더 TCC 권한 상태 확인 및 자동 데이터 로드
+    // 캘린더 TCC 권한 상태 갱신 (권한 획득 시 데이터 자동 로드)
     public func checkAuthorizationStatus() {
         let status = EKEventStore.authorizationStatus(for: .event)
-        DispatchQueue.main.async {
-            self.authorizationStatus = status
-            if self.isAuthorized(status: status) {
-                self.loadCalendars()
-                self.fetchEvents()
-            }
+        self.authorizationStatus = status
+        if isAuthorized(status: status) {
+            loadCalendars()
+            fetchEvents()
         }
     }
 
     public func isAuthorized(status: EKAuthorizationStatus? = nil) -> Bool {
-        let st = status ?? authorizationStatus
+        let st = status ?? EKEventStore.authorizationStatus(for: .event)
         if #available(macOS 14.0, *) {
             return st == .fullAccess
         } else {
@@ -70,11 +70,13 @@ public final class CalendarService: ObservableObject {
         }
     }
 
+    private let fetchSerialQueue = DispatchQueue(label: "com.nudgeline.fetchSerialQueue", qos: .userInitiated)
+
     // 등록된 모든 캘린더 목록 및 소스 계정별 그룹 로드
     public func loadCalendars() {
         guard isAuthorized() else { return }
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        fetchSerialQueue.async { [weak self] in
             guard let self = self else { return }
             let allCalendars = self.eventStore.calendars(for: .event)
             var grouped: [String: (sourceTitle: String, calendars: [CalendarInfo])] = [:]
@@ -119,8 +121,6 @@ public final class CalendarService: ObservableObject {
         }
     }
 
-    private let fetchSerialQueue = DispatchQueue(label: "com.nudgeline.fetchSerialQueue", qos: .userInitiated)
-
     // 지정 기준일(당일) 활성 캘린더 이벤트 비동기 조회
     public func fetchEvents(for baseDate: Date = Date(), settings: AppSettings = .shared) {
         guard isAuthorized() else { return }
@@ -155,14 +155,17 @@ public final class CalendarService: ObservableObject {
         }
     }
 
-    // 시스템 캘린더 변경 알림 및 주기적 갱신 타이머 등록
+    private var isSleeping: Bool = false
+
+    // 시스템 캘린더 변경 알림, 절전/복귀 전원 이벤트 및 주기적 갱신 타이머 등록
     private func setupEventStoreObserver() {
         // 1. 시스템 캘린더 DB 변경 감지
         NotificationCenter.default.publisher(for: .EKEventStoreChanged, object: nil)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.loadCalendars()
-                self?.fetchEvents()
+                guard let self = self, !self.isSleeping else { return }
+                self.loadCalendars()
+                self.fetchEvents()
             }
             .store(in: &cancellables)
 
@@ -171,16 +174,55 @@ public final class CalendarService: ObservableObject {
             .map { _ in () }
             .debounce(for: .milliseconds(150), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.fetchEvents()
+                guard let self = self, !self.isSleeping else { return }
+                self.fetchEvents()
             }
             .store(in: &cancellables)
 
-        // 3. 백그라운드 30초 주기 자동 갱신
+        // 3. 백그라운드 30초 주기 자동 갱신 (절전/화면 꺼짐 중에는 쿼리 완전 차단하여 배터리 절감)
         Timer.publish(every: 30, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
-                self?.fetchEvents()
+                guard let self = self, !self.isSleeping else { return }
+                self.fetchEvents()
             }
             .store(in: &cancellables)
+
+        // 4. 자정(00:00) 경과 시 당일 기준일 리셋 및 최신 일정 갱신
+        NotificationCenter.default.publisher(for: .NSCalendarDayChanged, object: nil)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self = self, !self.isSleeping else { return }
+                self.loadCalendars()
+                self.fetchEvents()
+            }
+            .store(in: &cancellables)
+
+        // 5. 전원 절전(Sleep/화면보호기) 진입 시 백그라운드 쿼리 일시정지
+        let wsCenter = NSWorkspace.shared.notificationCenter
+        Publishers.Merge(
+            wsCenter.publisher(for: NSWorkspace.willSleepNotification),
+            wsCenter.publisher(for: NSWorkspace.screensDidSleepNotification)
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in
+            self?.isSleeping = true
+            PopoverPanel.shared.hide()
+        }
+        .store(in: &cancellables)
+
+        // 6. 전원 복귀(Wake/화면 켜짐/잠금 해제) 시 즉시 1회 강제 동기화 (디바운스로 중복 방지)
+        Publishers.Merge(
+            wsCenter.publisher(for: NSWorkspace.didWakeNotification),
+            wsCenter.publisher(for: NSWorkspace.screensDidWakeNotification)
+        )
+        .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+        .sink { [weak self] _ in
+            guard let self = self else { return }
+            self.isSleeping = false
+            self.loadCalendars()
+            self.fetchEvents()
+        }
+        .store(in: &cancellables)
     }
 }

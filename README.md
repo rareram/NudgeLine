@@ -33,13 +33,10 @@
 NudgeLine shows your daily schedule as a subtle ambient bar along the edge of your screen (Left, Right, or Bottom).
 
 <p align="center">
-  <img src="docs/images/pet_hide_tail_peek.gif" width="126" height="162" title="1. Hide - Tail Wag (tailPeek)" alt="1. Hide - Tail Wag (tailPeek)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_head_peek.gif" width="126" height="162" title="2. Hide - Head Peek (headPeek)" alt="2. Hide - Head Peek (headPeek)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_pop.gif" width="126" height="162" title="3. Disappear - Pop (pop)" alt="3. Disappear - Pop (pop)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_vortex.gif" width="126" height="162" title="4. Disappear - Swirl (vortex)" alt="4. Disappear - Swirl (vortex)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_squish.gif" width="126" height="162" title="5. Disappear - Squish (squish)" alt="5. Disappear - Squish (squish)" style="margin: 0 4px;" />
-  <img src="docs/images/pet_hide_smoke.gif" width="126" height="162" title="6. Disappear - Smoke (smoke)" alt="6. Disappear - Smoke (smoke)" style="margin: 0 4px;" /><br>
-  <em><strong>Zero-Interference Ambient Design & 6 Mascot Hide Motions</strong>: Mouse clicks pass directly through to background windows, while the pet companion hides behind the bezel upon cursor proximity.</em>
+  <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="Hide - Tail Wag" alt="Hide - Tail Wag" style="margin: 0 10px;" />
+  <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="Hide - Head Peek" alt="Hide - Head Peek" style="margin: 0 10px;" />
+  <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="Disappear - Pop" alt="Disappear - Pop" style="margin: 0 10px;" /><br>
+  <em><strong>Zero-Interference Ambient Design & Mascot Evasion</strong>: Pet hides behind the bezel or vanishes upon cursor proximity (6 hide motions supported: Pop, Swirl, Squish, Smoke, etc.).</em>
 </p>
 
 Instead of intrusive full-screen popups, NudgeLine keeps you effortlessly aware of today's schedule along your screen edge:
@@ -48,7 +45,8 @@ Instead of intrusive full-screen popups, NudgeLine keeps you effortlessly aware 
 - **Clean Visuals**: Dark gradient track, 1px event boundaries, and 4 geometric indicators.
 - **Overlapping Events**: Seamless color breathing transition between concurrent events.
 - **Mascot Companions**: 3 built-in animated pets with 6 hide motions, plus custom sprite importer.
-- **Meeting Links**: Auto-detects Google Meet, Zoom, MS Teams, and Webex links with one-click launch buttons.
+- **Smart Meeting Links**: Auto-detects 10 major meeting platforms (Google Meet, Zoom, MS Teams, Webex, Naver Whale ON, Discord, Lark, Jitsi, Whereby, Amazon Chime) with 1-click launch and unverified link safety notice badges.
+- **Smart Privacy**: Automatically conceals timeline bar and popovers during screen share/recording, and avoids interference in full-screen spaces.
 - **Native & Low Power**: Zero third-party dependencies, built entirely on SwiftUI, AppKit, and EventKit.
 
 ---
@@ -102,14 +100,14 @@ brew install rareram/tap/nudgeline
 - **Custom Pets**: Import PNG frame sequences, adjust FPS, tune left/right hide offsets with live preview.
 
 ### 4. Event Popovers
-- **Action Card**: Full summary with meeting join buttons, Apple Calendar shortcut, and a 0.22s hover bridge.
+- **Action Card**: Full summary with meeting join buttons, unverified link notice badge, Apple Calendar shortcut, and a 0.22s hover bridge.
 - **Simple Tooltip**: Compact pill bubble that disappears 0.04s after cursor leaves.
 
 ### 5. Settings Window (4 Tabs)
 - **Timeline**: Position, thickness, hover expand, background style (Auto, Dark, Light, Custom), and track opacity.
 - **Indicators**: Card style/theme/opacity, time indicator shape/color, pet selection, hide motion, and custom pet list.
 - **Schedule**: 24-hour mode, work hours (start/end), visible calendars with color pickers, and system accounts shortcut.
-- **General**: Language (System, Korean, English), launch at login (`SMAppService`), multi-display toggle, and app info.
+- **General**: Language (System, Korean, English), launch at login (`SMAppService`), multi-display toggle, hide on screen share, hide in full screen, and app info.
 
 ---
 

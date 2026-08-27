@@ -1,6 +1,7 @@
 // 팝오버 플로팅 패널 관리자 및 FirstMouse 호버 브릿지 제어
 import AppKit
 import SwiftUI
+import Combine
 
 // 마우스 활성화 없이 즉각 클릭을 수신하는 NSHostingView
 public final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
@@ -43,6 +44,7 @@ public final class PopoverPanel: NSPanel {
     private var isMouseInside: Bool = false
     private var isDetailMode: Bool = false
     private var showGeneration: Int = 0
+    private var cancellables = Set<AnyCancellable>()
 
     private init() {
         super.init(
@@ -59,6 +61,21 @@ public final class PopoverPanel: NSPanel {
         self.hasShadow = false
         self.ignoresMouseEvents = false
         self.acceptsMouseMovedEvents = true
+
+        // 화면 공유 및 전체 화면 은폐 설정 실시간 동기화
+        AppSettings.shared.$hideOnScreenShare
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] hide in
+                self?.sharingType = hide ? .none : .readOnly
+            }
+            .store(in: &cancellables)
+
+        AppSettings.shared.$hideOnFullScreen
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] hide in
+                self?.collectionBehavior = hide ? [.canJoinAllSpaces, .transient] : [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+            }
+            .store(in: &cancellables)
     }
 
     public func setMouseInside(_ inside: Bool) {
@@ -86,6 +103,10 @@ public final class PopoverPanel: NSPanel {
         hideTimer = nil
 
         guard let screen = NSScreen.main, !events.isEmpty else { return }
+
+        // 화면 공유 및 전체 화면 은폐 설정 동기화
+        self.sharingType = settings.hideOnScreenShare ? .none : .readOnly
+        self.collectionBehavior = settings.hideOnFullScreen ? [.canJoinAllSpaces, .transient] : [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
 
         let renderer = settings.eventHoverStyle.renderer()
         self.isDetailMode = renderer.allowsTransitBridge

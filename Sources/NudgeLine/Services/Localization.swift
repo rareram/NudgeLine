@@ -42,7 +42,6 @@ public struct L10n {
 
     public enum Key {
         // Menu Bar & Context Menu
-        case toggleBar
         case refresh
         case settings
         case quit
@@ -164,6 +163,7 @@ public struct L10n {
         case durationMinutes(Int)
         case overlappingEvents(Int)
         case joinMeeting(String)
+        case unverifiedMeetingLink
 
         // Time Indicator Tooltip
         case todayDate(String)
@@ -172,11 +172,12 @@ public struct L10n {
 
         // About & General
         case launchAtLogin
+        case hideOnScreenShareLabel
+        case hideOnFullScreenLabel
         case appDescription
 
         var ko: String {
             switch self {
-            case .toggleBar: return "타임라인 바 표시"
             case .refresh: return "새로고침"
             case .settings: return "설정..."
             case .quit: return "NudgeLine 종료"
@@ -200,6 +201,8 @@ public struct L10n {
             case .creditsOriginal: return "원작: Andreas Katzian & ARTMIXTURE (2014-2015)"
 
             case .launchAtLogin: return "로그인할 때 자동 실행"
+            case .hideOnScreenShareLabel: return "화면 공유 시 숨김"
+            case .hideOnFullScreenLabel: return "전체 화면 시 숨김"
             case .appDescription: return "화면 가장자리에 오늘 일정을 시각화하는 세련된 macOS 캘린더 타임라인 바"
 
             case .permissionNeeded: return "macOS 캘린더 접근 권한이 필요합니다."
@@ -290,6 +293,7 @@ public struct L10n {
             case .durationMinutes(let m): return "(\(m)분)"
             case .overlappingEvents(let count): return "일정 \(count)개 겹침"
             case .joinMeeting(let p): return "\(p) 바로 참여"
+            case .unverifiedMeetingLink: return "⚠️ 링크 확인 필요"
             case .todayDate(let d): return "오늘: \(d)"
             case .remainingWorkTime(let t): return "남은 업무 시간: \(t)"
             case .remainingDayTime(let t): return "남은 하루 시간: \(t)"
@@ -298,8 +302,7 @@ public struct L10n {
 
         var en: String {
             switch self {
-            case .toggleBar: return "Show Timeline Bar"
-            case .refresh: return "Refresh Calendars"
+            case .refresh: return "Refresh"
             case .settings: return "Settings..."
             case .quit: return "Quit NudgeLine"
 
@@ -322,6 +325,8 @@ public struct L10n {
             case .creditsOriginal: return "Inspired by PixelScheduler (2014-2015) by Andreas Katzian & ARTMIXTURE"
 
             case .launchAtLogin: return "Launch at Login"
+            case .hideOnScreenShareLabel: return "Hide during Screen Sharing"
+            case .hideOnFullScreenLabel: return "Hide in Full Screen"
             case .appDescription: return "A sleek macOS edge timeline bar that visualizes today's schedule along screen edges."
 
             case .permissionNeeded: return "Calendar access permission is required."
@@ -412,6 +417,7 @@ public struct L10n {
             case .durationMinutes(let m): return "(\(m)m)"
             case .overlappingEvents(let count): return "\(count) Overlapping Events"
             case .joinMeeting(let p): return "Join \(p)"
+            case .unverifiedMeetingLink: return "⚠️ Verify Link"
 
             case .todayDate(let d): return "Today: \(d)"
             case .remainingWorkTime(let t): return "Remaining Work Time: \(t)"

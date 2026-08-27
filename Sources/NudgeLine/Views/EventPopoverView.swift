@@ -244,16 +244,12 @@ public struct EventPopoverView: View {
 
             // Meeting Quick Join Button if detected
             if let meeting = event.meetingInfo {
-                Button(action: {
-                    NSWorkspace.shared.open(meeting.url)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                        PopoverPanel.shared.hide(delayed: false)
-                    }
-                }) {
+                if meeting.platform == .unverified {
+                    // 미검증 외부 링크: 피싱 방어를 위해 클릭을 차단하고 캘린더 앱 직접 확인 안내 배지로 표출
                     HStack(spacing: 5) {
                         Image(systemName: meeting.platform.iconName)
                             .font(.system(size: 11, weight: .semibold))
-                        Text(L10n.tr(.joinMeeting(meeting.platform.rawValue), lang: settings.language))
+                        Text(L10n.tr(.unverifiedMeetingLink, lang: settings.language))
                             .font(.system(size: 11, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity)
@@ -265,10 +261,35 @@ public struct EventPopoverView: View {
                         RoundedRectangle(cornerRadius: 6)
                             .stroke(meeting.platform.brandColor.opacity(0.3), lineWidth: 0.5)
                     )
+                    .padding(.top, 3)
+                } else {
+                    // 공식 화상회의 플랫폼: 1클릭 즉시 입장 버튼
+                    Button(action: {
+                        NSWorkspace.shared.open(meeting.url)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                            PopoverPanel.shared.hide(delayed: false)
+                        }
+                    }) {
+                        HStack(spacing: 5) {
+                            Image(systemName: meeting.platform.iconName)
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(L10n.tr(.joinMeeting(meeting.platform.rawValue), lang: settings.language))
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(meeting.platform.brandColor.opacity(isDarkTheme ? 0.22 : 0.15))
+                        .foregroundStyle(meeting.platform.brandColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(meeting.platform.brandColor.opacity(0.3), lineWidth: 0.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 3)
                 }
-                .buttonStyle(.plain)
-                .padding(.top, 3)
-            } else if let url = event.url {
+            } else if let url = event.url, let scheme = url.scheme?.lowercased(), (scheme == "http" || scheme == "https") {
                 HStack(spacing: 4) {
                     Image(systemName: "link")
                         .font(.caption2)

@@ -9,7 +9,14 @@ public enum MeetingPlatform: String, Hashable {
     case zoom = "Zoom"
     case teams = "Microsoft Teams"
     case webex = "Webex"
+    case whaleOn = "Whale ON"
+    case discord = "Discord"
+    case lark = "Lark"
+    case jitsi = "Jitsi Meet"
+    case whereby = "Whereby"
+    case chime = "Amazon Chime"
     case generic = "Meeting"
+    case unverified = "Unverified"
 
     public var iconName: String {
         switch self {
@@ -17,7 +24,14 @@ public enum MeetingPlatform: String, Hashable {
         case .zoom: return "video.badge.waveform.fill"
         case .teams: return "person.2.wave.2.fill"
         case .webex: return "video.circle.fill"
+        case .whaleOn: return "video.bubble.fill"
+        case .discord: return "bubble.left.and.bubble.right.fill"
+        case .lark: return "paperplane.fill"
+        case .jitsi: return "video.fill"
+        case .whereby: return "video.fill"
+        case .chime: return "video.fill"
         case .generic: return "video"
+        case .unverified: return "exclamationmark.triangle.fill"
         }
     }
 
@@ -27,7 +41,14 @@ public enum MeetingPlatform: String, Hashable {
         case .zoom: return Color(red: 0.18, green: 0.53, blue: 0.98)
         case .teams: return Color(red: 0.38, green: 0.40, blue: 0.85)
         case .webex: return Color(red: 0.0, green: 0.70, blue: 0.75)
+        case .whaleOn: return Color(red: 0.0, green: 0.78, blue: 0.24)
+        case .discord: return Color(red: 0.35, green: 0.40, blue: 0.95)
+        case .lark: return Color(red: 0.0, green: 0.84, blue: 0.73)
+        case .jitsi: return Color(red: 0.11, green: 0.46, blue: 0.74)
+        case .whereby: return Color(red: 1.0, green: 0.41, blue: 0.31)
+        case .chime: return Color(red: 0.18, green: 0.49, blue: 0.20)
         case .generic: return .blue
+        case .unverified: return Color.orange
         }
     }
 }
@@ -110,15 +131,18 @@ public struct CalendarEvent: Identifiable, Hashable {
         }
 
         // 도메인 위조 피싱 방어: URL host 끝자리 일치 검사 (예: teams.microsoft.com.evil.com 차단)
-        func matchesDomain(_ host: String, targets: [String]) -> Bool {
-            targets.contains { target in
+        // 도메인 위조 피싱 방어: URL host 끝자리 일치 검사 (예: teams.microsoft.com.evil.com 차단)
+        func matchesDomain(_ rawHost: String, targets: [String]) -> Bool {
+            let host = rawHost.trimmingCharacters(in: CharacterSet(charactersIn: "."))
+            return targets.contains { target in
                 host == target || host.hasSuffix("." + target)
             }
         }
 
-        // 정규식 앵커 취약점(CodeQL) 해결: 파싱된 Host 기준 화상회의 플랫폼 판별
-        func identifyPlatform(for candidateUrl: URL) -> MeetingInfo? {
-            guard let host = candidateUrl.host?.lowercased() else { return nil }
+        // 공식 화상회의 플랫폼 화이트리스트 1차 판별 (매칭 실패 시 nil)
+        func identifyOfficialPlatform(for candidateUrl: URL) -> MeetingInfo? {
+            guard let rawHost = candidateUrl.host?.lowercased() else { return nil }
+            let host = rawHost.trimmingCharacters(in: CharacterSet(charactersIn: "."))
 
             // Microsoft Teams
             if matchesDomain(host, targets: ["teams.microsoft.com", "teams.live.com", "teams.cloud.microsoft"]) {
@@ -140,30 +164,74 @@ public struct CalendarEvent: Identifiable, Hashable {
                 return MeetingInfo(platform: .webex, url: candidateUrl)
             }
 
-            // 기타 플랫폼 (Gather, Discord, Lark 등)
-            if matchesDomain(host, targets: ["gather.town", "discord.gg", "larksuite.com", "voovmeeting.com", "meeting.tencent.com"]) {
+            // Naver Whale ON
+            if matchesDomain(host, targets: ["whale.naver.com", "whaleon.naver.com"]) {
+                return MeetingInfo(platform: .whaleOn, url: candidateUrl)
+            }
+
+            // Discord
+            if matchesDomain(host, targets: ["discord.com", "discord.gg"]) {
+                return MeetingInfo(platform: .discord, url: candidateUrl)
+            }
+
+            // Lark / Feishu
+            if matchesDomain(host, targets: ["larksuite.com", "feishu.cn"]) {
+                return MeetingInfo(platform: .lark, url: candidateUrl)
+            }
+
+            // Jitsi Meet
+            if matchesDomain(host, targets: ["meet.jit.si"]) {
+                return MeetingInfo(platform: .jitsi, url: candidateUrl)
+            }
+
+            // Whereby
+            if matchesDomain(host, targets: ["whereby.com"]) {
+                return MeetingInfo(platform: .whereby, url: candidateUrl)
+            }
+
+            // Amazon Chime
+            if matchesDomain(host, targets: ["chime.aws"]) {
+                return MeetingInfo(platform: .chime, url: candidateUrl)
+            }
+
+            // 기타 공식 플랫폼 (Gather, VooV 등)
+            if matchesDomain(host, targets: ["gather.town", "voovmeeting.com", "meeting.tencent.com"]) {
                 return MeetingInfo(platform: .generic, url: candidateUrl)
             }
 
             return nil
         }
 
-        // 본문 내 URL 목록 추출 후 화상회의 링크 탐색
+        // 1단계: 본문 내 모든 URL 파싱 및 정제
         let urlPattern = "https?://[^\\s<>\"]+"
+        var candidateUrls: [URL] = []
+
         if let matches = matchAllRegex(pattern: urlPattern, in: sanitized) {
             for rawUrl in matches {
-                if let validUrl = sanitizeUrl(rawUrl),
-                   let info = identifyPlatform(for: validUrl) {
-                    return info
+                if let validUrl = sanitizeUrl(rawUrl) {
+                    candidateUrls.append(validUrl)
                 }
             }
         }
 
-        // EKEvent 기본 URL 검사
-        if let url = url,
-           let validUrl = sanitizeUrl(url.absoluteString),
-           let info = identifyPlatform(for: validUrl) {
-            return info
+        if let eventUrl = url, let validUrl = sanitizeUrl(eventUrl.absoluteString) {
+            if !candidateUrls.contains(validUrl) {
+                candidateUrls.append(validUrl)
+            }
+        }
+
+        guard !candidateUrls.isEmpty else { return nil }
+
+        // 2단계: 공식 화상회의 화이트리스트 우선 탐색 (First-Match 역전 방지)
+        for candidate in candidateUrls {
+            if let official = identifyOfficialPlatform(for: candidate) {
+                return official
+            }
+        }
+
+        // 3단계: 공식 플랫폼이 없는 경우, 첫 번째 유효 URL을 미검증 링크로 안전하게 폴백
+        if let firstCandidate = candidateUrls.first {
+            return MeetingInfo(platform: .unverified, url: firstCandidate)
         }
 
         return nil
@@ -175,14 +243,6 @@ public struct CalendarEvent: Identifiable, Hashable {
         let results = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
         guard !results.isEmpty else { return nil }
         return results.map { nsString.substring(with: $0.range) }
-    }
-
-    private static func matchRegex(pattern: String, in text: String) -> String? {
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
-        let nsString = text as NSString
-        let results = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
-        guard let first = results.first else { return nil }
-        return nsString.substring(with: first.range)
     }
 
     public func title(lang: AppLanguage = AppSettings.shared.language) -> String {

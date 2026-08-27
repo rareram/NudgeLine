@@ -22,7 +22,8 @@ public final class OverlayPanel: NSPanel {
         )
 
         self.level = .floating
-        self.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        self.collectionBehavior = settings.hideOnFullScreen ? [.canJoinAllSpaces, .stationary, .ignoresCycle] : [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        self.sharingType = settings.hideOnScreenShare ? .none : .readOnly
         self.isOpaque = false
         self.backgroundColor = .clear
         self.hasShadow = false
@@ -39,7 +40,14 @@ public final class OverlayPanel: NSPanel {
     }
 
     deinit {
+        cleanup()
+    }
+
+    // 패널 파기 시 리소스 및 타이머 명시적 정리
+    public func cleanup() {
         mouseTrackingTimer?.invalidate()
+        mouseTrackingTimer = nil
+        cancellables.removeAll()
     }
 
     // 대상 디스플레이 기준 패널 프레임 크기 및 위치 재계산
@@ -94,15 +102,14 @@ public final class OverlayPanel: NSPanel {
 
     // 마우스 좌표 분석을 통한 무간섭 패스스루 및 펫 근접 제어
     private func checkMouseProximityAndHit() {
-        guard settings.isBarVisible else { return }
         let mouseLoc = NSEvent.mouseLocation
         if mouseLoc == lastMouseLoc { return }
         lastMouseLoc = mouseLoc
         let panelRect = self.frame
 
-        // 1. 물리 타임라인 바 영역 진입 여부 판정 (최소 12px의 클릭 감도 마진 보장)
+        // 1. 물리 타임라인 바 영역 진입 여부 판정 (설정된 바/호버 두께와 1:1 일치)
         let effectiveThickness = settings.expandOnHover ? max(settings.barWidth, settings.hoverWidth) : settings.barWidth
-        let hitMargin: CGFloat = max(effectiveThickness, 12.0)
+        let hitMargin: CGFloat = effectiveThickness
         let isInsideBar: Bool
 
         switch settings.barPosition {
@@ -203,16 +210,43 @@ public final class OverlayPanel: NSPanel {
             }
             .store(in: &cancellables)
 
-        settings.$isBarVisible
+        settings.$hideOnScreenShare
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] visible in
-                if visible {
-                    self?.orderFrontRegardless()
-                } else {
-                    self?.orderOut(nil)
-                }
+            .sink { [weak self] hide in
+                self?.sharingType = hide ? .none : .readOnly
             }
             .store(in: &cancellables)
+
+        settings.$hideOnFullScreen
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] hide in
+                self?.collectionBehavior = hide ? [.canJoinAllSpaces, .stationary, .ignoresCycle] : [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+            }
+            .store(in: &cancellables)
+
+        // 절전 및 화면 꺼짐 시 30Hz 마우스 감시 타이머 정지 (배터리 보존)
+        let wsCenter = NSWorkspace.shared.notificationCenter
+        Publishers.Merge(
+            wsCenter.publisher(for: NSWorkspace.willSleepNotification),
+            wsCenter.publisher(for: NSWorkspace.screensDidSleepNotification)
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in
+            self?.mouseTrackingTimer?.invalidate()
+            self?.mouseTrackingTimer = nil
+        }
+        .store(in: &cancellables)
+
+        // 깨어남 및 화면 켜짐 시 30Hz 마우스 감시 타이머 재개
+        Publishers.Merge(
+            wsCenter.publisher(for: NSWorkspace.didWakeNotification),
+            wsCenter.publisher(for: NSWorkspace.screensDidWakeNotification)
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in
+            self?.startMouseTracking()
+        }
+        .store(in: &cancellables)
     }
 }
 
@@ -234,10 +268,10 @@ private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Con
         super.init(rootView: rootView)
     }
 
-    // 바 내부 영역 판정 (윈도우 좌표계 기준, 최소 12px 감도 버퍼)
+    // 바 내부 영역 판정 (윈도우 좌표계 기준, 설정된 두께와 1:1 일치)
     private func isHitInBar(windowPoint: NSPoint) -> Bool {
-        let thickness = max(settings.barWidth, settings.hoverWidth)
-        let hitMargin: CGFloat = max(thickness, 12.0)
+        let thickness = settings.expandOnHover ? max(settings.barWidth, settings.hoverWidth) : settings.barWidth
+        let hitMargin: CGFloat = thickness
 
         switch settings.barPosition {
         case .left:
@@ -269,15 +303,15 @@ private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Con
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        let settingsItem = NSMenuItem(title: L10n.tr(.settings, lang: settings.language), action: #selector(openSettings(_:)), keyEquivalent: ",")
-        settingsItem.target = self
-        settingsItem.isEnabled = true
-        menu.addItem(settingsItem)
-
         let refreshItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshCalendars(_:)), keyEquivalent: "r")
         refreshItem.target = self
         refreshItem.isEnabled = true
         menu.addItem(refreshItem)
+
+        let settingsItem = NSMenuItem(title: L10n.tr(.settings, lang: settings.language), action: #selector(openSettings(_:)), keyEquivalent: ",")
+        settingsItem.target = self
+        settingsItem.isEnabled = true
+        menu.addItem(settingsItem)
 
         menu.addItem(NSMenuItem.separator())
 

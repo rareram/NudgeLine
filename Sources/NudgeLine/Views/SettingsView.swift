@@ -769,6 +769,10 @@ private struct GeneralTab: View {
                     ))
 
                     Toggle(L10n.tr(.showOnAllScreens, lang: settings.language), isOn: $settings.showOnAllScreens)
+
+                    Toggle(L10n.tr(.hideOnScreenShareLabel, lang: settings.language), isOn: $settings.hideOnScreenShare)
+
+                    Toggle(L10n.tr(.hideOnFullScreenLabel, lang: settings.language), isOn: $settings.hideOnFullScreen)
                 }
             }
             .formStyle(.columns)

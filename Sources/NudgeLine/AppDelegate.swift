@@ -20,8 +20,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         setupOverlayPanels()
         observeDataChanges()
 
-        // 캘린더 접근 권한 미인가 시 초기 요청
-        if !calendarService.isAuthorized() {
+        // 캘린더 접근 권한 확인 및 초기 1회 즉시 데이터 로드
+        if calendarService.isAuthorized() {
+            calendarService.loadCalendars()
+            calendarService.fetchEvents(settings: settings)
+        } else {
             calendarService.requestAccess()
         }
     }
@@ -42,18 +45,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let menu = NSMenu()
 
-        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
-        let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        let titleItem = NSMenuItem(title: settings.isDevBuild ? "NudgeLine (Dev) v\(appVersion) (Build \(buildNumber))" : "NudgeLine v\(appVersion) (Build \(buildNumber))", action: nil, keyEquivalent: "")
-        titleItem.isEnabled = false
-        menu.addItem(titleItem)
-        menu.addItem(NSMenuItem.separator())
-
         let updateItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshCalendars), keyEquivalent: "r")
         menu.addItem(updateItem)
-
-        let toggleItem = NSMenuItem(title: L10n.tr(.toggleBar, lang: settings.language), action: #selector(toggleBarVisibility), keyEquivalent: "t")
-        menu.addItem(toggleItem)
 
         let prefsItem = NSMenuItem(title: L10n.tr(.settings, lang: settings.language), action: #selector(openSettings), keyEquivalent: ",")
         menu.addItem(prefsItem)
@@ -69,21 +62,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     // 모니터 설정에 따른 화면별 오버레이 패널 인스턴스 생성
     private func setupOverlayPanels() {
         overlayPanels.forEach { panel in
+            panel.cleanup()
             panel.orderOut(nil)
             panel.close()
         }
         overlayPanels.removeAll()
 
-        guard settings.isBarVisible else { return }
+        let allScreens = settings.showOnAllScreens ? NSScreen.screens : [NSScreen.main].compactMap { $0 }
+        let validScreens = allScreens.filter { $0.frame.width > 100 && $0.frame.height > 100 }
 
-        let screens: [NSScreen]
-        if settings.showOnAllScreens {
-            screens = NSScreen.screens
-        } else {
-            screens = [NSScreen.main].compactMap { $0 }
-        }
-
-        for screen in screens {
+        for screen in validScreens {
             let panel = OverlayPanel(screen: screen, settings: settings)
             panel.orderFrontRegardless()
             overlayPanels.append(panel)
@@ -92,8 +80,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // 설정 변경 및 디스플레이 해상도/연결 변경 이벤트 감지
     private func observeDataChanges() {
-        // 다중 디스플레이 표시 여부 및 바 가시성 변경 감지
-        Publishers.CombineLatest(settings.$showOnAllScreens, settings.$isBarVisible)
+        // 다중 디스플레이 표시 여부 변경 감지
+        settings.$showOnAllScreens
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.setupOverlayPanels()
@@ -117,14 +105,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
     }
 
-    @objc public func toggleBarVisibility() {
-        settings.isBarVisible.toggle()
-    }
-
     @objc public func refreshCalendars() {
         calendarService.loadCalendars()
         calendarService.fetchEvents(settings: settings)
-        overlayPanels.forEach { $0.updateFrame() }
     }
 
     // 환경설정 단일 윈도우 인스턴스 오픈
