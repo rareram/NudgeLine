@@ -36,7 +36,7 @@ public struct DetailCardHoverRenderer: EventHoverStyleRenderer {
         isHorizontal: Bool
     ) -> (width: CGFloat, height: CGFloat) {
         let isMulti = events.count > 1
-        let maxTitleLength = events.map { $0.title.count }.max() ?? 8
+        let maxTitleLength = events.map { $0.rawTitle.count }.max() ?? 8
         let estimatedWidth = CGFloat(110 + maxTitleLength * 8)
         let width: CGFloat = max(220.0, min(280.0, estimatedWidth)) + (isHorizontal ? 0 : 8.0)
         let height: CGFloat = (isMulti ? (CGFloat(events.count) * 75.0 + 40.0) : 135.0) + (isHorizontal ? 8.0 : 0)
@@ -61,7 +61,7 @@ public struct SimpleInfoHoverRenderer: EventHoverStyleRenderer {
         events: [CalendarEvent],
         isHorizontal: Bool
     ) -> (width: CGFloat, height: CGFloat) {
-        let maxTitleLength = events.map { $0.title.count }.max() ?? 6
+        let maxTitleLength = events.map { $0.rawTitle.count }.max() ?? 6
         let estimatedWidth = CGFloat(65 + maxTitleLength * 9)
         let clampedWidth = max(135.0, min(260.0, estimatedWidth)) + (isHorizontal ? 0 : 8.0)
 

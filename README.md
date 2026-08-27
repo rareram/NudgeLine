@@ -33,9 +33,9 @@
 NudgeLine shows your daily schedule as a subtle ambient bar along the edge of your screen (Left, Right, or Bottom).
 
 <p align="center">
-  <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="Hide - Tail Wag" alt="Hide - Tail Wag" style="margin: 0 10px;" />
-  <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="Hide - Head Peek" alt="Hide - Head Peek" style="margin: 0 10px;" />
-  <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="Disappear - Pop" alt="Disappear - Pop" style="margin: 0 10px;" /><br>
+  <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="Hide - Tail Wag" alt="Hide - Tail Wag" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="Hide - Head Peek" alt="Hide - Head Peek" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="Disappear - Pop" alt="Disappear - Pop" style="margin: 0 18px;" /><br>
   <em><strong>Zero-Interference Ambient Design & Mascot Evasion</strong>: Pet hides behind the bezel or vanishes upon cursor proximity (6 hide motions supported: Pop, Swirl, Squish, Smoke, etc.).</em>
 </p>
 

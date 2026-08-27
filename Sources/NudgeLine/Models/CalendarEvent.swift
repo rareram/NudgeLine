@@ -131,7 +131,6 @@ public struct CalendarEvent: Identifiable, Hashable {
         }
 
         // 도메인 위조 피싱 방어: URL host 끝자리 일치 검사 (예: teams.microsoft.com.evil.com 차단)
-        // 도메인 위조 피싱 방어: URL host 끝자리 일치 검사 (예: teams.microsoft.com.evil.com 차단)
         func matchesDomain(_ rawHost: String, targets: [String]) -> Bool {
             let host = rawHost.trimmingCharacters(in: CharacterSet(charactersIn: "."))
             return targets.contains { target in
@@ -249,16 +248,8 @@ public struct CalendarEvent: Identifiable, Hashable {
         rawTitle.isEmpty ? L10n.tr(.untitledEvent, lang: lang) : rawTitle
     }
 
-    public var title: String {
-        title(lang: AppSettings.shared.language)
-    }
-
     public func sourceTitle(lang: AppLanguage = AppSettings.shared.language) -> String {
         rawSourceTitle.isEmpty ? L10n.tr(.otherSource, lang: lang) : rawSourceTitle
-    }
-
-    public var sourceTitle: String {
-        sourceTitle(lang: AppSettings.shared.language)
     }
 
     public func effectiveColor(settings: AppSettings) -> Color {
@@ -281,10 +272,6 @@ public struct CalendarEvent: Identifiable, Hashable {
         let startStr = Self.timeFormatter.string(from: startDate)
         let endStr = Self.timeFormatter.string(from: endDate)
         return "\(startStr) ~ \(endStr)"
-    }
-
-    public var formattedTimeRange: String {
-        formattedTimeRange(lang: AppSettings.shared.language)
     }
 
     public var durationMinutes: Int {

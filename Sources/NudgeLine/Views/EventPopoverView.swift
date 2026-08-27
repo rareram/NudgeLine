@@ -44,11 +44,6 @@ public struct EventPopoverView: View {
         self.settings = settings
     }
 
-    public init(event: CalendarEvent, settings: AppSettings = .shared) {
-        self.events = [event]
-        self.settings = settings
-    }
-
     private var bubbleDirection: BubbleArrowDirection {
         switch settings.barPosition {
         case .left: return .left
@@ -288,25 +283,6 @@ public struct EventPopoverView: View {
                     }
                     .buttonStyle(.plain)
                     .padding(.top, 3)
-                }
-            } else if let url = event.url, let scheme = url.scheme?.lowercased(), (scheme == "http" || scheme == "https") {
-                HStack(spacing: 4) {
-                    Image(systemName: "link")
-                        .font(.caption2)
-                        .foregroundStyle(.blue)
-
-                    Button(action: {
-                        NSWorkspace.shared.open(url)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                            PopoverPanel.shared.hide(delayed: false)
-                        }
-                    }) {
-                        Text(url.host ?? "Link")
-                            .font(.caption2)
-                            .foregroundStyle(.blue)
-                            .underline()
-                    }
-                    .buttonStyle(.plain)
                 }
             }
 

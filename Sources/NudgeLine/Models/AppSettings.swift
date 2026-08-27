@@ -87,7 +87,6 @@ public enum PetHideStyle: String, Codable, CaseIterable, Identifiable {
     case vortex   = "vortex"         // 없어지기 (회오리)
     case squish   = "squish"         // 없어지기 (슬라임)
     case smoke    = "smoke"          // 없어지기 (연기)
-    case fadeOut  = "fadeOut"        // 레거시 하위 호환
 
     public static var allCases: [PetHideStyle] {
         [.tailPeek, .headPeek, .pop, .vortex, .squish, .smoke]
@@ -99,7 +98,7 @@ public enum PetHideStyle: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .tailPeek: return L10n.tr(.hideStyleTailPeek, lang: lang)
         case .headPeek: return L10n.tr(.hideStyleHeadPeek, lang: lang)
-        case .pop, .fadeOut: return L10n.tr(.hideStylePop, lang: lang)
+        case .pop:      return L10n.tr(.hideStylePop, lang: lang)
         case .vortex:   return L10n.tr(.hideStyleVortex, lang: lang)
         case .squish:   return L10n.tr(.hideStyleSquish, lang: lang)
         case .smoke:    return L10n.tr(.hideStyleSmoke, lang: lang)
@@ -386,8 +385,13 @@ public final class AppSettings: ObservableObject {
         let savedCustomPetId = defaults.string(forKey: Keys.selectedCustomPetId) ?? ""
         self.selectedCustomPetId = savedCustomPetId
 
-        let savedPetHideStyle = defaults.string(forKey: Keys.petHideStyle) ?? PetHideStyle.tailPeek.rawValue
-        self.petHideStyle = PetHideStyle(rawValue: savedPetHideStyle) ?? .tailPeek
+        let savedPetHideStyle = defaults.string(forKey: Keys.petHideStyle) ?? ""
+        if let loadedHideStyle = PetHideStyle(rawValue: savedPetHideStyle) {
+            self.petHideStyle = loadedHideStyle
+        } else {
+            self.petHideStyle = .tailPeek
+            defaults.set(PetHideStyle.tailPeek.rawValue, forKey: Keys.petHideStyle)
+        }
 
         let savedLastPetState = defaults.object(forKey: Keys.lastEnabledPetStateBeforeBottom) != nil ? defaults.bool(forKey: Keys.lastEnabledPetStateBeforeBottom) : true
         self.lastEnabledPetStateBeforeBottom = savedLastPetState

@@ -42,6 +42,7 @@ public final class PopoverPanel: NSPanel {
     private var hideTimer: Timer?
     private var currentClusterId: String? = nil
     private var isMouseInside: Bool = false
+    private var hasEnteredPopover: Bool = false
     private var isDetailMode: Bool = false
     private var showGeneration: Int = 0
     private var cancellables = Set<AnyCancellable>()
@@ -81,6 +82,7 @@ public final class PopoverPanel: NSPanel {
     public func setMouseInside(_ inside: Bool) {
         self.isMouseInside = inside
         if inside {
+            self.hasEnteredPopover = true
             hideTimer?.invalidate()
             hideTimer = nil
         } else {
@@ -99,14 +101,11 @@ public final class PopoverPanel: NSPanel {
         settings: AppSettings = .shared
     ) {
         showGeneration += 1
+        hasEnteredPopover = false
         hideTimer?.invalidate()
         hideTimer = nil
 
         guard let screen = NSScreen.main, !events.isEmpty else { return }
-
-        // 화면 공유 및 전체 화면 은폐 설정 동기화
-        self.sharingType = settings.hideOnScreenShare ? .none : .readOnly
-        self.collectionBehavior = settings.hideOnFullScreen ? [.canJoinAllSpaces, .transient] : [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
 
         let renderer = settings.eventHoverStyle.renderer()
         self.isDetailMode = renderer.allowsTransitBridge
@@ -213,6 +212,7 @@ public final class PopoverPanel: NSPanel {
         barPosition: BarPosition
     ) {
         showGeneration += 1
+        hasEnteredPopover = false
         hideTimer?.invalidate()
         hideTimer = nil
         self.isDetailMode = false
@@ -284,16 +284,18 @@ public final class PopoverPanel: NSPanel {
         }
     }
 
-    // 팝오버 숨김 타이머 (상세 카드 브릿지 0.22초 딜레이)
+    // 팝오버 숨김 타이머 (대각선 진입 시 0.20초 보호, 팝오버 이탈 시 0.04초 즉시 닫기)
     public func hide(delayed: Bool = false) {
         hideTimer?.invalidate()
         if delayed {
-            let delayTime: TimeInterval = isDetailMode ? 0.22 : 0.04
+            let delayTime: TimeInterval = hasEnteredPopover ? 0.04 : (isDetailMode ? 0.20 : 0.04)
             let timer = Timer(timeInterval: delayTime, repeats: false) { [weak self] _ in
                 guard let self = self else { return }
-                if self.isMouseInside {
+                // 타이머 만료 시 실제 OS 마우스 절대 좌표로 물리적 검증 (박제 방지)
+                if self.frame.contains(NSEvent.mouseLocation) {
                     return
                 }
+                self.isMouseInside = false
                 self.performHide()
             }
             RunLoop.main.add(timer, forMode: .common)
@@ -316,6 +318,7 @@ public final class PopoverPanel: NSPanel {
                 self.orderOut(nil)
                 self.currentClusterId = nil
                 self.isMouseInside = false
+                self.hasEnteredPopover = false
             }
         })
     }

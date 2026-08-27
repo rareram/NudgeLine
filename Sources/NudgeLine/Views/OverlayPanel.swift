@@ -7,7 +7,6 @@ public final class OverlayPanel: NSPanel {
     private let targetScreen: NSScreen
     private let settings: AppSettings
     private var cancellables = Set<AnyCancellable>()
-    private var isMouseInActiveZone: Bool = false
     private var mouseTrackingTimer: Timer?
 
     public init(screen: NSScreen, settings: AppSettings) {

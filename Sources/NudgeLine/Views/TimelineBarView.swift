@@ -695,7 +695,7 @@ private struct InteractivePetView: View {
         switch hideStyle {
         case .tailPeek, .headPeek:
             return 1.0
-        case .pop, .vortex, .squish, .smoke, .fadeOut:
+        case .pop, .vortex, .squish, .smoke:
             return 0.0
         }
     }
@@ -714,7 +714,7 @@ private struct InteractivePetView: View {
             return 1.6
         case .smoke:
             return 1.3
-        case .tailPeek, .headPeek, .fadeOut:
+        case .tailPeek, .headPeek:
             return 1.0
         }
     }
@@ -726,7 +726,7 @@ private struct InteractivePetView: View {
             return 0.05
         case .smoke:
             return 1.3
-        case .tailPeek, .headPeek, .fadeOut:
+        case .tailPeek, .headPeek:
             return 1.0
         }
     }
@@ -743,7 +743,7 @@ private struct InteractivePetView: View {
             return baseX + (isLeft ? -23.0 : (isHorizontal ? 0 : 23.0))
         case .headPeek:
             return baseX + (isLeft ? 6.0 : (isHorizontal ? 0 : -6.0))
-        case .pop, .vortex, .squish, .smoke, .fadeOut:
+        case .pop, .vortex, .squish, .smoke:
             return baseX
         }
     }
@@ -761,7 +761,7 @@ private struct InteractivePetView: View {
             return isLeft ? 85.0 : (isHorizontal ? 85.0 : -85.0)
         case .vortex:
             return 720.0
-        case .pop, .squish, .smoke, .fadeOut:
+        case .pop, .squish, .smoke:
             return 0.0
         }
     }
@@ -840,7 +840,7 @@ private struct InteractiveCustomPetView: View {
         switch hideStyle {
         case .tailPeek, .headPeek:
             return 1.0
-        case .pop, .vortex, .squish, .smoke, .fadeOut:
+        case .pop, .vortex, .squish, .smoke:
             return 0.0
         }
     }
@@ -859,7 +859,7 @@ private struct InteractiveCustomPetView: View {
             return 1.6
         case .smoke:
             return 1.3
-        case .tailPeek, .headPeek, .fadeOut:
+        case .tailPeek, .headPeek:
             return 1.0
         }
     }
@@ -871,7 +871,7 @@ private struct InteractiveCustomPetView: View {
             return 0.05
         case .smoke:
             return 1.3
-        case .tailPeek, .headPeek, .fadeOut:
+        case .tailPeek, .headPeek:
             return 1.0
         }
     }
@@ -889,7 +889,7 @@ private struct InteractiveCustomPetView: View {
             return baseX + (isLeft ? leftOffset : (isHorizontal ? 0 : -leftOffset))
         case .headPeek:
             return baseX + (isLeft ? rightOffset : (isHorizontal ? 0 : -rightOffset))
-        case .pop, .vortex, .squish, .smoke, .fadeOut:
+        case .pop, .vortex, .squish, .smoke:
             return baseX
         }
     }
@@ -906,43 +906,9 @@ private struct InteractiveCustomPetView: View {
             return isLeft ? 85.0 : (isHorizontal ? 85.0 : -85.0)
         case .vortex:
             return 720.0
-        case .pop, .squish, .smoke, .fadeOut:
+        case .pop, .squish, .smoke:
             return 0.0
         }
     }
-
-    /* 구버전 3개 모션용 중복 코드 보존 (신규 6개 모션 코드로 대체됨)
-    // PET_SPEC_RULES §3: 노출량은 지정 오프셋(baseX - 8)과 회전 궤적으로만 제어
-    private func calculateOffsetX(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
-        let baseX: CGFloat = isHorizontal ? 0 : (settings.barPosition == .left ? max(0, thickness - 2) : 0)
-        guard isHovered else { return baseX }
-
-        let isLeft = (settings.barPosition == .left)
-
-        switch hideStyle {
-        case .tailPeek:
-            return baseX + (isLeft ? -23.0 : (isHorizontal ? 0 : 23.0))
-        case .headPeek:
-            return baseX + (isLeft ? 6.0 : (isHorizontal ? 0 : -6.0))
-        case .fadeOut:
-            return baseX
-        }
-    }
-
-    // PET_SPEC_RULES §3 (Left Bar 기준): tailPeek -80° 위로 회전, headPeek +90° 아래로 회전
-    private func calculateRotationAngle(isHovered: Bool, hideStyle: PetHideStyle) -> Double {
-        guard isHovered else { return 0.0 }
-        let isLeft = (settings.barPosition == .left)
-
-        switch hideStyle {
-        case .tailPeek:
-            return isLeft ? -85.0 : (isHorizontal ? -85.0 : 85.0)
-        case .headPeek:
-            return isLeft ? 85.0 : (isHorizontal ? 85.0 : -85.0)
-        case .fadeOut:
-            return 0.0
-        }
-    }
-    */
 }
 

@@ -33,9 +33,9 @@
 NudgeLine은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 띄워주는 macOS 앰비언트 유틸리티입니다.
 
 <p align="center">
-  <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="숨기 (꼬리 살랑)" alt="숨기 (꼬리 살랑)" style="margin: 0 10px;" />
-  <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="숨기 (머리 빼꼼)" alt="숨기 (머리 빼꼼)" style="margin: 0 10px;" />
-  <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="사라지기 (퐁!)" alt="사라지기 (퐁!)" style="margin: 0 10px;" /><br>
+  <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="숨기 (꼬리 살랑)" alt="숨기 (꼬리 살랑)" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="숨기 (머리 빼꼼)" alt="숨기 (머리 빼꼼)" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="사라지기 (퐁!)" alt="사라지기 (퐁!)" style="margin: 0 18px;" /><br>
   <em><strong>작업창 무간섭 & 마스코트 회피 동작</strong>: 마우스 커서 접근 시 펫이 베젤 뒤로 숨거나 사라집니다. (퐁!, 빙글빙글, 쫀득, 스르륵 등 6종 지원)</em>
 </p>
 

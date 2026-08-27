@@ -134,7 +134,6 @@ public struct L10n {
         case hideStyleVortex
         case hideStyleSquish
         case hideStyleSmoke
-        case hideStyleFadeOut
 
         // Custom Pet Editor
         case customPetSection
@@ -266,7 +265,6 @@ public struct L10n {
             case .hideStyleVortex: return "사라지기 (빙글빙글)"
             case .hideStyleSquish: return "사라지기 (쫀득)"
             case .hideStyleSmoke: return "사라지기 (스르륵)"
-            case .hideStyleFadeOut: return "사라지기 (퐁!)"
 
             case .customPetSection: return "사용자 설정 펫"
             case .addCustomPet: return "사용자 설정 펫 추가"
@@ -390,7 +388,6 @@ public struct L10n {
             case .hideStyleVortex: return "Disappear (Swirl)"
             case .hideStyleSquish: return "Disappear (Squish)"
             case .hideStyleSmoke: return "Disappear (Smoke)"
-            case .hideStyleFadeOut: return "Disappear (Pop)"
 
             case .customPetSection: return "Custom Pets"
             case .addCustomPet: return "Add Custom Pet"
