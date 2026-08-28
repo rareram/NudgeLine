@@ -200,7 +200,7 @@ public struct L10n {
             case .creditsOriginal: return "원작: Andreas Katzian & ARTMIXTURE (2014-2015)"
 
             case .launchAtLogin: return "로그인할 때 자동 실행"
-            case .hideOnScreenShareLabel: return "화면 공유 시 숨김"
+            case .hideOnScreenShareLabel: return "화상회의 · 녹화 · 가상화면에 표시 안 함"
             case .hideOnFullScreenLabel: return "전체 화면 시 숨김"
             case .appDescription: return "화면 가장자리에 오늘 일정을 시각화하는 세련된 macOS 캘린더 타임라인 바"
 
@@ -323,7 +323,7 @@ public struct L10n {
             case .creditsOriginal: return "Inspired by PixelScheduler (2014-2015) by Andreas Katzian & ARTMIXTURE"
 
             case .launchAtLogin: return "Launch at Login"
-            case .hideOnScreenShareLabel: return "Hide during Screen Sharing"
+            case .hideOnScreenShareLabel: return "Exclude from Meetings, Capture & Virtual Display"
             case .hideOnFullScreenLabel: return "Hide in Full Screen"
             case .appDescription: return "A sleek macOS edge timeline bar that visualizes today's schedule along screen edges."
 

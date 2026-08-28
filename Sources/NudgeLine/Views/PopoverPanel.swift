@@ -90,6 +90,12 @@ public final class PopoverPanel: NSPanel {
         }
     }
 
+    // 마우스 커서가 현재 위치한 디스플레이 화면 반환 (다중 모니터 대응)
+    private func currentTargetScreen() -> NSScreen? {
+        let mouseLoc = NSEvent.mouseLocation
+        return NSScreen.screens.first(where: { $0.frame.contains(mouseLoc) }) ?? NSScreen.main ?? NSScreen.screens.first
+    }
+
     // 일정 호버 팝오버 표시 및 좌표 애니메이션
     public func show(
         events: [CalendarEvent],
@@ -105,7 +111,7 @@ public final class PopoverPanel: NSPanel {
         hideTimer?.invalidate()
         hideTimer = nil
 
-        guard let screen = NSScreen.main, !events.isEmpty else { return }
+        guard let screen = currentTargetScreen(), !events.isEmpty else { return }
 
         let renderer = settings.eventHoverStyle.renderer()
         self.isDetailMode = renderer.allowsTransitBridge
@@ -217,7 +223,7 @@ public final class PopoverPanel: NSPanel {
         hideTimer = nil
         self.isDetailMode = false
 
-        guard let screen = NSScreen.main else { return }
+        guard let screen = currentTargetScreen() else { return }
 
         let visibleFrame = screen.visibleFrame
         let fullFrame = screen.frame

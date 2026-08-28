@@ -6,6 +6,7 @@ import AppKit
 public struct TimelineBarView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var calendarService: CalendarService
+    @ObservedObject var panelState: OverlayPanelState
 
     @State private var currentTime = Date()
     @State private var cachedSegments: [TimelineSegment] = []
@@ -15,9 +16,14 @@ public struct TimelineBarView: View {
 
     private static let clockPublisher = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    public init(settings: AppSettings = .shared, calendarService: CalendarService = .shared) {
+    public init(
+        settings: AppSettings = .shared,
+        calendarService: CalendarService = .shared,
+        panelState: OverlayPanelState = OverlayPanelState()
+    ) {
         self.settings = settings
         self.calendarService = calendarService
+        self.panelState = panelState
     }
 
     public var body: some View {
@@ -67,6 +73,7 @@ public struct TimelineBarView: View {
                         thickness: currentThickness,
                         isHorizontal: isHorizontal,
                         isBarHovered: isBarHovered,
+                        isPetProximityHovered: panelState.isPetProximityHovered,
                         accentColor: settings.effectiveCurrentTimeColor()
                     )
                     .offset(
@@ -413,6 +420,7 @@ private struct CurrentTimeIndicatorView: View {
     let thickness: CGFloat
     let isHorizontal: Bool
     let isBarHovered: Bool
+    let isPetProximityHovered: Bool
     let accentColor: Color
 
     var body: some View {
@@ -515,12 +523,14 @@ private struct CurrentTimeIndicatorView: View {
 
     @ViewBuilder
     private func petCompanionView() -> some View {
+        let isProximityNear = isPetProximityHovered
         switch settings.selectedPetType {
         case .cat:
             InteractivePetView(
                 petType: .cat,
                 isHorizontal: isHorizontal,
                 isBarHovered: isBarHovered,
+                isPetProximityHovered: isProximityNear,
                 settings: settings,
                 thickness: thickness,
                 accentColor: accentColor
@@ -530,6 +540,7 @@ private struct CurrentTimeIndicatorView: View {
                 petType: .dog,
                 isHorizontal: isHorizontal,
                 isBarHovered: isBarHovered,
+                isPetProximityHovered: isProximityNear,
                 settings: settings,
                 thickness: thickness,
                 accentColor: accentColor
@@ -539,6 +550,7 @@ private struct CurrentTimeIndicatorView: View {
                 petType: .whiteTiger,
                 isHorizontal: isHorizontal,
                 isBarHovered: isBarHovered,
+                isPetProximityHovered: isProximityNear,
                 settings: settings,
                 thickness: thickness,
                 accentColor: accentColor
@@ -549,6 +561,7 @@ private struct CurrentTimeIndicatorView: View {
                     petId: petId,
                     isHorizontal: isHorizontal,
                     isBarHovered: isBarHovered,
+                    isPetProximityHovered: isProximityNear,
                     settings: settings,
                     thickness: thickness,
                     accentColor: accentColor
@@ -558,6 +571,7 @@ private struct CurrentTimeIndicatorView: View {
                     petType: .cat,
                     isHorizontal: isHorizontal,
                     isBarHovered: isBarHovered,
+                    isPetProximityHovered: isProximityNear,
                     settings: settings,
                     thickness: thickness,
                     accentColor: accentColor
@@ -640,12 +654,13 @@ private struct InteractivePetView: View {
     let petType: PetType
     let isHorizontal: Bool
     let isBarHovered: Bool
+    let isPetProximityHovered: Bool
     @ObservedObject var settings: AppSettings
     let thickness: CGFloat
     let accentColor: Color
 
     var body: some View {
-        let isHovered = isBarHovered || settings.isPetProximityHovered
+        let isHovered = isBarHovered || isPetProximityHovered
         let hideStyle = settings.petHideStyle
 
         HangingPetIndicatorView(
@@ -772,6 +787,7 @@ private struct InteractiveCustomPetView: View {
     let petId: String
     let isHorizontal: Bool
     let isBarHovered: Bool
+    let isPetProximityHovered: Bool
     @ObservedObject var settings: AppSettings
     let thickness: CGFloat
     let accentColor: Color
@@ -782,7 +798,7 @@ private struct InteractiveCustomPetView: View {
         let pet = petService.customPets.first { $0.id == petId }
         let frames = petService.getFrames(for: petId)
         let fps = pet?.fps ?? 8.0
-        let isHovered = isBarHovered || settings.isPetProximityHovered
+        let isHovered = isBarHovered || isPetProximityHovered
         let hideStyle = settings.petHideStyle
 
         if !frames.isEmpty {

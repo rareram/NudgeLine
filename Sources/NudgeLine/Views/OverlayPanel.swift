@@ -3,9 +3,16 @@ import AppKit
 import SwiftUI
 import Combine
 
+// 각 모니터 화면별 독립 오버레이 상태 (다중 모니터 상태 격리)
+public final class OverlayPanelState: ObservableObject {
+    @Published public var isPetProximityHovered: Bool = false
+    public init() {}
+}
+
 public final class OverlayPanel: NSPanel {
     private let targetScreen: NSScreen
     private let settings: AppSettings
+    public let panelState = OverlayPanelState()
     private var cancellables = Set<AnyCancellable>()
     private var mouseTrackingTimer: Timer?
     private var presentationCheckTimer: Timer?
@@ -31,7 +38,11 @@ public final class OverlayPanel: NSPanel {
         self.ignoresMouseEvents = false
         self.acceptsMouseMovedEvents = true
 
-        let rootView = TimelineBarView(settings: settings, calendarService: CalendarService.shared)
+        let rootView = TimelineBarView(
+            settings: settings,
+            calendarService: CalendarService.shared,
+            panelState: panelState
+        )
         let hostingView = EdgePassthroughHostingView(rootView: rootView, settings: settings)
         self.contentView = hostingView
 
@@ -150,8 +161,8 @@ public final class OverlayPanel: NSPanel {
 
         // 2. 펫 마스코트 근접 감지 (숨김 애니메이션 트리거)
         guard settings.isPetEnabled else {
-            if settings.isPetProximityHovered {
-                settings.isPetProximityHovered = false
+            if panelState.isPetProximityHovered {
+                panelState.isPetProximityHovered = false
             }
             return
         }
@@ -184,12 +195,12 @@ public final class OverlayPanel: NSPanel {
             let dist = hypot(mouseLoc.x - petScreenPoint.x, mouseLoc.y - petScreenPoint.y)
             let isNear = dist <= 64.0
 
-            if settings.isPetProximityHovered != isNear {
-                settings.isPetProximityHovered = isNear
+            if panelState.isPetProximityHovered != isNear {
+                panelState.isPetProximityHovered = isNear
             }
         } else {
-            if settings.isPetProximityHovered {
-                settings.isPetProximityHovered = false
+            if panelState.isPetProximityHovered {
+                panelState.isPetProximityHovered = false
             }
         }
     }
@@ -334,7 +345,6 @@ public final class OverlayPanel: NSPanel {
         }
 
         var onScreenCoveringApps = Set<String>()
-        var hasOffscreenWindows = false
         var hasFullScreenLayer = false
         var maxCoveringHeight: CGFloat = 0.0
 
@@ -344,8 +354,16 @@ public final class OverlayPanel: NSPanel {
             let layer = win[kCGWindowLayer as String] as? Int ?? 0
             guard pid != currentPid else { continue }
 
+            // 가상 디스플레이 백그라운드 스트리밍/캡처 유틸리티 제외
+            let isVirtualDisplayUtility = owner.contains("Tab Display") || owner.contains("AnyDisplay") || owner.contains("DuetDisplay") || owner.contains("AirPlay")
+            guard !isVirtualDisplayUtility else { continue }
+
             guard let boundsDict = win[kCGWindowBounds as String] as? [String: Any],
                   let winBounds = CGRect(dictionaryRepresentation: boundsDict as CFDictionary) else { continue }
+
+            // 일반 사용자 GUI 앱(.regular) 판별 (가상 디스플레이 백그라운드 데몬 배제)
+            let runningApp = NSRunningApplication(processIdentifier: pid)
+            let isRegularApp = (runningApp?.activationPolicy == .regular) || (owner == "Google Chrome" || owner == "IINA" || owner == "Microsoft PowerPoint" || owner == "Keynote")
 
             // 현재 담당 모니터와 교차하는 전체화면 전용 특수 레이어 감지 (크롬 툴바: 26, 종료 배너: 999)
             if (layer == 26 || layer == 999) && owner != "Window Server" {
@@ -354,12 +372,7 @@ public final class OverlayPanel: NSPanel {
                 }
             }
 
-            if layer == 0 {
-                // 해당 모니터의 X 범위를 완전히 벗어난 창 감지 (외장 좌/우 배치 음수 좌표 완벽 분리)
-                if winBounds.maxX < targetBounds.minX - 50.0 || winBounds.minX > targetBounds.maxX + 50.0 {
-                    hasOffscreenWindows = true
-                }
-
+            if layer == 0 && isRegularApp {
                 // 현재 담당 모니터 화면 안에 떠 있는 화면 크기 창 감지
                 if winBounds.minX >= targetBounds.minX - 15.0 && winBounds.minX < targetBounds.maxX {
                     if winBounds.width >= targetBounds.width - 25.0 &&
@@ -374,13 +387,13 @@ public final class OverlayPanel: NSPanel {
         }
 
         // [실측 기반 전체화면 및 프레젠테이션 확정 조건]
-        // 1. 크롬 / IINA / Keynote (네이티브 전체화면 스페이스: 단 1개 앱만 화면을 독점하고 다른 앱은 스페이스 밖으로 밀려남)
-        let isNativeFullScreenSpace = (onScreenCoveringApps.count == 1) && (hasOffscreenWindows || hasFullScreenLayer)
+        // 1. 특수 오버레이 레이어 기반 전체화면 (툴바 26 / 종료 배너 999 등)
+        let hasFullScreenOverlay = (onScreenCoveringApps.count == 1) && hasFullScreenLayer
 
-        // 2. MS 파워포인트 슬라이드쇼 (동일 스페이스 화면 100% 덮음: 뒤에 다른 창이 있어도 화면 전체를 100% 덮은 발표 창 존재)
-        let isSameSpacePresentation = (maxCoveringHeight >= targetBounds.height - 5.0)
+        // 2. 물리 화면 높이 100% 덮음 (IINA / 유튜브 / Keynote / MS 파워포인트 등)
+        let isFullDisplayCovered = (maxCoveringHeight >= targetBounds.height - 5.0)
 
-        let isOccluded = isNativeFullScreenSpace || isSameSpacePresentation
+        let isOccluded = hasFullScreenOverlay || isFullDisplayCovered
 
         self.isOccludedByFullScreen = isOccluded
 
