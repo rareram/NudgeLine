@@ -302,6 +302,17 @@ public final class OverlayPanel: NSPanel {
         presentationCheckTimer = timer
     }
 
+    // AppKit 화면 좌표계를 CoreGraphics 전역 좌표계(Quartz, 좌상단 원점, Y축 하향)로 변환
+    private var cgScreenBounds: CGRect {
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? targetScreen.frame.height
+        return CGRect(
+            x: targetScreen.frame.minX,
+            y: primaryHeight - targetScreen.frame.maxY,
+            width: targetScreen.frame.width,
+            height: targetScreen.frame.height
+        )
+    }
+
     // 듀얼 시그널 기반 몰입형 전체화면 및 프레젠테이션 실시간 감지
     private func checkFullScreenAndPresentation() {
         guard settings.hideOnFullScreen else {
@@ -310,11 +321,13 @@ public final class OverlayPanel: NSPanel {
             }
             if self.alphaValue != 1.0 {
                 self.alphaValue = 1.0
+                self.ignoresMouseEvents = false
             }
             return
         }
 
         let currentPid = ProcessInfo.processInfo.processIdentifier
+        let targetBounds = self.cgScreenBounds
 
         guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
             return
@@ -334,21 +347,23 @@ public final class OverlayPanel: NSPanel {
             guard let boundsDict = win[kCGWindowBounds as String] as? [String: Any],
                   let winBounds = CGRect(dictionaryRepresentation: boundsDict as CFDictionary) else { continue }
 
-            // 전체화면 전용 특수 레이어 감지 (크롬 툴바: 26, 전체화면 종료 배너: 999)
+            // 현재 담당 모니터와 교차하는 전체화면 전용 특수 레이어 감지 (크롬 툴바: 26, 종료 배너: 999)
             if (layer == 26 || layer == 999) && owner != "Window Server" {
-                hasFullScreenLayer = true
+                if winBounds.intersects(targetBounds) {
+                    hasFullScreenLayer = true
+                }
             }
 
             if layer == 0 {
-                // 다른 스페이스로 밀려난 창(음수 X 좌표) 감지
-                if winBounds.minX <= -100.0 {
+                // 해당 모니터의 X 범위를 완전히 벗어난 창 감지 (외장 좌/우 배치 음수 좌표 완벽 분리)
+                if winBounds.maxX < targetBounds.minX - 50.0 || winBounds.minX > targetBounds.maxX + 50.0 {
                     hasOffscreenWindows = true
                 }
 
-                // 현재 화면 안(X >= 0)에 떠 있는 화면 크기 창 감지
-                if winBounds.minX >= -10.0 && winBounds.minX < targetScreen.frame.width {
-                    if winBounds.width >= targetScreen.frame.width - 20.0 &&
-                       winBounds.height >= targetScreen.visibleFrame.height - 20.0 {
+                // 현재 담당 모니터 화면 안에 떠 있는 화면 크기 창 감지
+                if winBounds.minX >= targetBounds.minX - 15.0 && winBounds.minX < targetBounds.maxX {
+                    if winBounds.width >= targetBounds.width - 25.0 &&
+                       winBounds.height >= targetScreen.visibleFrame.height - 25.0 {
                         onScreenCoveringApps.insert(owner)
                         if winBounds.height > maxCoveringHeight {
                             maxCoveringHeight = winBounds.height
@@ -363,7 +378,7 @@ public final class OverlayPanel: NSPanel {
         let isNativeFullScreenSpace = (onScreenCoveringApps.count == 1) && (hasOffscreenWindows || hasFullScreenLayer)
 
         // 2. MS 파워포인트 슬라이드쇼 (동일 스페이스 화면 100% 덮음: 뒤에 다른 창이 있어도 화면 전체를 100% 덮은 발표 창 존재)
-        let isSameSpacePresentation = (maxCoveringHeight >= targetScreen.frame.height - 5.0)
+        let isSameSpacePresentation = (maxCoveringHeight >= targetBounds.height - 5.0)
 
         let isOccluded = isNativeFullScreenSpace || isSameSpacePresentation
 
@@ -378,6 +393,7 @@ public final class OverlayPanel: NSPanel {
         } else {
             if self.alphaValue != 1.0 {
                 self.alphaValue = 1.0
+                self.ignoresMouseEvents = false
             }
         }
     }
