@@ -8,6 +8,8 @@ public final class OverlayPanel: NSPanel {
     private let settings: AppSettings
     private var cancellables = Set<AnyCancellable>()
     private var mouseTrackingTimer: Timer?
+    private var presentationCheckTimer: Timer?
+    private var isOccludedByFullScreen: Bool = false
 
     public init(screen: NSScreen, settings: AppSettings) {
         self.targetScreen = screen
@@ -36,6 +38,8 @@ public final class OverlayPanel: NSPanel {
         updateFrame()
         observeNotifications()
         startMouseTracking()
+        startPresentationTracking()
+        scheduleBurstChecks()
     }
 
     deinit {
@@ -46,6 +50,8 @@ public final class OverlayPanel: NSPanel {
     public func cleanup() {
         mouseTrackingTimer?.invalidate()
         mouseTrackingTimer = nil
+        presentationCheckTimer?.invalidate()
+        presentationCheckTimer = nil
         cancellables.removeAll()
     }
 
@@ -101,6 +107,14 @@ public final class OverlayPanel: NSPanel {
 
     // 마우스 좌표 분석을 통한 무간섭 패스스루 및 펫 근접 제어
     private func checkMouseProximityAndHit() {
+        // 전체화면/슬라이드쇼 은폐 중에는 100% 클릭 관통 강제 유지
+        if isOccludedByFullScreen {
+            if !self.ignoresMouseEvents {
+                self.ignoresMouseEvents = true
+            }
+            return
+        }
+
         let mouseLoc = NSEvent.mouseLocation
         if mouseLoc == lastMouseLoc { return }
         lastMouseLoc = mouseLoc
@@ -220,11 +234,23 @@ public final class OverlayPanel: NSPanel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] hide in
                 self?.collectionBehavior = hide ? [.canJoinAllSpaces, .stationary, .ignoresCycle] : [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+                self?.scheduleBurstChecks()
             }
             .store(in: &cancellables)
 
-        // 절전 및 화면 꺼짐 시 30Hz 마우스 감시 타이머 정지 (배터리 보존)
+        // 활성 앱 전환 및 스페이스 전환 시 즉시 버스트 재시도 검사 (애니메이션 완료 동기화)
         let wsCenter = NSWorkspace.shared.notificationCenter
+        Publishers.Merge(
+            wsCenter.publisher(for: NSWorkspace.didActivateApplicationNotification),
+            wsCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in
+            self?.scheduleBurstChecks()
+        }
+        .store(in: &cancellables)
+
+        // 절전 및 화면 꺼짐 시 30Hz 마우스 및 프레젠테이션 감시 타이머 정지 (배터리 보존)
         Publishers.Merge(
             wsCenter.publisher(for: NSWorkspace.willSleepNotification),
             wsCenter.publisher(for: NSWorkspace.screensDidSleepNotification)
@@ -233,10 +259,12 @@ public final class OverlayPanel: NSPanel {
         .sink { [weak self] _ in
             self?.mouseTrackingTimer?.invalidate()
             self?.mouseTrackingTimer = nil
+            self?.presentationCheckTimer?.invalidate()
+            self?.presentationCheckTimer = nil
         }
         .store(in: &cancellables)
 
-        // 깨어남 및 화면 켜짐 시 30Hz 마우스 감시 타이머 재개
+        // 깨어남 및 화면 켜짐 시 감시 타이머 재개
         Publishers.Merge(
             wsCenter.publisher(for: NSWorkspace.didWakeNotification),
             wsCenter.publisher(for: NSWorkspace.screensDidWakeNotification)
@@ -244,8 +272,114 @@ public final class OverlayPanel: NSPanel {
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in
             self?.startMouseTracking()
+            self?.startPresentationTracking()
+            self?.scheduleBurstChecks()
         }
         .store(in: &cancellables)
+    }
+
+    // 스페이스 전환 애니메이션(300~400ms) 레이스 컨디션을 극복하는 버스트 재시도 검사
+    private func scheduleBurstChecks() {
+        self.checkFullScreenAndPresentation()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) { [weak self] in
+            self?.checkFullScreenAndPresentation()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { [weak self] in
+            self?.checkFullScreenAndPresentation()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.50) { [weak self] in
+            self?.checkFullScreenAndPresentation()
+        }
+    }
+
+    // 저주파(1.5초) 프레젠테이션/보더리스 전체화면 창 감시 루프 (App Nap 및 저전력 보존)
+    private func startPresentationTracking() {
+        presentationCheckTimer?.invalidate()
+        let timer = Timer(timeInterval: 1.5, repeats: true) { [weak self] _ in
+            self?.checkFullScreenAndPresentation()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        presentationCheckTimer = timer
+    }
+
+    // 듀얼 시그널 기반 몰입형 전체화면 및 프레젠테이션 실시간 감지
+    private func checkFullScreenAndPresentation() {
+        guard settings.hideOnFullScreen else {
+            if self.isOccludedByFullScreen {
+                self.isOccludedByFullScreen = false
+            }
+            if self.alphaValue != 1.0 {
+                self.alphaValue = 1.0
+            }
+            return
+        }
+
+        let currentPid = ProcessInfo.processInfo.processIdentifier
+
+        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
+            return
+        }
+
+        var onScreenCoveringApps = Set<String>()
+        var hasOffscreenWindows = false
+        var hasFullScreenLayer = false
+        var maxCoveringHeight: CGFloat = 0.0
+
+        for win in windowList {
+            let owner = win[kCGWindowOwnerName as String] as? String ?? ""
+            let pid = win[kCGWindowOwnerPID as String] as? pid_t ?? 0
+            let layer = win[kCGWindowLayer as String] as? Int ?? 0
+            guard pid != currentPid else { continue }
+
+            guard let boundsDict = win[kCGWindowBounds as String] as? [String: Any],
+                  let winBounds = CGRect(dictionaryRepresentation: boundsDict as CFDictionary) else { continue }
+
+            // 전체화면 전용 특수 레이어 감지 (크롬 툴바: 26, 전체화면 종료 배너: 999)
+            if (layer == 26 || layer == 999) && owner != "Window Server" {
+                hasFullScreenLayer = true
+            }
+
+            if layer == 0 {
+                // 다른 스페이스로 밀려난 창(음수 X 좌표) 감지
+                if winBounds.minX <= -100.0 {
+                    hasOffscreenWindows = true
+                }
+
+                // 현재 화면 안(X >= 0)에 떠 있는 화면 크기 창 감지
+                if winBounds.minX >= -10.0 && winBounds.minX < targetScreen.frame.width {
+                    if winBounds.width >= targetScreen.frame.width - 20.0 &&
+                       winBounds.height >= targetScreen.visibleFrame.height - 20.0 {
+                        onScreenCoveringApps.insert(owner)
+                        if winBounds.height > maxCoveringHeight {
+                            maxCoveringHeight = winBounds.height
+                        }
+                    }
+                }
+            }
+        }
+
+        // [실측 기반 전체화면 및 프레젠테이션 확정 조건]
+        // 1. 크롬 / IINA / Keynote (네이티브 전체화면 스페이스: 단 1개 앱만 화면을 독점하고 다른 앱은 스페이스 밖으로 밀려남)
+        let isNativeFullScreenSpace = (onScreenCoveringApps.count == 1) && (hasOffscreenWindows || hasFullScreenLayer)
+
+        // 2. MS 파워포인트 슬라이드쇼 (동일 스페이스 화면 100% 덮음: 뒤에 다른 창이 있어도 화면 전체를 100% 덮은 발표 창 존재)
+        let isSameSpacePresentation = (maxCoveringHeight >= targetScreen.frame.height - 5.0)
+
+        let isOccluded = isNativeFullScreenSpace || isSameSpacePresentation
+
+        self.isOccludedByFullScreen = isOccluded
+
+        if isOccluded {
+            if self.alphaValue != 0.0 {
+                self.alphaValue = 0.0
+                self.ignoresMouseEvents = true
+                PopoverPanel.shared.hide(delayed: false)
+            }
+        } else {
+            if self.alphaValue != 1.0 {
+                self.alphaValue = 1.0
+            }
+        }
     }
 }
 
