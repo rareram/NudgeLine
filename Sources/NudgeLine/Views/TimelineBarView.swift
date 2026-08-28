@@ -687,9 +687,12 @@ private struct InteractivePetView: View {
         // 5. 화면 공간 수평 이동 오프셋
         .offset(
             x: calculateOffsetX(isHovered: isHovered, hideStyle: hideStyle),
-            y: isHorizontal ? -(thickness + 6) : -15.5
+            y: calculateOffsetY(isHovered: isHovered, hideStyle: hideStyle)
         )
-        .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isHovered)
+        .animation(
+            isHorizontal ? .spring(response: 0.36, dampingFraction: 0.82) : .spring(response: 0.28, dampingFraction: 0.72),
+            value: isHovered
+        )
     }
 
     // 단일 힌지 피벗 (PET_SPEC_RULES §1.2, §2.1): 손 접촉 핀 고정 불변
@@ -697,7 +700,7 @@ private struct InteractivePetView: View {
         let centerY: CGFloat = 0.267
 
         if isHorizontal {
-            return UnitPoint(x: 0.50, y: 1.0)
+            return UnitPoint(x: 0.50, y: 0.50)
         } else if settings.barPosition == .right {
             return UnitPoint(x: 1.0, y: centerY)
         } else {
@@ -735,6 +738,9 @@ private struct InteractivePetView: View {
     }
 
     private func calculateScaleY(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
+        if isHorizontal && hideStyle == .tailPeek {
+            return -1.0 // 하단 바 꼬리살랑: 꼬리가 위로 오도록 상하 반전
+        }
         guard isHovered else { return 1.0 }
         switch hideStyle {
         case .pop, .vortex, .squish:
@@ -746,20 +752,41 @@ private struct InteractivePetView: View {
         }
     }
 
-    // PET_SPEC_RULES §3: 노출량은 지정 오프셋(baseX - 8)과 회전 궤적로만 제어
+    // PET_SPEC_RULES §3: 노출량은 지정 오프셋(baseX - 8)과 회전 궤적으로만 제어
     private func calculateOffsetX(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
         let baseX: CGFloat = isHorizontal ? -4 : (settings.barPosition == .left ? max(0, thickness - 2) : 0)
         guard isHovered else { return baseX }
 
-        let isLeft = (settings.barPosition == .left)
+        if isHorizontal {
+            return baseX
+        }
 
+        let isLeft = (settings.barPosition == .left)
         switch hideStyle {
         case .tailPeek:
-            return baseX + (isLeft ? -23.0 : (isHorizontal ? 0 : 23.0))
+            return baseX + (isLeft ? -23.0 : 23.0)
         case .headPeek:
-            return baseX + (isLeft ? 6.0 : (isHorizontal ? 0 : -6.0))
+            return baseX + (isLeft ? 6.0 : -6.0)
         case .pop, .vortex, .squish, .smoke:
             return baseX
+        }
+    }
+
+    // 하단 바(두더지 모션: 평상시 머리/꼬리 15px 빼꼼, 호버 시 바닥 아래로 스르륵 쏙 하강 은폐) vs 세로 바 고정 Y 오프셋
+    private func calculateOffsetY(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
+        if isHorizontal {
+            let baseY: CGFloat = 27.0 // 바닥 베젤 뒤에서 머리 또는 꼬리 15px 빼꼼 노출 (+5px 보정)
+            if !isHovered {
+                return baseY
+            }
+            switch hideStyle {
+            case .headPeek, .tailPeek:
+                return 65.0 // 바닥(베젤) 아래로 스르륵 쏙 완전 하강 은폐
+            case .pop, .vortex, .squish, .smoke:
+                return baseY
+            }
+        } else {
+            return -15.5
         }
     }
 
@@ -767,13 +794,19 @@ private struct InteractivePetView: View {
     private func calculateRotationAngle(isHovered: Bool, hideStyle: PetHideStyle) -> Double {
         guard isHovered else { return 0.0 }
 
-        let isLeft = (settings.barPosition == .left)
+        if isHorizontal {
+            switch hideStyle {
+            case .vortex: return 720.0
+            case .tailPeek, .headPeek, .pop, .squish, .smoke: return 0.0
+            }
+        }
 
+        let isLeft = (settings.barPosition == .left)
         switch hideStyle {
         case .tailPeek:
-            return isLeft ? -85.0 : (isHorizontal ? -85.0 : 85.0)
+            return isLeft ? -85.0 : 85.0
         case .headPeek:
-            return isLeft ? 85.0 : (isHorizontal ? 85.0 : -85.0)
+            return isLeft ? 85.0 : -85.0
         case .vortex:
             return 720.0
         case .pop, .squish, .smoke:
@@ -832,9 +865,12 @@ private struct InteractiveCustomPetView: View {
             // 5. 화면 공간 수평 이동 오프셋
             .offset(
                 x: calculateOffsetX(isHovered: isHovered, hideStyle: hideStyle, pet: pet),
-                y: isHorizontal ? -(thickness + 7) : -6
+                y: calculateOffsetY(isHovered: isHovered, hideStyle: hideStyle)
             )
-            .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isHovered)
+            .animation(
+                isHorizontal ? .spring(response: 0.36, dampingFraction: 0.82) : .spring(response: 0.28, dampingFraction: 0.72),
+                value: isHovered
+            )
         }
     }
 
@@ -843,7 +879,7 @@ private struct InteractiveCustomPetView: View {
         let centerY: CGFloat = 0.267
 
         if isHorizontal {
-            return UnitPoint(x: 0.50, y: 1.0)
+            return UnitPoint(x: 0.50, y: 0.50)
         } else if settings.barPosition == .right {
             return UnitPoint(x: 1.0, y: centerY)
         } else {
@@ -881,6 +917,9 @@ private struct InteractiveCustomPetView: View {
     }
 
     private func calculateScaleY(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
+        if isHorizontal && hideStyle == .tailPeek {
+            return -1.0 // 하단 바 꼬리살랑: 꼬리가 위로 오도록 상하 반전
+        }
         guard isHovered else { return 1.0 }
         switch hideStyle {
         case .pop, .vortex, .squish:
@@ -896,30 +935,59 @@ private struct InteractiveCustomPetView: View {
         let baseX: CGFloat = isHorizontal ? -4 : (settings.barPosition == .left ? max(0, thickness - 2) : 0)
         guard isHovered else { return baseX }
 
+        if isHorizontal {
+            return baseX
+        }
+
         let isLeft = (settings.barPosition == .left)
         let leftOffset = pet?.leftHideOffset ?? -23.0
         let rightOffset = pet?.rightHideOffset ?? 6.0
 
         switch hideStyle {
         case .tailPeek:
-            return baseX + (isLeft ? leftOffset : (isHorizontal ? 0 : -leftOffset))
+            return baseX + (isLeft ? leftOffset : -leftOffset)
         case .headPeek:
-            return baseX + (isLeft ? rightOffset : (isHorizontal ? 0 : -rightOffset))
+            return baseX + (isLeft ? rightOffset : -rightOffset)
         case .pop, .vortex, .squish, .smoke:
             return baseX
+        }
+    }
+
+    // 하단 바(두더지 모션: 평상시 머리/꼬리 빼꼼, 호버 시 바닥 아래로 스르륵 하강 은폐) vs 세로 바 고정 Y 오프셋
+    private func calculateOffsetY(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
+        if isHorizontal {
+            let baseY: CGFloat = 27.0 // 위로 5px 보정
+            if !isHovered {
+                return baseY
+            }
+            switch hideStyle {
+            case .headPeek, .tailPeek:
+                return 65.0 // 바닥(베젤) 아래로 스르륵 쏙 하강 은폐
+            case .pop, .vortex, .squish, .smoke:
+                return baseY
+            }
+        } else {
+            return -6.0
         }
     }
 
     private func calculateRotationAngle(isHovered: Bool, hideStyle: PetHideStyle) -> Double {
         guard isHovered else { return 0.0 }
 
+        if isHorizontal {
+            switch hideStyle {
+            case .vortex: return 720.0
+            case .tailPeek, .headPeek, .pop, .squish, .smoke: return 0.0
+            }
+        }
+
         let isLeft = (settings.barPosition == .left)
 
         switch hideStyle {
         case .tailPeek:
-            return isLeft ? -85.0 : (isHorizontal ? -85.0 : 85.0)
+            return isLeft ? -85.0 : 85.0
         case .headPeek:
-            return isLeft ? 85.0 : (isHorizontal ? 85.0 : -85.0)
+            return isLeft ? 85.0 : -85.0
         case .vortex:
             return 720.0
         case .pop, .squish, .smoke:

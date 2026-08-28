@@ -169,7 +169,6 @@ public final class AppSettings: ObservableObject {
         static let enableIndicatorRim = "settings_enable_indicator_rim"
         static let enableIndicatorGlow = "settings_enable_indicator_glow"
         static let isPetEnabled = "settings_is_pet_enabled"
-        static let lastEnabledPetStateBeforeBottom = "settings_last_enabled_pet_state_before_bottom"
         static let selectedPetType = "settings_selected_pet_type"
         static let selectedCustomPetId = "settings_selected_custom_pet_id"
         static let petHideStyle = "settings_pet_hide_style"
@@ -180,7 +179,6 @@ public final class AppSettings: ObservableObject {
     }
 
     private let defaults = UserDefaults.standard
-    private var lastEnabledPetStateBeforeBottom: Bool
 
     @Published public var language: AppLanguage {
         didSet { defaults.set(language.rawValue, forKey: Keys.language) }
@@ -211,13 +209,7 @@ public final class AppSettings: ObservableObject {
     }
 
     @Published public var isPetEnabled: Bool {
-        didSet {
-            defaults.set(isPetEnabled, forKey: Keys.isPetEnabled)
-            if barPosition != .bottom {
-                lastEnabledPetStateBeforeBottom = isPetEnabled
-                defaults.set(lastEnabledPetStateBeforeBottom, forKey: Keys.lastEnabledPetStateBeforeBottom)
-            }
-        }
+        didSet { defaults.set(isPetEnabled, forKey: Keys.isPetEnabled) }
     }
 
     @Published public var selectedPetType: HangingPetType {
@@ -260,19 +252,6 @@ public final class AppSettings: ObservableObject {
     @Published public var barPosition: BarPosition {
         didSet {
             defaults.set(barPosition.rawValue, forKey: Keys.barPosition)
-            if barPosition == .bottom {
-                if oldValue != .bottom {
-                    lastEnabledPetStateBeforeBottom = isPetEnabled
-                    defaults.set(lastEnabledPetStateBeforeBottom, forKey: Keys.lastEnabledPetStateBeforeBottom)
-                    if isPetEnabled {
-                        isPetEnabled = false
-                    }
-                }
-            } else if oldValue == .bottom {
-                if isPetEnabled != lastEnabledPetStateBeforeBottom {
-                    isPetEnabled = lastEnabledPetStateBeforeBottom
-                }
-            }
         }
     }
 
@@ -390,19 +369,9 @@ public final class AppSettings: ObservableObject {
             defaults.set(PetHideStyle.tailPeek.rawValue, forKey: Keys.petHideStyle)
         }
 
-        let savedLastPetState = defaults.object(forKey: Keys.lastEnabledPetStateBeforeBottom) != nil ? defaults.bool(forKey: Keys.lastEnabledPetStateBeforeBottom) : true
-        self.lastEnabledPetStateBeforeBottom = savedLastPetState
-
         let savedPosition = defaults.string(forKey: Keys.barPosition) ?? BarPosition.left.rawValue
-        let loadedPosition = BarPosition(rawValue: savedPosition) ?? .left
-        self.barPosition = loadedPosition
-
-        let savedIsPetEnabled = defaults.object(forKey: Keys.isPetEnabled) != nil ? defaults.bool(forKey: Keys.isPetEnabled) : true
-        if loadedPosition == .bottom {
-            self.isPetEnabled = false
-        } else {
-            self.isPetEnabled = savedIsPetEnabled
-        }
+        self.barPosition = BarPosition(rawValue: savedPosition) ?? .left
+        self.isPetEnabled = defaults.object(forKey: Keys.isPetEnabled) != nil ? defaults.bool(forKey: Keys.isPetEnabled) : true
 
         self.showOnAllScreens = defaults.bool(forKey: Keys.showOnAllScreens)
         self.hideOnScreenShare = defaults.object(forKey: Keys.hideOnScreenShare) != nil ? defaults.bool(forKey: Keys.hideOnScreenShare) : true

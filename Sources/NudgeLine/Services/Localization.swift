@@ -127,7 +127,6 @@ public struct L10n {
 
         // Pet Hide Motion Styles
         case petHideMotionLabel
-        case petNotSupportedOnBottom
         case hideStyleTailPeek
         case hideStyleHeadPeek
         case hideStylePop
@@ -258,7 +257,6 @@ public struct L10n {
             case .languageLabel: return "언어:"
 
             case .petHideMotionLabel: return "마우스 접근 시 숨기:"
-            case .petNotSupportedOnBottom: return "화면 하단 배치 시에는 펫 표시가 지원되지 않습니다."
             case .hideStyleTailPeek: return "숨기 (꼬리 살랑)"
             case .hideStyleHeadPeek: return "숨기 (머리 빼꼼)"
             case .hideStylePop: return "사라지기 (퐁!)"
@@ -381,7 +379,6 @@ public struct L10n {
             case .languageLabel: return "Language:"
 
             case .petHideMotionLabel: return "Hover Hide Motion:"
-            case .petNotSupportedOnBottom: return "Pet companion is not supported on the bottom edge."
             case .hideStyleTailPeek: return "Hide (Tail Wag)"
             case .hideStyleHeadPeek: return "Hide (Head Peek)"
             case .hideStylePop: return "Disappear (Pop)"

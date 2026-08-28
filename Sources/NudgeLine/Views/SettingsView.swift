@@ -380,13 +380,6 @@ private struct AppearanceTab: View {
                             .frame(minWidth: 135, alignment: .trailing)
                     }
                     .toggleStyle(.switch)
-                    .disabled(settings.barPosition == .bottom)
-
-                    if settings.barPosition == .bottom {
-                        Text(L10n.tr(.petNotSupportedOnBottom, lang: settings.language))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
 
                     LabeledContent {
                         HStack {
@@ -410,7 +403,7 @@ private struct AppearanceTab: View {
                         Text(L10n.tr(.petCharacterLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
-                    .disabled(!settings.isPetEnabled || settings.barPosition == .bottom)
+                    .disabled(!settings.isPetEnabled)
 
                     LabeledContent {
                         HStack {
@@ -428,7 +421,7 @@ private struct AppearanceTab: View {
                         Text(L10n.tr(.petHideMotionLabel, lang: settings.language))
                             .frame(minWidth: 135, alignment: .trailing)
                     }
-                    .disabled(!settings.isPetEnabled || settings.barPosition == .bottom)
+                    .disabled(!settings.isPetEnabled)
 
                     // Custom Pet Management & List
                     VStack(alignment: .leading, spacing: 6) {
