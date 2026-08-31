@@ -48,11 +48,11 @@ extension AppDelegate {
 
         let menu = NSMenu()
 
-        let updateItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshCalendars), keyEquivalent: "r")
-        menu.addItem(updateItem)
-
         let prefsItem = NSMenuItem(title: L10n.tr(.settings, lang: settings.language), action: #selector(openSettings), keyEquivalent: ",")
         menu.addItem(prefsItem)
+
+        let updateItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshCalendars), keyEquivalent: "r")
+        menu.addItem(updateItem)
 
         menu.addItem(NSMenuItem.separator())
 

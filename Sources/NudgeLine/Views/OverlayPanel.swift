@@ -477,15 +477,15 @@ private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Con
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        let refreshItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshCalendars(_:)), keyEquivalent: "r")
-        refreshItem.target = self
-        refreshItem.isEnabled = true
-        menu.addItem(refreshItem)
-
         let settingsItem = NSMenuItem(title: L10n.tr(.settings, lang: settings.language), action: #selector(openSettings(_:)), keyEquivalent: ",")
         settingsItem.target = self
         settingsItem.isEnabled = true
         menu.addItem(settingsItem)
+
+        let refreshItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshCalendars(_:)), keyEquivalent: "r")
+        refreshItem.target = self
+        refreshItem.isEnabled = true
+        menu.addItem(refreshItem)
 
         menu.addItem(NSMenuItem.separator())
 

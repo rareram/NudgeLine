@@ -21,9 +21,9 @@
 </p>
 
 <p align="center">
-  <a href="docs/images/settings_timeline_en.png"><img src="docs/images/settings_timeline_en.png" width="32%" alt="Timeline Settings" /></a>
-  <a href="docs/images/settings_indicator_en.png"><img src="docs/images/settings_indicator_en.png" width="32%" alt="Indicator Settings" /></a>
-  <a href="docs/images/custom_pet_editor_en.png"><img src="docs/images/custom_pet_editor_en.png" width="32%" alt="Custom Pet Editor" /></a>
+  <a href="docs/images/settings_timeline_en.png"><img src="docs/images/settings_timeline_en.png" width="32%" style="vertical-align: top;" alt="Timeline Settings" /></a>
+  <a href="docs/images/settings_indicator_en.png"><img src="docs/images/settings_indicator_en.png" width="32%" style="vertical-align: top;" alt="Indicator Settings" /></a>
+  <a href="docs/images/custom_pet_editor_en.png"><img src="docs/images/custom_pet_editor_en.png" width="32%" style="vertical-align: top;" alt="Custom Pet Editor" /></a>
 </p>
 
 ---
@@ -88,7 +88,16 @@ brew install rareram/tap/nudgeline
 - **Visual Effects**: Custom indicator color, rim highlight, and neon glow toggles.
 - **Focus Lift**: Automatically prioritizes the shortest event when hovering over overlapping meetings.
 
-### 3. Mascot Indicators & Custom Pets
+### 3. Event Alert Effects (Micro-Effects)
+- **4 Themes (1.0s 16-Frame Silky Smooth)**:
+  - `Cherry Blossom`: Pink flower petals bursting outward with gentle 3D tumbling.
+  - `Electric Thunder`: Vivid neon cyan and white lightning arcs discharging into the screen.
+  - `Leaf Swirl`: Vibrant crimson, orange, and golden starfish maple leaves swirling in the autumn breeze.
+  - `Snow Crystal`: 6-fold dendritic snowflakes and radiant cyan ice crystals in a winter blizzard flurry.
+- **On the Hour Notification**: Optional hourly alert triggered precisely at `00m 00s` on every hour.
+- **Smart Triggering**: Discharges seamlessly when an upcoming calendar event starts, with a 3-minute cooldown state machine.
+
+### 4. Mascot Indicators & Custom Pets
 - **Built-in Pets**: Calico Cat, White Jindo Dog, and White Tiger (16-frame loop).
 - **6 Hide Motions**:
   - `tailPeek`: Rotates -85° behind the bezel; tail stays visible.
@@ -99,18 +108,18 @@ brew install rareram/tap/nudgeline
   - `smoke`: Expands with blur and disappears.
 - **Custom Pets**: Import PNG frame sequences, adjust FPS, tune left/right hide offsets with live preview.
 
-### 4. Event Popovers
+### 5. Event Popovers
 - **Action Card**: Full summary with meeting join buttons, unverified link notice badge, Apple Calendar shortcut, and a 0.22s hover bridge.
 - **Simple Tooltip**: Compact pill bubble that disappears 0.04s after cursor leaves.
 
-### 5. Shortcuts & Siri Automation
+### 6. Shortcuts & Siri Automation
 - **AppIntents Integration**: Native support for macOS Shortcuts app and Siri voice triggers:
   - `Refresh Schedule` / `NudgeLine 새로고침`: Instantly refetch today's calendar events.
   - `Toggle Pet` / `NudgeLine 펫 토글`: Toggle pet companion visibility on the timeline bar.
 
-### 6. Settings Window (4 Tabs)
+### 7. Settings Window (4 Tabs)
 - **Timeline**: Position, thickness, hover expand, background style (Auto, Dark, Light, Custom), and track opacity.
-- **Indicators**: Card style/theme/opacity, time indicator shape/color, pet selection (Default White Tiger, Calico Cat, Jindo Dog), hide motion, and custom pet list.
+- **Indicators**: Card style/theme/opacity, time indicator shape/color, event alert effects (4 themes, preview button, on the hour checkbox), pet selection (Default White Tiger, Calico Cat, Jindo Dog), hide motion, and custom pet list.
 - **Schedule**: 24-hour mode, work hours (start/end), visible calendars with color pickers, and 1-click System Settings privacy deep link.
 - **General**: Language (System, Korean, English), launch at login (`SMAppService`), multi-display toggle, hide on screen share, hide in full screen, and app info.
 
@@ -173,6 +182,12 @@ NudgeLine/
 │           ├── SimpleInfoPopoverView.swift # Simple tooltip bubble
 │           ├── CustomPetEditorSheet.swift# Custom pet drag-and-drop modal
 │           ├── SettingsView.swift        # 4-tab preferences window
+│           ├── Effects/                  # 16-frame 1.0s micro event alert effects
+│           │   ├── EventTriggerEffectView.swift
+│           │   ├── CherryBlossomEffectAsset.swift
+│           │   ├── ThunderEffectAsset.swift
+│           │   ├── AutumnLeavesEffectAsset.swift
+│           │   └── WinterSnowEffectAsset.swift
 │           └── Pets/                     # Built-in 16-frame Base64 pet assets
 │               ├── PetProtocol.swift
 │               ├── CatPetAsset.swift

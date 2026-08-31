@@ -21,9 +21,9 @@
 </p>
 
 <p align="center">
-  <a href="docs/images/settings_timeline_kr.png"><img src="docs/images/settings_timeline_kr.png" width="32%" alt="타임라인 설정" /></a>
-  <a href="docs/images/settings_indicator_kr.png"><img src="docs/images/settings_indicator_kr.png" width="32%" alt="인디케이터 설정" /></a>
-  <a href="docs/images/custom_pet_editor_kr.png"><img src="docs/images/custom_pet_editor_kr.png" width="32%" alt="사용자 설정 펫 편집기" /></a>
+  <a href="docs/images/settings_timeline_kr.png"><img src="docs/images/settings_timeline_kr.png" width="32%" style="vertical-align: top;" alt="타임라인 설정" /></a>
+  <a href="docs/images/settings_indicator_kr.png"><img src="docs/images/settings_indicator_kr.png" width="32%" style="vertical-align: top;" alt="인디케이터 설정" /></a>
+  <a href="docs/images/custom_pet_editor_kr.png"><img src="docs/images/custom_pet_editor_kr.png" width="32%" style="vertical-align: top;" alt="사용자 설정 펫 편집기" /></a>
 </p>
 
 ---
@@ -88,7 +88,16 @@ brew install rareram/tap/nudgeline
 - **시각 효과**: 표시자 색상 변경, 테두리 강조, 네온 효과 토글
 - **단기 일정 우선 포커스**: 여러 일정이 겹친 구간 호버 시 소요 시간이 가장 짧은 일정 우선 강조
 
-### 3. 마스코트 펫과 숨김 모션
+### 3. 일정 알림 효과 (마이크로 이펙트)
+- **1.0초 16프레임 실키 스무스 4종 테마**:
+  - `체리블라섬`: 핑크빛 벚꽃 잎들이 폭죽처럼 팡 터지며 3D 펄럭임으로 흩날림
+  - `일렉트릭 썬더`: 네온 시안과 화이트 벼락 줄기가 화면 안쪽으로 시원하게 방전
+  - `낙엽 회오리`: 큼직한 5~7갈래 불가사리형 단풍잎(진홍/주황/황금)이 가을바람에 알록달록 흩날림
+  - `눈꽃 크리스탈`: 6각 대칭 정밀 눈결정과 영롱한 네온 시안 블리자드 회오리 비산
+- **정각 알림 (On the Hour)**: 매시간 00분 00초 정각 시 은은한 시각 효과 알림 지원
+- **스마트 트리거링**: 등록된 캘린더 일정 시작 접점 도달 시 3분 쿨다운 상태 머신으로 안전 발동
+
+### 4. 마스코트 펫과 숨김 모션
 - **기본 펫 3종**: 삼색고양이, 진도백구, 백호 (16프레임 애니메이션)
 - **6가지 숨김 동작**:
   - `tailPeek` (숨기 - 꼬리 살랑): 머리부터 베젤 뒤로 숨고 꼬리만 살랑거림
@@ -99,18 +108,18 @@ brew install rareram/tap/nudgeline
   - `smoke` (사라지기 - 스르륵): 흐려지고 퍼지며 연기처럼 사라짐
 - **커스텀 펫 편집기**: PNG 프레임 시퀀스 등록, 속도(FPS) 조절, 좌/우 숨김 오프셋 튜닝 및 실시간 미리보기 지원
 
-### 4. 팝오버 카드
+### 5. 팝오버 카드
 - **상세 액션 카드**: 일정 상세 내용, 화상회의 원클릭 입장 버튼, 미검증 링크 주의 안내 배지, Apple 캘린더 바로가기 (0.22초 호버 브릿지)
 - **심플 툴팁**: 제목과 시간만 간결하게 보여주는 말풍선 (마우스 벗어나면 0.04초 만에 즉시 닫힘)
 
-### 5. 단축어(Shortcuts) 및 Siri 자동화 연동
+### 6. 단축어(Shortcuts) 및 Siri 자동화 연동
 - **AppIntents 지원**: macOS 단축어 앱 및 Siri 음성 명령 연동
   - `NudgeLine 새로고침` / `Refresh Schedule`: 오늘 일정 즉시 재동기화
   - `NudgeLine 펫 토글` / `Toggle Pet`: 타임라인 펫 마스코트 표시/숨김 전환
 
-### 6. 환경설정 (4개 탭)
+### 7. 환경설정 (4개 탭)
 - **타임라인**: 바 위치, 두께, 호버 확장, 배경 스타일(자동/다크/라이트/커스텀) 및 투명도
-- **인디케이터**: 일정 카드 스타일/테마, 시간 표시자 모양/색상, 펫 선택(기본 백호/삼색이/진도백구), 숨김 동작, 커스텀 펫 관리
+- **인디케이터**: 일정 카드 스타일/테마, 시간 표시자 모양/색상, 일정 알림 효과(4종 테마, 미리보기, 정각 알림 체크박스), 펫 선택(기본 백호/삼색이/진도백구), 숨김 동작, 커스텀 펫 관리
 - **시간 및 캘린더**: 24시간 모드, 업무 시작/종료 시각, 표시할 캘린더 선택 및 캘린더별 색상 지정, 시스템 설정 1클릭 딥링크
 - **일반**: 언어 선택 (시스템 기본/한국어/영어), 로그인 시 자동 실행, 다중 모니터 표시, 화면 공유 시 숨김, 전체 화면 시 숨김, 앱 정보
 

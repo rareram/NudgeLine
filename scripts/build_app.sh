@@ -4,6 +4,20 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Xcode 및 개발자 도구 환경변수 자동 감지 및 보정
+if [[ -z "${DEVELOPER_DIR:-}" || ! -d "${DEVELOPER_DIR}" || "${DEVELOPER_DIR}" == "/Library/Developer/CommandLineTools" ]]; then
+    if [[ -d "/Applications/Xcode.app/Contents/Developer" ]]; then
+        export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
+    elif [[ -d "/Library/Developer/CommandLineTools" ]]; then
+        export DEVELOPER_DIR="/Library/Developer/CommandLineTools"
+    elif command -v xcode-select >/dev/null 2>&1; then
+        DETECTED_DIR="$(xcode-select -p 2>/dev/null || true)"
+        if [[ -n "${DETECTED_DIR}" && -d "${DETECTED_DIR}" ]]; then
+            export DEVELOPER_DIR="${DETECTED_DIR}"
+        fi
+    fi
+fi
+
 echo "=== NudgeLine 빌드 시작 ==="
 
 cd "${ROOT_DIR}"

@@ -107,7 +107,7 @@ public struct L10n {
         case styleActionCard
         case styleSummaryBubble
 
-        // 인디케이터 스타일
+        // 펫 캐릭터 및 표시자
         case indicatorStyleLabel
         case styleTriangleTick
         case styleRoundDome
@@ -116,8 +116,6 @@ public struct L10n {
         case indicatorColorLabel
         case indicatorRimLabel
         case indicatorGlowLabel
-
-        // 대롱대롱 펫
         case petCompanionSection
         case showPetCompanionLabel
         case petCharacterLabel
@@ -126,6 +124,17 @@ public struct L10n {
         case styleHangingWhiteTiger
         case styleCustomPet
         case languageLabel
+
+        // 일정 알림 효과
+        case eventTriggerEffectSection
+        case showEventTriggerEffectLabel
+        case hourlyAlertLabel
+        case eventTriggerEffectStyleLabel
+        case effectThunder
+        case effectCherry
+        case effectAutumn
+        case effectWinter
+        case effectNone
 
         // 펫 숨김 모션
         case petHideMotionLabel
@@ -262,6 +271,16 @@ extension L10n.Key {
         case .styleCustomPet: return "사용자 설정 펫"
         case .languageLabel: return "언어:"
 
+        case .eventTriggerEffectSection: return "일정 알림 효과"
+        case .showEventTriggerEffectLabel: return "알림 효과 표시:"
+        case .hourlyAlertLabel: return "정각 알림"
+        case .eventTriggerEffectStyleLabel: return "효과 종류:"
+        case .effectThunder: return "일렉트릭 썬더"
+        case .effectCherry: return "체리블라섬"
+        case .effectAutumn: return "낙엽 회오리"
+        case .effectWinter: return "눈꽃 크리스탈"
+        case .effectNone: return "효과 끄기"
+
         case .petHideMotionLabel: return "마우스 접근 시 숨기:"
         case .hideStyleTailPeek: return "숨기 (꼬리 살랑)"
         case .hideStyleHeadPeek: return "숨기 (머리 빼꼼)"
@@ -386,6 +405,16 @@ extension L10n.Key {
         case .styleHangingWhiteTiger: return "White Tiger"
         case .styleCustomPet: return "Custom Pet"
         case .languageLabel: return "Language:"
+
+        case .eventTriggerEffectSection: return "Event Alert Effects"
+        case .showEventTriggerEffectLabel: return "Show Alert Effect:"
+        case .hourlyAlertLabel: return "On the Hour"
+        case .eventTriggerEffectStyleLabel: return "Effect Type:"
+        case .effectThunder: return "Electric Thunder"
+        case .effectCherry: return "Cherry Blossom"
+        case .effectAutumn: return "Leaf Swirl"
+        case .effectWinter: return "Snow Crystal"
+        case .effectNone: return "None"
 
         case .petHideMotionLabel: return "Hover Hide Motion:"
         case .hideStyleTailPeek: return "Hide (Tail Wag)"

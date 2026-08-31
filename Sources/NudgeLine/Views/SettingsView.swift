@@ -373,7 +373,56 @@ private struct AppearanceTab: View {
 
                 Divider().opacity(0.4).padding(.vertical, 4)
 
-                // 3. Hanging Pet Companion (대롱대롱 펫)
+                // 3. Event Alert Effects (일정 알림 효과)
+                Section(header: Text(L10n.tr(.eventTriggerEffectSection, lang: settings.language)).fontWeight(.semibold)) {
+                    Toggle(isOn: $settings.enableEventTriggerEffect) {
+                        Text(L10n.tr(.showEventTriggerEffectLabel, lang: settings.language))
+                            .frame(minWidth: 135, alignment: .trailing)
+                    }
+                    .toggleStyle(.switch)
+
+                    LabeledContent {
+                        HStack(spacing: 8) {
+                            Picker("", selection: $settings.eventTriggerEffectType) {
+                                ForEach(EventTriggerEffectType.allCases, id: \.self) { effect in
+                                    Text(effect.title(lang: settings.language)).tag(effect)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .fixedSize()
+
+                            Button(L10n.tr(.previewLabel, lang: settings.language)) {
+                                NotificationCenter.default.post(name: .previewEventContactEffect, object: nil)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(!settings.enableEventTriggerEffect)
+
+                            Spacer()
+                        }
+                    } label: {
+                        Text(L10n.tr(.eventTriggerEffectStyleLabel, lang: settings.language))
+                            .frame(minWidth: 135, alignment: .trailing)
+                    }
+                    .disabled(!settings.enableEventTriggerEffect)
+
+                    LabeledContent {
+                        HStack {
+                            Toggle(L10n.tr(.hourlyAlertLabel, lang: settings.language), isOn: $settings.enableHourlyAlertEffect)
+                                .toggleStyle(.checkbox)
+                            Spacer()
+                        }
+                    } label: {
+                        Text("")
+                            .frame(minWidth: 135, alignment: .trailing)
+                    }
+                    .disabled(!settings.enableEventTriggerEffect)
+                }
+
+                Divider().opacity(0.4).padding(.vertical, 4)
+
+                // 4. Hanging Pet Companion (대롱대롱 펫)
                 Section(header: Text(L10n.tr(.petCompanionSection, lang: settings.language)).fontWeight(.semibold)) {
                     Toggle(isOn: $settings.isPetEnabled) {
                         Text(L10n.tr(.showPetCompanionLabel, lang: settings.language))

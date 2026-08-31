@@ -1,6 +1,7 @@
 // 앱 전역 설정 모델 및 UserDefaults 영속화 관리
 import Foundation
 import SwiftUI
+import AppKit
 import Combine
 
 // MARK: - 1. 환경설정 열거형 모델 (Enums)
@@ -111,6 +112,33 @@ public enum PetHideStyle: String, Codable, CaseIterable, Identifiable, Sendable 
     }
 }
 
+public enum EventTriggerEffectType: String, Codable, CaseIterable, Identifiable, Sendable {
+    case cherry  = "cherry"          // 체리블라섬
+    case thunder = "thunder"         // 일렉트릭 썬더
+    case autumn  = "autumn"          // 낙엽 회오리
+    case winter  = "winter"          // 눈꽃 크리스탈
+
+    public var id: String { rawValue }
+
+    public func title(lang: AppLanguage = .system) -> String {
+        switch self {
+        case .cherry:  return L10n.tr(.effectCherry, lang: lang)
+        case .thunder: return L10n.tr(.effectThunder, lang: lang)
+        case .autumn:  return L10n.tr(.effectAutumn, lang: lang)
+        case .winter:  return L10n.tr(.effectWinter, lang: lang)
+        }
+    }
+
+    public func image(frameIndex: Int) -> NSImage? {
+        switch self {
+        case .cherry:  return CherryBlossomEffectAsset.image(frameIndex: frameIndex)
+        case .thunder: return ThunderEffectAsset.image(frameIndex: frameIndex)
+        case .autumn:  return AutumnLeavesEffectAsset.image(frameIndex: frameIndex)
+        case .winter:  return WinterSnowEffectAsset.image(frameIndex: frameIndex)
+        }
+    }
+}
+
 public enum BarStyleMode: String, Codable, CaseIterable, Identifiable, Sendable {
     case adaptive = "adaptive"       // 시스템 테마 (자동)
     case dark = "dark"               // 다크
@@ -178,6 +206,9 @@ public final class AppSettings: ObservableObject {
         static let currentTimeIndicatorStyle = "settings_current_time_indicator_style"
         static let enableIndicatorRim = "settings_enable_indicator_rim"
         static let enableIndicatorGlow = "settings_enable_indicator_glow"
+        static let enableEventTriggerEffect = "settings_enable_event_trigger_effect"
+        static let enableHourlyAlertEffect = "settings_enable_hourly_alert_effect"
+        static let eventTriggerEffectType = "settings_event_trigger_effect_type"
         static let isPetEnabled = "settings_is_pet_enabled"
         static let selectedPetType = "settings_selected_pet_type"
         static let selectedCustomPetId = "settings_selected_custom_pet_id"
@@ -217,6 +248,18 @@ public final class AppSettings: ObservableObject {
 
     @Published public var enableIndicatorGlow: Bool {
         didSet { defaults.set(enableIndicatorGlow, forKey: Keys.enableIndicatorGlow) }
+    }
+
+    @Published public var enableEventTriggerEffect: Bool {
+        didSet { defaults.set(enableEventTriggerEffect, forKey: Keys.enableEventTriggerEffect) }
+    }
+
+    @Published public var enableHourlyAlertEffect: Bool {
+        didSet { defaults.set(enableHourlyAlertEffect, forKey: Keys.enableHourlyAlertEffect) }
+    }
+
+    @Published public var eventTriggerEffectType: EventTriggerEffectType {
+        didSet { defaults.set(eventTriggerEffectType.rawValue, forKey: Keys.eventTriggerEffectType) }
     }
 
     @Published public var isPetEnabled: Bool {
@@ -352,6 +395,11 @@ public final class AppSettings: ObservableObject {
 
         self.enableIndicatorRim = defaults.object(forKey: Keys.enableIndicatorRim) != nil ? defaults.bool(forKey: Keys.enableIndicatorRim) : false
         self.enableIndicatorGlow = defaults.object(forKey: Keys.enableIndicatorGlow) != nil ? defaults.bool(forKey: Keys.enableIndicatorGlow) : false
+
+        self.enableEventTriggerEffect = defaults.object(forKey: Keys.enableEventTriggerEffect) != nil ? defaults.bool(forKey: Keys.enableEventTriggerEffect) : false
+        self.enableHourlyAlertEffect = defaults.bool(forKey: Keys.enableHourlyAlertEffect)
+        let savedEffectType = defaults.string(forKey: Keys.eventTriggerEffectType) ?? EventTriggerEffectType.cherry.rawValue
+        self.eventTriggerEffectType = EventTriggerEffectType(rawValue: savedEffectType) ?? .cherry
 
         let savedPetType = defaults.string(forKey: Keys.selectedPetType) ?? HangingPetType.whiteTiger.rawValue
         let loadedPetType: HangingPetType

@@ -13,6 +13,11 @@ public struct TimelineBarView: View {
     @State private var hoveredFocusId: String? = nil
     @State private var hoveredActiveId: String? = nil
     @State private var isBarHovered = false
+    @State private var activeEffectType: EventTriggerEffectType? = nil
+    @State private var activeEffectId: UUID = UUID()
+    @State private var lastTriggeredEventKey: String? = nil
+    @State private var lastTriggeredHourlyHour: Int = -1
+    @State private var lastTriggeredDate: Date? = nil
 
     private static let clockPublisher = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -74,7 +79,12 @@ public struct TimelineBarView: View {
                         isHorizontal: isHorizontal,
                         isBarHovered: isBarHovered,
                         isPetProximityHovered: panelState.isPetProximityHovered,
-                        accentColor: settings.effectiveCurrentTimeColor()
+                        accentColor: settings.effectiveCurrentTimeColor(),
+                        activeEffectType: activeEffectType,
+                        activeEffectId: activeEffectId,
+                        onEffectComplete: {
+                            activeEffectType = nil
+                        }
                     )
                     .offset(
                         x: isHorizontal ? pos : 0,
@@ -174,11 +184,14 @@ public struct TimelineBarView: View {
                 Button(L10n.tr(.settings, lang: settings.language)) {
                     openSettingsWindow()
                 }
+
                 Button(L10n.tr(.refresh, lang: settings.language)) {
                     calendarService.loadCalendars()
                     calendarService.fetchEvents(settings: settings)
                 }
+
                 Divider()
+
                 Button(L10n.tr(.quit, lang: settings.language)) {
                     NSApplication.shared.terminate(nil)
                 }
@@ -201,6 +214,57 @@ public struct TimelineBarView: View {
             if !wasSameDay {
                 calendarService.fetchEvents(settings: settings)
                 updateSegments()
+            }
+            checkEventContactEffect(at: input)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .previewEventContactEffect)) { _ in
+            activeEffectType = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                activeEffectId = UUID()
+                activeEffectType = settings.eventTriggerEffectType
+            }
+        }
+    }
+
+    // 00초 정각 일정 시작 접점 및 매시간 정각 알림 감지 (1.0초 마이크로 이펙트 트리거)
+    private func checkEventContactEffect(at time: Date) {
+        guard settings.enableEventTriggerEffect, activeEffectType == nil else { return }
+
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: time)
+        let minute = calendar.component(.minute, from: time)
+        let second = calendar.component(.second, from: time)
+
+        // 1. 캘린더 일정 시작 접점 알림 (최우선 순위)
+        for event in calendarService.events where !event.isAllDay {
+            let diff = abs(time.timeIntervalSince(event.startDate))
+            if diff <= 1.5 {
+                let eventKey = "\(event.id)_\(Int(event.startDate.timeIntervalSince1970))"
+                if lastTriggeredEventKey != eventKey {
+                    let isCoolingDown = lastTriggeredDate.map { time.timeIntervalSince($0) < 180 } ?? false
+                    guard !isCoolingDown else { continue }
+
+                    lastTriggeredEventKey = eventKey
+                    lastTriggeredDate = time
+                    lastTriggeredHourlyHour = currentHour // 정각 중복 발동 억제
+                    activeEffectId = UUID()
+                    activeEffectType = settings.eventTriggerEffectType
+                    return
+                }
+            }
+        }
+
+        // 2. 매시간 정각 알림 (00분 00초)
+        if settings.enableHourlyAlertEffect && minute == 0 && (second <= 1 || second >= 59) {
+            if lastTriggeredHourlyHour != currentHour {
+                let isCoolingDown = lastTriggeredDate.map { time.timeIntervalSince($0) < 180 } ?? false
+                if !isCoolingDown {
+                    lastTriggeredHourlyHour = currentHour
+                    lastTriggeredDate = time
+                    activeEffectId = UUID()
+                    activeEffectType = settings.eventTriggerEffectType
+                    return
+                }
             }
         }
     }
@@ -414,7 +478,7 @@ private struct CrossFadeOverlapView: View {
     }
 }
 
-// MARK: - 현재 시각 표시자 뷰 (4종 기하 형태 및 펫 마스코트)
+// MARK: - 현재 시각 표시자 뷰 (4종 기하 형태, 펫 마스코트 및 이벤트 접점 마이크로 이펙트)
 private struct CurrentTimeIndicatorView: View {
     @ObservedObject var settings: AppSettings
     let thickness: CGFloat
@@ -422,18 +486,56 @@ private struct CurrentTimeIndicatorView: View {
     let isBarHovered: Bool
     let isPetProximityHovered: Bool
     let accentColor: Color
+    let activeEffectType: EventTriggerEffectType?
+    let activeEffectId: UUID
+    let onEffectComplete: @MainActor () -> Void
 
     var body: some View {
         ZStack(alignment: alignmentForPosition) {
-            // 1. 기하 인디케이터 형태
+            // 1. 일정 알림 마이크로 이펙트 (1.0초 점멸, 펫/인디케이터 뒤쪽 레이어)
+            if let effect = activeEffectType {
+                EventTriggerEffectView(
+                    effectType: effect,
+                    isHorizontal: isHorizontal,
+                    barPosition: settings.barPosition,
+                    onComplete: onEffectComplete
+                )
+                .id(activeEffectId)
+                .offset(
+                    x: effectOffsetX,
+                    y: effectOffsetY
+                )
+            }
+
+            // 2. 기하 인디케이터 형태
             indicatorShapeView()
 
-            // 2. 대롱대롱 펫 마스코트
+            // 3. 대롱대롱 펫 마스코트
             if settings.isPetEnabled {
                 petCompanionView()
             }
         }
         .allowsHitTesting(false)
+    }
+
+    private var effectOffsetX: CGFloat {
+        switch settings.barPosition {
+        case .left:
+            return 0
+        case .right:
+            return -80.0
+        case .bottom:
+            return -40.0
+        }
+    }
+
+    private var effectOffsetY: CGFloat {
+        switch settings.barPosition {
+        case .left, .right:
+            return -40.0
+        case .bottom:
+            return -80.0
+        }
     }
 
     private var alignmentForPosition: Alignment {
