@@ -3,6 +3,7 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
+// MARK: - 1. 커스텀 펫 편집기 모달 본체 (CustomPetEditorSheet)
 public struct CustomPetEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var petService = CustomPetService.shared
@@ -22,7 +23,7 @@ public struct CustomPetEditorSheet: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // 헤더
             HStack {
                 Text(L10n.tr(.customPetEditorTitle, lang: settings.language))
                     .font(.headline)
@@ -35,291 +36,25 @@ public struct CustomPetEditorSheet: View {
 
             Divider()
 
-            // Main Editor Form
+            // 메인 폼
             VStack(alignment: .leading, spacing: 12) {
-                // 1. Pet Name
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(L10n.tr(.petNameLabel, lang: settings.language))
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-
-                    TextField(L10n.tr(.petNamePlaceholder, lang: settings.language), text: $petName)
-                        .textFieldStyle(.roundedBorder)
-                }
+                // 1. 펫 이름 입력
+                petNameSection
 
                 Divider()
 
-                // 2. Frames Management
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text(L10n.tr(.framesLabel, lang: settings.language))
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text("\(frames.count) Frames")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack(alignment: .top, spacing: 14) {
-                        // Left Guidelines
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L10n.tr(.framesGuide, lang: settings.language))
-                                .font(.system(size: 10.5))
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(width: 140, alignment: .leading)
-
-                        // Right Drop Area & Frame Grid
-                        VStack(spacing: 0) {
-                            ZStack {
-                                if frames.isEmpty {
-                                    VStack(spacing: 6) {
-                                        Image(systemName: "plus.viewfinder")
-                                            .font(.system(size: 24))
-                                            .foregroundStyle(.secondary)
-                                        Text(L10n.tr(.dragDropGuide, lang: settings.language))
-                                            .font(.system(size: 10.5))
-                                            .foregroundStyle(.secondary)
-                                            .multilineTextAlignment(.center)
-                                    }
-                                    .padding(8)
-                                } else {
-                                    ScrollView(.horizontal, showsIndicators: true) {
-                                        LazyHStack(spacing: 8) {
-                                            ForEach(Array(frames.enumerated()), id: \.offset) { index, frame in
-                                                ZStack(alignment: .topTrailing) {
-                                                    Image(nsImage: frame)
-                                                        .resizable()
-                                                        .interpolation(.high)
-                                                        .scaledToFit()
-                                                        .frame(width: 44, height: 60)
-                                                        .padding(4)
-                                                        .background(
-                                                            RoundedRectangle(cornerRadius: 6)
-                                                                .fill(selectedFrameIndex == index ? Color.accentColor.opacity(0.2) : Color.clear)
-                                                        )
-                                                        .overlay(
-                                                            RoundedRectangle(cornerRadius: 6)
-                                                                .stroke(selectedFrameIndex == index ? Color.accentColor : Color.secondary.opacity(0.3), lineWidth: 1)
-                                                        )
-                                                        .onTapGesture {
-                                                            selectedFrameIndex = index
-                                                        }
-
-                                                    Text("\(index + 1)")
-                                                        .font(.system(size: 9, weight: .bold))
-                                                        .foregroundStyle(.secondary)
-                                                        .padding(2)
-                                                }
-                                            }
-                                        }
-                                        .padding(8)
-                                    }
-                                }
-                            }
-                            .frame(height: 100)
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(isDropTargeted ? Color.accentColor.opacity(0.1) : Color(NSColor.textBackgroundColor).opacity(0.5))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(isDropTargeted ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: 1)
-                            )
-                            .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
-                                handleDrop(providers: providers)
-                            }
-
-                            // Bottom Frame Toolbar
-                            HStack(spacing: 0) {
-                                Button(action: openFileDialog) {
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .frame(width: 28, height: 22)
-                                }
-                                .buttonStyle(.plain)
-
-                                Divider()
-                                    .frame(height: 14)
-
-                                Button(action: deleteSelectedOrLastFrame) {
-                                    Image(systemName: "minus")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .frame(width: 28, height: 22)
-                                }
-                                .buttonStyle(.plain)
-                                .disabled(frames.isEmpty)
-
-                                Spacer()
-                            }
-                            .background(Color(NSColor.controlBackgroundColor).opacity(0.7))
-                            .overlay(Rectangle().stroke(Color.secondary.opacity(0.2), lineWidth: 0.5))
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
+                // 2. 프레임 이미지 관리 (드래그앤드롭 + 툴바)
+                framesManagementSection
 
                 Divider()
 
-                // 3. Real-time Preview & Speed Slider (macOS Standard Layout)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(L10n.tr(.previewLabel, lang: settings.language))
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-
-                    HStack(spacing: 14) {
-                        // Live Animated Preview Box (100% Retina Size: 40x58pt)
-                        LivePetPreviewBox(frames: frames, fps: fps)
-                            .frame(width: 80, height: 72)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color(NSColor.controlBackgroundColor))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
-                            )
-
-                        // Speed Slider
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("\(L10n.tr(.speedLabel, lang: settings.language)): \(String(format: "%.1f", fps)) FPS")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-
-                            Slider(value: $fps, in: 2...20, step: 0.5)
-
-                            HStack {
-                                Text(L10n.tr(.speedSlow, lang: settings.language))
-                                    .font(.system(size: 9.5))
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text(L10n.tr(.speedFast, lang: settings.language))
-                                    .font(.system(size: 9.5))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.horizontal, 2)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
+                // 3. 실시간 애니메이션 미리보기 및 재생 속도 조절
+                previewAndSpeedSection
 
                 Divider()
 
-                // 4. Hide Motion Offsets Tuning (Live Peeking Preview)
-                HStack(spacing: 16) {
-                    // Left Hide Offset (Tail Peek)
-                    HStack(spacing: 10) {
-                        LivePetHidePreviewBox(frames: frames, rotation: -85.0, offset: leftHideOffset)
-                            .frame(width: 80, height: 72)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color(NSColor.controlBackgroundColor))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
-                            )
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L10n.tr(.leftHideOffsetLabel, lang: settings.language))
-                                .font(.system(size: 10.5, weight: .medium))
-                                .foregroundStyle(.secondary)
-
-                            HStack(spacing: 0) {
-                                Button {
-                                    leftHideOffset = max(-50.0, leftHideOffset - 1.0)
-                                } label: {
-                                    Image(systemName: "arrowtriangle.backward.fill")
-                                        .font(.system(size: 8))
-                                        .frame(width: 22, height: 20)
-                                }
-                                .buttonStyle(.plain)
-
-                                Divider().frame(height: 12)
-
-                                Text("\(Int(leftHideOffset))px")
-                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                    .frame(width: 44, height: 20)
-
-                                Divider().frame(height: 12)
-
-                                Button {
-                                    leftHideOffset = min(20.0, leftHideOffset + 1.0)
-                                } label: {
-                                    Image(systemName: "arrowtriangle.forward.fill")
-                                        .font(.system(size: 8))
-                                        .frame(width: 22, height: 20)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    // Right Hide Offset (Head Peek)
-                    HStack(spacing: 10) {
-                        LivePetHidePreviewBox(frames: frames, rotation: 85.0, offset: rightHideOffset)
-                            .frame(width: 80, height: 72)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color(NSColor.controlBackgroundColor))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
-                            )
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L10n.tr(.rightHideOffsetLabel, lang: settings.language))
-                                .font(.system(size: 10.5, weight: .medium))
-                                .foregroundStyle(.secondary)
-
-                            HStack(spacing: 0) {
-                                Button {
-                                    rightHideOffset = max(-20.0, rightHideOffset - 1.0)
-                                } label: {
-                                    Image(systemName: "arrowtriangle.backward.fill")
-                                        .font(.system(size: 8))
-                                        .frame(width: 22, height: 20)
-                                }
-                                .buttonStyle(.plain)
-
-                                Divider().frame(height: 12)
-
-                                Text("\(Int(rightHideOffset))px")
-                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                    .frame(width: 44, height: 20)
-
-                                Divider().frame(height: 12)
-
-                                Button {
-                                    rightHideOffset = min(50.0, rightHideOffset + 1.0)
-                                } label: {
-                                    Image(systemName: "arrowtriangle.forward.fill")
-                                        .font(.system(size: 8))
-                                        .frame(width: 22, height: 20)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                // 4. 숨김 오프셋 미세조절 (좌/우 실시간 힌지 프리뷰)
+                hideOffsetsSection
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -328,30 +63,317 @@ public struct CustomPetEditorSheet: View {
 
             Divider()
 
-            // Footer Actions
-            HStack(spacing: 12) {
-                Spacer()
-
-                Button(L10n.tr(.cancelButton, lang: settings.language)) {
-                    dismiss()
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Button(L10n.tr(.addButton, lang: settings.language)) {
-                    saveCustomPet()
-                }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .disabled(petName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || frames.isEmpty)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 20)
-            .background(Color(NSColor.windowBackgroundColor))
+            // 하단 액션 버튼 (취소 / 추가)
+            footerActions
         }
         .frame(width: 450, height: 537)
     }
+}
 
+// MARK: - 2. 폼 서브뷰 컴포넌트
+extension CustomPetEditorSheet {
+    private var petNameSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L10n.tr(.petNameLabel, lang: settings.language))
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            TextField(L10n.tr(.petNamePlaceholder, lang: settings.language), text: $petName)
+                .textFieldStyle(.roundedBorder)
+        }
+    }
+
+    private var framesManagementSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(L10n.tr(.framesLabel, lang: settings.language))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(frames.count) Frames")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.tr(.framesGuide, lang: settings.language))
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(width: 140, alignment: .leading)
+
+                VStack(spacing: 0) {
+                    ZStack {
+                        if frames.isEmpty {
+                            VStack(spacing: 6) {
+                                Image(systemName: "plus.viewfinder")
+                                    .font(.system(size: 24))
+                                    .foregroundStyle(.secondary)
+                                Text(L10n.tr(.dragDropGuide, lang: settings.language))
+                                    .font(.system(size: 10.5))
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding(8)
+                        } else {
+                            ScrollView(.horizontal, showsIndicators: true) {
+                                LazyHStack(spacing: 8) {
+                                    ForEach(Array(frames.enumerated()), id: \.offset) { index, frame in
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(nsImage: frame)
+                                                .resizable()
+                                                .interpolation(.high)
+                                                .scaledToFit()
+                                                .frame(width: 44, height: 60)
+                                                .padding(4)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 6)
+                                                        .fill(selectedFrameIndex == index ? Color.accentColor.opacity(0.2) : Color.clear)
+                                                )
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 6)
+                                                        .stroke(selectedFrameIndex == index ? Color.accentColor : Color.secondary.opacity(0.3), lineWidth: 1)
+                                                )
+                                                .onTapGesture {
+                                                    selectedFrameIndex = index
+                                                }
+
+                                            Text("\(index + 1)")
+                                                .font(.system(size: 9, weight: .bold))
+                                                .foregroundStyle(.secondary)
+                                                .padding(2)
+                                        }
+                                    }
+                                }
+                                .padding(8)
+                            }
+                        }
+                    }
+                    .frame(height: 100)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(isDropTargeted ? Color.accentColor.opacity(0.1) : Color(NSColor.textBackgroundColor).opacity(0.5))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(isDropTargeted ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: 1)
+                    )
+                    .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
+                        handleDrop(providers: providers)
+                    }
+
+                    // 하단 툴바
+                    HStack(spacing: 0) {
+                        Button(action: openFileDialog) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 11, weight: .bold))
+                                .frame(width: 28, height: 22)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().frame(height: 14)
+
+                        Button(action: deleteSelectedOrLastFrame) {
+                            Image(systemName: "minus")
+                                .font(.system(size: 11, weight: .bold))
+                                .frame(width: 28, height: 22)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(frames.isEmpty)
+
+                        Spacer()
+                    }
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.7))
+                    .overlay(Rectangle().stroke(Color.secondary.opacity(0.2), lineWidth: 0.5))
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var previewAndSpeedSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L10n.tr(.previewLabel, lang: settings.language))
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 14) {
+                LivePetPreviewBox(frames: frames, fps: fps)
+                    .frame(width: 80, height: 72)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(L10n.tr(.speedLabel, lang: settings.language)): \(String(format: "%.1f", fps)) FPS")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+
+                    Slider(value: $fps, in: 2...20, step: 0.5)
+
+                    HStack {
+                        Text(L10n.tr(.speedSlow, lang: settings.language))
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(L10n.tr(.speedFast, lang: settings.language))
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 2)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var hideOffsetsSection: some View {
+        HStack(spacing: 16) {
+            // 좌측 숨김 (Tail Peek)
+            HStack(spacing: 10) {
+                LivePetHidePreviewBox(frames: frames, rotation: -85.0, offset: leftHideOffset)
+                    .frame(width: 80, height: 72)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.tr(.leftHideOffsetLabel, lang: settings.language))
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 0) {
+                        Button {
+                            leftHideOffset = max(-50.0, leftHideOffset - 1.0)
+                        } label: {
+                            Image(systemName: "arrowtriangle.backward.fill")
+                                .font(.system(size: 8))
+                                .frame(width: 22, height: 20)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().frame(height: 12)
+
+                        Text("\(Int(leftHideOffset))px")
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .frame(width: 44, height: 20)
+
+                        Divider().frame(height: 12)
+
+                        Button {
+                            leftHideOffset = min(20.0, leftHideOffset + 1.0)
+                        } label: {
+                            Image(systemName: "arrowtriangle.forward.fill")
+                                .font(.system(size: 8))
+                                .frame(width: 22, height: 20)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // 우측 숨김 (Head Peek)
+            HStack(spacing: 10) {
+                LivePetHidePreviewBox(frames: frames, rotation: 85.0, offset: rightHideOffset)
+                    .frame(width: 80, height: 72)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.tr(.rightHideOffsetLabel, lang: settings.language))
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 0) {
+                        Button {
+                            rightHideOffset = max(-20.0, rightHideOffset - 1.0)
+                        } label: {
+                            Image(systemName: "arrowtriangle.backward.fill")
+                                .font(.system(size: 8))
+                                .frame(width: 22, height: 20)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().frame(height: 12)
+
+                        Text("\(Int(rightHideOffset))px")
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .frame(width: 44, height: 20)
+
+                        Divider().frame(height: 12)
+
+                        Button {
+                            rightHideOffset = min(50.0, rightHideOffset + 1.0)
+                        } label: {
+                            Image(systemName: "arrowtriangle.forward.fill")
+                                .font(.system(size: 8))
+                                .frame(width: 22, height: 20)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var footerActions: some View {
+        HStack(spacing: 12) {
+            Spacer()
+
+            Button(L10n.tr(.cancelButton, lang: settings.language)) {
+                dismiss()
+            }
+            .keyboardShortcut(.cancelAction)
+
+            Button(L10n.tr(.addButton, lang: settings.language)) {
+                saveCustomPet()
+            }
+            .keyboardShortcut(.defaultAction)
+            .buttonStyle(.borderedProminent)
+            .disabled(petName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || frames.isEmpty)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 20)
+        .background(Color(NSColor.windowBackgroundColor))
+    }
+}
+
+// MARK: - 3. 파일 선택 및 드롭 I/O 핸들러
+extension CustomPetEditorSheet {
     private func openFileDialog() {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
@@ -425,7 +447,7 @@ public struct CustomPetEditorSheet: View {
     }
 }
 
-// MARK: - 커스텀 펫 실시간 애니메이션 미리보기 뷰 (100% Retina 크기: 40x58pt)
+// MARK: - 4. 커스텀 펫 실시간 애니메이션 미리보기 뷰 (100% Retina 크기: 40x58pt)
 private struct LivePetPreviewBox: View {
     let frames: [NSImage]
     let fps: Double
@@ -453,7 +475,7 @@ private struct LivePetPreviewBox: View {
     }
 }
 
-// MARK: - 커스텀 펫 실시간 숨김 모션 프리뷰 박스 (100% Retina 크기, 가로/세로 정중앙 정렬)
+// MARK: - 5. 커스텀 펫 실시간 숨김 모션 프리뷰 박스 (100% Retina 크기, 가로/세로 정중앙 정렬)
 private struct LivePetHidePreviewBox: View {
     let frames: [NSImage]
     let rotation: Double

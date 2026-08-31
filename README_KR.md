@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>화면 가장자리에서 오늘 일정을 살며시 안내해 주는 macOS 캘린더 타임라인 바</strong><br>
-  <em>macOS 14+ (Sonoma / Sequoia) 환경을 위해 Swift 6 및 SwiftUI로 제작</em>
+  <em>macOS 15+ (Sequoia) 환경을 위해 Swift 6 및 SwiftUI로 제작</em>
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Platform-macOS%2014.0%2B%20(Sonoma%2FSequoia)-blue.svg" alt="Platform" />
+  <img src="https://img.shields.io/badge/Platform-macOS%2015.0%2B%20(Sequoia)-blue.svg" alt="Platform" />
   <img src="https://img.shields.io/badge/Swift-6.0-orange.svg" alt="Swift Version" />
   <img src="https://img.shields.io/badge/Architecture-Apple%20Silicon%20%2F%20Intel-success.svg" alt="Architecture" />
   <img src="https://img.shields.io/badge/License-MIT-lightgrey.svg" alt="License" />
@@ -103,10 +103,15 @@ brew install rareram/tap/nudgeline
 - **상세 액션 카드**: 일정 상세 내용, 화상회의 원클릭 입장 버튼, 미검증 링크 주의 안내 배지, Apple 캘린더 바로가기 (0.22초 호버 브릿지)
 - **심플 툴팁**: 제목과 시간만 간결하게 보여주는 말풍선 (마우스 벗어나면 0.04초 만에 즉시 닫힘)
 
-### 5. 환경설정 (4개 탭)
+### 5. 단축어(Shortcuts) 및 Siri 자동화 연동
+- **AppIntents 지원**: macOS 단축어 앱 및 Siri 음성 명령 연동
+  - `NudgeLine 새로고침` / `Refresh Schedule`: 오늘 일정 즉시 재동기화
+  - `NudgeLine 펫 토글` / `Toggle Pet`: 타임라인 펫 마스코트 표시/숨김 전환
+
+### 6. 환경설정 (4개 탭)
 - **타임라인**: 바 위치, 두께, 호버 확장, 배경 스타일(자동/다크/라이트/커스텀) 및 투명도
-- **인디케이터**: 일정 카드 스타일/테마, 시간 표시자 모양/색상, 펫 선택, 숨김 동작, 커스텀 펫 관리
-- **시간 및 캘린더**: 24시간 모드, 업무 시작/종료 시각, 표시할 캘린더 선택 및 캘린더별 색상 지정
+- **인디케이터**: 일정 카드 스타일/테마, 시간 표시자 모양/색상, 펫 선택(기본 백호/삼색이/진도백구), 숨김 동작, 커스텀 펫 관리
+- **시간 및 캘린더**: 24시간 모드, 업무 시작/종료 시각, 표시할 캘린더 선택 및 캘린더별 색상 지정, 시스템 설정 1클릭 딥링크
 - **일반**: 언어 선택 (시스템 기본/한국어/영어), 로그인 시 자동 실행, 다중 모니터 표시, 화면 공유 시 숨김, 전체 화면 시 숨김, 앱 정보
 
 ---
@@ -114,7 +119,7 @@ brew install rareram/tap/nudgeline
 ## 요구 사양 및 빌드
 
 ### 요구 사양
-- macOS 14.0 (Sonoma) 또는 macOS 15.0+ (Sequoia)
+- macOS 15.0+ (Sequoia)
 - Apple Silicon (M1~M4) 또는 Intel Mac
 
 ### 소스코드에서 빌드하기

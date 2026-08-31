@@ -26,25 +26,20 @@ for pet in pets {
     let vertDir = baseOutputDir.appendingPathComponent(pet.name).appendingPathComponent("vertical_hanging")
     try? fileManager.createDirectory(at: vertDir, withIntermediateDirectories: true)
 
-    // 2. Horizontal Running Frames (8 frames)
-    let horizDir = baseOutputDir.appendingPathComponent(pet.name).appendingPathComponent("horizontal_running")
-    try? fileManager.createDirectory(at: horizDir, withIntermediateDirectories: true)
-
     print("\n📦 Exporting [\(pet.name)]...")
 
     for frame in 0..<8 {
-        exportFrameToPNG(frameIndex: frame, isHorizontal: false, petType: pet.type, to: vertDir.appendingPathComponent("frame_\(frame).png"))
-        exportFrameToPNG(frameIndex: frame, isHorizontal: true, petType: pet.type, to: horizDir.appendingPathComponent("frame_\(frame).png"))
+        exportFrameToPNG(frameIndex: frame, petType: pet.type, to: vertDir.appendingPathComponent("frame_\(frame).png"))
     }
 }
 
 print("\n✨ All Pet PNGs successfully exported to: \(baseOutputDir.path)")
 
 // MARK: - Export Renderer Helper
-func exportFrameToPNG(frameIndex: Int, isHorizontal: Bool, petType: PetType, to outputURL: URL) {
+func exportFrameToPNG(frameIndex: Int, petType: PetType, to outputURL: URL) {
     let scale: CGFloat = 4.0 // 4x Ultra High-Res Export for clean pixel-perfect editing
-    let width: CGFloat = isHorizontal ? 26 * scale : 24 * scale
-    let height: CGFloat = isHorizontal ? 22 * scale : 35 * scale
+    let width: CGFloat = 24 * scale
+    let height: CGFloat = 35 * scale
 
     let image = NSImage(size: NSSize(width: width, height: height))
     image.lockFocus()
@@ -58,11 +53,7 @@ func exportFrameToPNG(frameIndex: Int, isHorizontal: Bool, petType: PetType, to 
     context.scaleBy(x: scale, y: scale)
 
     // Manual Drawing matching Canvas logic for precise frame capture
-    if !isHorizontal {
-        drawVerticalFrame(context: context, petType: petType, frameIndex: frameIndex)
-    } else {
-        drawHorizontalFrame(context: context, petType: petType, frameIndex: frameIndex)
-    }
+    drawVerticalFrame(context: context, petType: petType, frameIndex: frameIndex)
 
     image.unlockFocus()
 
@@ -200,24 +191,3 @@ func drawVerticalFrame(context: CGContext, petType: PetType, frameIndex: Int) {
     }
 }
 
-func drawHorizontalFrame(context: CGContext, petType: PetType, frameIndex: Int) {
-    let bounceOffsets: [CGFloat] = [0.0, -0.6, -1.2, -0.6, 0.0, -0.6, -1.2, -0.6]
-    let bounce = bounceOffsets[frameIndex]
-
-    let mainColor: NSColor = (petType == .whiteTiger) ? NSColor(red: 0.98, green: 0.98, blue: 1.0, alpha: 1.0) : (petType == .cat ? NSColor(red: 1.0, green: 0.64, blue: 0.28, alpha: 1.0) : NSColor(red: 0.94, green: 0.70, blue: 0.34, alpha: 1.0))
-    let subColor = NSColor.white
-
-    // Body
-    context.setFillColor(mainColor.cgColor)
-    let bodyPath = CGPath(roundedRect: CGRect(x: 5.5, y: 22 - (7.5 + bounce) - 9.0, width: 12.5, height: 9.0), cornerWidth: 4.5, cornerHeight: 4.5, transform: nil)
-    context.addPath(bodyPath)
-    context.fillPath()
-
-    context.setFillColor(subColor.cgColor)
-    context.fillEllipse(in: CGRect(x: 8.5, y: 22 - (8.5 + bounce) - 7.0, width: 7.0, height: 7.0))
-
-    // Head
-    let headRect = CGRect(x: 13.5, y: 22 - (3.0 + bounce) - 11.5, width: 12.0, height: 11.5)
-    context.setFillColor(mainColor.cgColor)
-    context.fillEllipse(in: headRect)
-}

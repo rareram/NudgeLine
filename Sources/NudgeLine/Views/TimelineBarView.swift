@@ -124,10 +124,10 @@ public struct TimelineBarView: View {
                             hoveredFocusId = nil
                             PopoverPanel.shared.showTimeTooltip(
                                 currentTime: currentTime,
-                                settings: settings,
                                 timeOffset: timePos,
                                 isHorizontal: isHorizontal,
-                                barPosition: settings.barPosition
+                                barPosition: settings.barPosition,
+                                settings: settings
                             )
                         }
                     } else if let resolved = resolveHoveredEvents(
@@ -525,9 +525,9 @@ private struct CurrentTimeIndicatorView: View {
     private func petCompanionView() -> some View {
         let isProximityNear = isPetProximityHovered
         switch settings.selectedPetType {
-        case .cat:
+        case .calicoCat:
             InteractivePetView(
-                petType: .cat,
+                petType: .calicoCat,
                 isHorizontal: isHorizontal,
                 isBarHovered: isBarHovered,
                 isPetProximityHovered: isProximityNear,
@@ -535,9 +535,9 @@ private struct CurrentTimeIndicatorView: View {
                 thickness: thickness,
                 accentColor: accentColor
             )
-        case .dog:
+        case .jindoDog:
             InteractivePetView(
-                petType: .dog,
+                petType: .jindoDog,
                 isHorizontal: isHorizontal,
                 isBarHovered: isBarHovered,
                 isPetProximityHovered: isProximityNear,
@@ -568,7 +568,7 @@ private struct CurrentTimeIndicatorView: View {
                 )
             } else {
                 InteractivePetView(
-                    petType: .cat,
+                    petType: .whiteTiger,
                     isHorizontal: isHorizontal,
                     isBarHovered: isBarHovered,
                     isPetProximityHovered: isProximityNear,

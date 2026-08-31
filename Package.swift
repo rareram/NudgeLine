@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "NudgeLine",
     platforms: [
-        .macOS(.v14)
+        .macOS("15.0")
     ],
     products: [
         .executable(

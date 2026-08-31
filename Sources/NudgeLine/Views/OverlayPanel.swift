@@ -3,12 +3,13 @@ import AppKit
 import SwiftUI
 import Combine
 
-// 각 모니터 화면별 독립 오버레이 상태 (다중 모니터 상태 격리)
+// MARK: - 1. 다중 디스플레이 격리 상태 모델 (OverlayPanelState)
 public final class OverlayPanelState: ObservableObject {
     @Published public var isPetProximityHovered: Bool = false
     public init() {}
 }
 
+// MARK: - 2. 화면 가장자리 플로팅 패널 본체 (OverlayPanel)
 public final class OverlayPanel: NSPanel {
     private let targetScreen: NSScreen
     private let settings: AppSettings
@@ -17,6 +18,7 @@ public final class OverlayPanel: NSPanel {
     private var mouseTrackingTimer: Timer?
     private var presentationCheckTimer: Timer?
     private var isOccludedByFullScreen: Bool = false
+    private var lastMouseLoc: NSPoint = .zero
 
     public init(screen: NSScreen, settings: AppSettings) {
         self.targetScreen = screen
@@ -65,7 +67,10 @@ public final class OverlayPanel: NSPanel {
         presentationCheckTimer = nil
         cancellables.removeAll()
     }
+}
 
+// MARK: - 3. 모니터 기준 프레임 배치 연산 (Layout & Frame)
+extension OverlayPanel {
     // 대상 디스플레이 기준 패널 프레임 크기 및 위치 재계산
     public func updateFrame() {
         let screen = targetScreen
@@ -103,9 +108,10 @@ public final class OverlayPanel: NSPanel {
             self.setFrame(newFrame, display: true)
         }
     }
+}
 
-    private var lastMouseLoc: NSPoint = .zero
-
+// MARK: - 4. 30Hz 저전력 마우스 센서 루프 (Mouse Proximity & Hit Testing)
+extension OverlayPanel {
     // 30Hz 저전력 마우스 좌표 감시 루프 (패스스루 및 펫 근접 감지)
     private func startMouseTracking() {
         mouseTrackingTimer?.invalidate()
@@ -204,7 +210,10 @@ public final class OverlayPanel: NSPanel {
             }
         }
     }
+}
 
+// MARK: - 5. 시스템 및 설정 알림 구독 (Combine Observers)
+extension OverlayPanel {
     private func observeNotifications() {
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .receive(on: DispatchQueue.main)
@@ -288,7 +297,10 @@ public final class OverlayPanel: NSPanel {
         }
         .store(in: &cancellables)
     }
+}
 
+// MARK: - 6. 몰입형 전체화면 및 프레젠테이션 이중 감지 엔진 (Dual Full-Screen Detection)
+extension OverlayPanel {
     // 스페이스 전환 애니메이션(300~400ms) 레이스 컨디션을 극복하는 버스트 재시도 검사
     private func scheduleBurstChecks() {
         self.checkFullScreenAndPresentation()
@@ -412,7 +424,7 @@ public final class OverlayPanel: NSPanel {
     }
 }
 
-// MARK: - 화면 가장자리 전용 마우스 클릭 패스스루 및 네이티브 컨텍스트 메뉴 NSHostingView
+// MARK: - 7. 화면 가장자리 마우스 패스스루 NSHostingView (EdgePassthroughHostingView)
 private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Content>, NSMenuItemValidation {
     private let settings: AppSettings
 

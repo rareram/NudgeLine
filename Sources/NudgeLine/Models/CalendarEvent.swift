@@ -3,8 +3,8 @@ import Foundation
 import SwiftUI
 import EventKit
 
-// 지원 화상회의 플랫폼
-public enum MeetingPlatform: String, Hashable {
+// MARK: - 1. 화상회의 플랫폼 열거형 및 메타데이터
+public enum MeetingPlatform: String, Hashable, Sendable {
     case googleMeet = "Google Meet"
     case zoom = "Zoom"
     case teams = "Microsoft Teams"
@@ -54,13 +54,13 @@ public enum MeetingPlatform: String, Hashable {
 }
 
 // 화상회의 바로가기 정보
-public struct MeetingInfo: Hashable {
+public struct MeetingInfo: Hashable, Sendable {
     public let platform: MeetingPlatform
     public let url: URL
 }
 
-// EventKit 래퍼 일정 데이터 모델
-public struct CalendarEvent: Identifiable, Hashable {
+// MARK: - 2. 캘린더 이벤트 모델 (CalendarEvent)
+public struct CalendarEvent: Identifiable, Hashable, Sendable {
     public let id: String
     public let rawTitle: String
     public let startDate: Date
@@ -95,153 +95,6 @@ public struct CalendarEvent: Identifiable, Hashable {
         self.notes = ekEvent.notes?.strippingHTMLTags()
         self.status = ekEvent.status
         self.meetingInfo = CalendarEvent.extractMeetingInfo(url: ekEvent.url, location: ekEvent.location, notes: ekEvent.notes)
-    }
-
-    // 본문/위치/URL 내 화상회의 링크 정규식 추출
-    private static func extractMeetingInfo(url: URL?, location: String?, notes: String?) -> MeetingInfo? {
-        let combined = [url?.absoluteString, location, notes].compactMap { $0 }.joined(separator: "\n")
-        guard !combined.isEmpty else { return nil }
-
-        // HTML 엔티티 복원
-        let sanitized = combined
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&quot;", with: "\"")
-
-        // URL 끝단 특수문자 정제
-        func sanitizeUrl(_ raw: String) -> URL? {
-            var trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            let trailingPunctuation = CharacterSet(charactersIn: ".,;:)>]}'\"`")
-            while let last = trimmed.unicodeScalars.last, trailingPunctuation.contains(last) {
-                trimmed.removeLast()
-            }
-            if let validUrl = URL(string: trimmed),
-               let scheme = validUrl.scheme?.lowercased(),
-               (scheme == "http" || scheme == "https") {
-                return validUrl
-            }
-            if let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-               let validUrl = URL(string: encoded),
-               let scheme = validUrl.scheme?.lowercased(),
-               (scheme == "http" || scheme == "https") {
-                return validUrl
-            }
-            return nil
-        }
-
-        // 도메인 위조 피싱 방어: URL host 끝자리 일치 검사 (예: teams.microsoft.com.evil.com 차단)
-        func matchesDomain(_ rawHost: String, targets: [String]) -> Bool {
-            let host = rawHost.trimmingCharacters(in: CharacterSet(charactersIn: "."))
-            return targets.contains { target in
-                host == target || host.hasSuffix("." + target)
-            }
-        }
-
-        // 공식 화상회의 플랫폼 화이트리스트 1차 판별 (매칭 실패 시 nil)
-        func identifyOfficialPlatform(for candidateUrl: URL) -> MeetingInfo? {
-            guard let rawHost = candidateUrl.host?.lowercased() else { return nil }
-            let host = rawHost.trimmingCharacters(in: CharacterSet(charactersIn: "."))
-
-            // Microsoft Teams
-            if matchesDomain(host, targets: ["teams.microsoft.com", "teams.live.com", "teams.cloud.microsoft"]) {
-                return MeetingInfo(platform: .teams, url: candidateUrl)
-            }
-
-            // Google Meet
-            if matchesDomain(host, targets: ["meet.google.com"]) {
-                return MeetingInfo(platform: .googleMeet, url: candidateUrl)
-            }
-
-            // Zoom
-            if matchesDomain(host, targets: ["zoom.us", "zoom.com", "zoom.gov", "zoom.com.cn"]) {
-                return MeetingInfo(platform: .zoom, url: candidateUrl)
-            }
-
-            // Webex
-            if matchesDomain(host, targets: ["webex.com"]) {
-                return MeetingInfo(platform: .webex, url: candidateUrl)
-            }
-
-            // Naver Whale ON
-            if matchesDomain(host, targets: ["whale.naver.com", "whaleon.naver.com"]) {
-                return MeetingInfo(platform: .whaleOn, url: candidateUrl)
-            }
-
-            // Discord
-            if matchesDomain(host, targets: ["discord.com", "discord.gg"]) {
-                return MeetingInfo(platform: .discord, url: candidateUrl)
-            }
-
-            // Lark / Feishu
-            if matchesDomain(host, targets: ["larksuite.com", "feishu.cn"]) {
-                return MeetingInfo(platform: .lark, url: candidateUrl)
-            }
-
-            // Jitsi Meet
-            if matchesDomain(host, targets: ["meet.jit.si"]) {
-                return MeetingInfo(platform: .jitsi, url: candidateUrl)
-            }
-
-            // Whereby
-            if matchesDomain(host, targets: ["whereby.com"]) {
-                return MeetingInfo(platform: .whereby, url: candidateUrl)
-            }
-
-            // Amazon Chime
-            if matchesDomain(host, targets: ["chime.aws"]) {
-                return MeetingInfo(platform: .chime, url: candidateUrl)
-            }
-
-            // 기타 공식 플랫폼 (Gather, VooV 등)
-            if matchesDomain(host, targets: ["gather.town", "voovmeeting.com", "meeting.tencent.com"]) {
-                return MeetingInfo(platform: .generic, url: candidateUrl)
-            }
-
-            return nil
-        }
-
-        // 1단계: 본문 내 모든 URL 파싱 및 정제
-        let urlPattern = "https?://[^\\s<>\"]+"
-        var candidateUrls: [URL] = []
-
-        if let matches = matchAllRegex(pattern: urlPattern, in: sanitized) {
-            for rawUrl in matches {
-                if let validUrl = sanitizeUrl(rawUrl) {
-                    candidateUrls.append(validUrl)
-                }
-            }
-        }
-
-        if let eventUrl = url, let validUrl = sanitizeUrl(eventUrl.absoluteString) {
-            if !candidateUrls.contains(validUrl) {
-                candidateUrls.append(validUrl)
-            }
-        }
-
-        guard !candidateUrls.isEmpty else { return nil }
-
-        // 2단계: 공식 화상회의 화이트리스트 우선 탐색 (First-Match 역전 방지)
-        for candidate in candidateUrls {
-            if let official = identifyOfficialPlatform(for: candidate) {
-                return official
-            }
-        }
-
-        // 3단계: 공식 플랫폼이 없는 경우, 첫 번째 유효 URL을 미검증 링크로 안전하게 폴백
-        if let firstCandidate = candidateUrls.first {
-            return MeetingInfo(platform: .unverified, url: firstCandidate)
-        }
-
-        return nil
-    }
-
-    private static func matchAllRegex(pattern: String, in text: String) -> [String]? {
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
-        let nsString = text as NSString
-        let results = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
-        guard !results.isEmpty else { return nil }
-        return results.map { nsString.substring(with: $0.range) }
     }
 
     public func title(lang: AppLanguage = AppSettings.shared.language) -> String {
@@ -281,15 +134,197 @@ public struct CalendarEvent: Identifiable, Hashable {
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(startDate)
+        hasher.combine(endDate)
+        hasher.combine(rawTitle)
+        hasher.combine(isAllDay)
+        hasher.combine(calendarIdentifier)
     }
 
     public static func == (lhs: CalendarEvent, rhs: CalendarEvent) -> Bool {
-        return lhs.id == rhs.id
+        return lhs.id == rhs.id &&
+            lhs.startDate == rhs.startDate &&
+            lhs.endDate == rhs.endDate &&
+            lhs.rawTitle == rhs.rawTitle &&
+            lhs.isAllDay == rhs.isAllDay &&
+            lhs.calendarIdentifier == rhs.calendarIdentifier
     }
 }
 
-// MARK: - 중첩 일정 클러스터 모델
-public struct EventCluster: Identifiable, Equatable {
+// MARK: - 3. 화상회의 URL 정규식 파서 및 피싱 방어 검증
+extension CalendarEvent {
+    // MARK: 3-1. 화상회의 플랫폼별 사전 컴파일된 정규식 (성능 최적화: 1회 컴파일 캐싱)
+    private enum MeetingRegex {
+        static let meet = try? NSRegularExpression(pattern: #"https?://meet\.google\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let zoom = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*zoom\.(?:us|com|gov|de)/[a-zA-Z0-9_.\-/?=&]+"#, options: [.caseInsensitive])
+        static let teams = try? NSRegularExpression(pattern: #"https?://teams\.microsoft\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let teamsLive = try? NSRegularExpression(pattern: #"https?://teams\.live\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let webex = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*webex\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let whaleOn = try? NSRegularExpression(pattern: #"https?://whaleon\.naver\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let discord = try? NSRegularExpression(pattern: #"https?://(?:www\.)?discord\.(?:gg|com)/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let lark = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*larksuite\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let feishu = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*feishu\.cn/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let jitsi = try? NSRegularExpression(pattern: #"https?://meet\.jit\.si/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let jitsi8x8 = try? NSRegularExpression(pattern: #"https?://8x8\.vc/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let whereby = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*whereby\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let chime = try? NSRegularExpression(pattern: #"https?://app\.chime\.aws/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let genericMeeting = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]+/(?:meeting|join|call|conference|j|room|bridge)/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let anyUrl = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]+\.[a-zA-Z]{2,}[a-zA-Z0-9_.\-/?=&%]*"#, options: [.caseInsensitive])
+    }
+
+    // 본문/위치/URL 내 화상회의 링크 정규식 추출
+    private static func extractMeetingInfo(url: URL?, location: String?, notes: String?) -> MeetingInfo? {
+        let combined = [url?.absoluteString, location, notes].compactMap { $0 }.joined(separator: "\n")
+        guard !combined.isEmpty else { return nil }
+
+        // 빠른 O(1) 조기 탈출: 링크 스킴이 전혀 없는 일반 일정은 정규식 검사를 건너뜀
+        let hasPotentialUrl = combined.contains("http://") ||
+            combined.contains("https://") ||
+            combined.contains("zoommtg://") ||
+            combined.contains("msteams://")
+        guard hasPotentialUrl else { return nil }
+
+        // HTML 엔티티 복원
+        let sanitized = combined
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+
+        // URL 끝단 특수문자 정제
+        func sanitizeUrl(_ raw: String) -> URL? {
+            var trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trailingPunctuation = CharacterSet(charactersIn: ".,;:)>]}'\"`")
+            while let last = trimmed.unicodeScalars.last, trailingPunctuation.contains(last) {
+                trimmed.removeLast()
+            }
+            if let validUrl = URL(string: trimmed),
+               let scheme = validUrl.scheme?.lowercased(),
+               (scheme == "http" || scheme == "https" || scheme == "zoommtg" || scheme == "msteams") {
+                return validUrl
+            }
+            return nil
+        }
+
+        // 도메인 위조 피싱 방어: URL host 일치 검사 (서브도메인 위조 차단 및 상위 부모 도메인 무단 매칭 배제)
+        func matchesDomain(_ url: URL, validDomains: [String]) -> Bool {
+            guard let host = url.host?.lowercased() else { return false }
+            return validDomains.contains { domain in
+                host == domain || host.hasSuffix("." + domain)
+            }
+        }
+
+        // 1. Google Meet (표준 코드, /lookup/..., /landing 등 모든 meet.google.com 경로 지원)
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.meet),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["meet.google.com"]) {
+            return MeetingInfo(platform: .googleMeet, url: validUrl)
+        }
+
+        // 2. Zoom
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.zoom),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["zoom.us", "zoom.com", "zoom.gov", "zoom.de"]) {
+            return MeetingInfo(platform: .zoom, url: validUrl)
+        }
+
+        // 3. Microsoft Teams
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.teams),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["teams.microsoft.com"]) {
+            return MeetingInfo(platform: .teams, url: validUrl)
+        }
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.teamsLive),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["teams.live.com"]) {
+            return MeetingInfo(platform: .teams, url: validUrl)
+        }
+
+        // 4. Cisco Webex
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.webex),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["webex.com"]) {
+            return MeetingInfo(platform: .webex, url: validUrl)
+        }
+
+        // 5. Naver Whale ON
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.whaleOn),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["whaleon.naver.com"]) {
+            return MeetingInfo(platform: .whaleOn, url: validUrl)
+        }
+
+        // 6. Discord
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.discord),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["discord.gg", "discord.com"]) {
+            return MeetingInfo(platform: .discord, url: validUrl)
+        }
+
+        // 7. Lark (Feishu)
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.lark),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["larksuite.com"]) {
+            return MeetingInfo(platform: .lark, url: validUrl)
+        }
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.feishu),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["feishu.cn"]) {
+            return MeetingInfo(platform: .lark, url: validUrl)
+        }
+
+        // 8. Jitsi Meet
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.jitsi),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["meet.jit.si"]) {
+            return MeetingInfo(platform: .jitsi, url: validUrl)
+        }
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.jitsi8x8),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["8x8.vc"]) {
+            return MeetingInfo(platform: .jitsi, url: validUrl)
+        }
+
+        // 9. Whereby
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.whereby),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["whereby.com"]) {
+            return MeetingInfo(platform: .whereby, url: validUrl)
+        }
+
+        // 10. Amazon Chime
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.chime),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["app.chime.aws", "chime.aws"]) {
+            return MeetingInfo(platform: .chime, url: validUrl)
+        }
+
+        // 11. 명시적 미팅 URL
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.genericMeeting),
+           let validUrl = sanitizeUrl(match) {
+            return MeetingInfo(platform: .generic, url: validUrl)
+        }
+
+        // 12. 미검증 외부 링크
+        if let match = firstMatch(in: sanitized, regex: MeetingRegex.anyUrl),
+           let validUrl = sanitizeUrl(match) {
+            return MeetingInfo(platform: .unverified, url: validUrl)
+        }
+
+        return nil
+    }
+
+    private static func firstMatch(in text: String, regex: NSRegularExpression?) -> String? {
+        guard let regex = regex else { return nil }
+        let nsString = text as NSString
+        let match = regex.firstMatch(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
+        guard let m = match else { return nil }
+        return nsString.substring(with: m.range)
+    }
+}
+
+// MARK: - 4. 타임라인 세그먼트 및 클러스터링 데이터 모델
+public struct EventCluster: Identifiable, Equatable, Sendable {
     public let id: String
     public let start: Date
     public let end: Date
@@ -300,7 +335,6 @@ public struct EventCluster: Identifiable, Equatable {
     }
 }
 
-// MARK: - 타임라인 단위 세그먼트 슬라이스 모델
 public struct TimelineSegment: Identifiable {
     public let id: String
     public let start: Date
@@ -313,19 +347,31 @@ public struct TimelineSegment: Identifiable {
     }
 }
 
-// MARK: - 일정 중첩 분석 및 시간 구간 슬라이싱
+// MARK: - 5. 일정 중첩 분석 및 시간 구간 슬라이싱 알고리즘
 extension CalendarEvent {
     public static func buildSegments(from rawEvents: [CalendarEvent], dayStart: Date, dayEnd: Date) -> [TimelineSegment] {
-        let timedEvents = rawEvents.filter { !$0.isAllDay }.compactMap { event -> CalendarEvent? in
+        let timedEvents = filterAndSortEvents(rawEvents, dayStart: dayStart, dayEnd: dayEnd)
+        guard !timedEvents.isEmpty else { return [] }
+
+        // 1단계: 연속된 중첩 일정 클러스터링
+        let clusters = createClusters(from: timedEvents, dayStart: dayStart, dayEnd: dayEnd)
+
+        // 2단계: 시간 교차점 기준 세그먼트 분할
+        return sliceClustersIntoSegments(clusters)
+    }
+
+    // 종일 일정을 제외하고 유효 시간 범위 내 일정을 시작 시각 순 정렬
+    private static func filterAndSortEvents(_ rawEvents: [CalendarEvent], dayStart: Date, dayEnd: Date) -> [CalendarEvent] {
+        return rawEvents.filter { !$0.isAllDay }.compactMap { event -> CalendarEvent? in
             let s = max(dayStart, event.startDate)
             let e = min(dayEnd, event.endDate)
             guard e > s else { return nil }
             return event
         }.sorted { $0.startDate < $1.startDate }
+    }
 
-        guard !timedEvents.isEmpty else { return [] }
-
-        // 1. 연속된 중첩 일정 클러스터링
+    // 시간상 연속되거나 중첩된 일정들을 하나의 클러스터로 그룹화
+    private static func createClusters(from timedEvents: [CalendarEvent], dayStart: Date, dayEnd: Date) -> [EventCluster] {
         var clusters: [EventCluster] = []
         var currentClusterEvents: [CalendarEvent] = []
         var clusterStart = timedEvents[0].startDate
@@ -363,7 +409,11 @@ extension CalendarEvent {
             ))
         }
 
-        // 2. 시간 교차점 기준 세그먼트 분할
+        return clusters
+    }
+
+    // 클러스터 내부의 시작/종료 교차점들을 잘게 슬라이스하여 겹침 세그먼트 생성
+    private static func sliceClustersIntoSegments(_ clusters: [EventCluster]) -> [TimelineSegment] {
         var segments: [TimelineSegment] = []
 
         for cluster in clusters {
@@ -409,7 +459,7 @@ extension CalendarEvent {
     }
 }
 
-// MARK: - HTML 태그 및 엔티티 정제 확장
+// MARK: - 6. HTML 태그 및 특수문자 엔티티 정제 확장
 public extension String {
     func strippingHTMLTags() -> String {
         var text = self
@@ -429,7 +479,7 @@ public extension String {
     }
 }
 
-// MARK: - Apple 캘린더 앱 연동 실행기
+// MARK: - 7. macOS 캘린더 앱 연동 실행기
 public enum CalendarAppLauncher {
     public static func open(event: CalendarEvent? = nil) {
         // 날짜 지정 시 AppleScript로 해당 날짜 화면 이동
@@ -466,7 +516,7 @@ public enum CalendarAppLauncher {
     }
 }
 
-// MARK: - 배열 안전 인덱스 참조 확장
+// MARK: - 8. 배열 안전 인덱스 참조 유틸리티
 extension Array {
     public subscript(safe index: Index) -> Element? {
         indices.contains(index) ? self[index] : nil

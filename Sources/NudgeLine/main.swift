@@ -2,15 +2,16 @@
 import AppKit
 
 // 중복 실행 방어: 동일 번들 ID 선행 프로세스 감지 시 기존 앱 포커스 후 즉시 종료
-let currentBundleId = Bundle.main.bundleIdentifier ?? "com.rareram.NudgeLine"
+let bundleId = Bundle.main.bundleIdentifier ?? "com.rareram.NudgeLine"
 let currentPid = getpid()
-let duplicateInstances = NSRunningApplication.runningApplications(withBundleIdentifier: currentBundleId).filter { $0.processIdentifier != currentPid }
 
-if let primaryInstance = duplicateInstances.first {
-    primaryInstance.activate()
+if let runningInstance = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
+    .first(where: { $0.processIdentifier != currentPid }) {
+    runningInstance.activate()
     exit(0)
 }
 
+// macOS Accessory 앱 실행 라이프사이클 구동
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate

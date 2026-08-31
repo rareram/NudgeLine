@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>A subtle macOS screen-edge timeline bar for today's calendar events</strong><br>
-  <em>Built with Swift 6 and SwiftUI for macOS 14+ (Sonoma / Sequoia)</em>
+  <em>Built with Swift 6 and SwiftUI for macOS 15+ (Sequoia)</em>
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Platform-macOS%2014.0%2B%20(Sonoma%2FSequoia)-blue.svg" alt="Platform" />
+  <img src="https://img.shields.io/badge/Platform-macOS%2015.0%2B%20(Sequoia)-blue.svg" alt="Platform" />
   <img src="https://img.shields.io/badge/Swift-6.0-orange.svg" alt="Swift Version" />
   <img src="https://img.shields.io/badge/Architecture-Apple%20Silicon%20%2F%20Intel-success.svg" alt="Architecture" />
   <img src="https://img.shields.io/badge/License-MIT-lightgrey.svg" alt="License" />
@@ -103,10 +103,15 @@ brew install rareram/tap/nudgeline
 - **Action Card**: Full summary with meeting join buttons, unverified link notice badge, Apple Calendar shortcut, and a 0.22s hover bridge.
 - **Simple Tooltip**: Compact pill bubble that disappears 0.04s after cursor leaves.
 
-### 5. Settings Window (4 Tabs)
+### 5. Shortcuts & Siri Automation
+- **AppIntents Integration**: Native support for macOS Shortcuts app and Siri voice triggers:
+  - `Refresh Schedule` / `NudgeLine 새로고침`: Instantly refetch today's calendar events.
+  - `Toggle Pet` / `NudgeLine 펫 토글`: Toggle pet companion visibility on the timeline bar.
+
+### 6. Settings Window (4 Tabs)
 - **Timeline**: Position, thickness, hover expand, background style (Auto, Dark, Light, Custom), and track opacity.
-- **Indicators**: Card style/theme/opacity, time indicator shape/color, pet selection, hide motion, and custom pet list.
-- **Schedule**: 24-hour mode, work hours (start/end), visible calendars with color pickers, and system accounts shortcut.
+- **Indicators**: Card style/theme/opacity, time indicator shape/color, pet selection (Default White Tiger, Calico Cat, Jindo Dog), hide motion, and custom pet list.
+- **Schedule**: 24-hour mode, work hours (start/end), visible calendars with color pickers, and 1-click System Settings privacy deep link.
 - **General**: Language (System, Korean, English), launch at login (`SMAppService`), multi-display toggle, hide on screen share, hide in full screen, and app info.
 
 ---
@@ -114,7 +119,7 @@ brew install rareram/tap/nudgeline
 ## Requirements & Build
 
 ### Requirements
-- macOS 14.0 (Sonoma) or macOS 15.0+ (Sequoia)
+- macOS 15.0+ (Sequoia)
 - Apple Silicon or Intel Mac
 
 ### Build from Source
@@ -139,7 +144,7 @@ open "build/NudgeLine.app"
 
 ```
 NudgeLine/
-├── Package.swift                         # SPM Manifest (macOS 14+)
+├── Package.swift                         # SPM Manifest (macOS 15+)
 ├── docs/
 │   └── images/                           # README screenshots and icon assets
 ├── Resources/
@@ -156,7 +161,8 @@ NudgeLine/
 │       │   ├── CalendarService.swift     # EventKit background query service
 │       │   ├── CustomPetService.swift    # Thread-safe custom pet file manager
 │       │   ├── LaunchAtLoginHelper.swift # SMAppService login item wrapper
-│       │   └── Localization.swift        # English/Korean L10n dictionary
+│       │   ├── Localization.swift        # English/Korean L10n dictionary
+│       │   └── NudgeLineShortcuts.swift  # AppIntents for Shortcuts & Siri automation
 │       └── Views/
 │           ├── OverlayPanel.swift        # Edge floating NSPanel with mouse passthrough
 │           ├── PopoverPanel.swift        # Floating popover panel with .common runloop timer

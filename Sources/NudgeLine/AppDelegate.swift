@@ -12,6 +12,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = AppSettings.shared
     private let calendarService = CalendarService.shared
 
+    // MARK: - 1. 앱 라이프사이클 (Application Lifecycle)
     public func applicationDidFinishLaunching(_ notification: Notification) {
         // 런치패드/Spotlight 노출 및 실행 후 Dock 아이콘 숨김 (.accessory)
         NSApp.setActivationPolicy(.accessory)
@@ -28,8 +29,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             calendarService.requestAccess()
         }
     }
+}
 
-    // 메뉴바 상태 아이템 및 컨텍스트 메뉴 구성
+// MARK: - 2. 메뉴바 상태 아이템 구성 (Status Item & Menu)
+extension AppDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         guard let button = statusItem?.button else { return }
@@ -58,8 +61,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusItem?.menu = menu
     }
+}
 
-    // 모니터 설정에 따른 화면별 오버레이 패널 인스턴스 생성
+// MARK: - 3. 오버레이 패널 윈도우 관리 (Overlay Panels Setup)
+extension AppDelegate {
     private func setupOverlayPanels() {
         overlayPanels.forEach { panel in
             panel.cleanup()
@@ -77,8 +82,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             overlayPanels.append(panel)
         }
     }
+}
 
-    // 설정 변경 및 디스플레이 해상도/연결 변경 이벤트 감지
+// MARK: - 4. 시스템/디스플레이 변경 감시 (Combine Observers)
+extension AppDelegate {
     private func observeDataChanges() {
         // 다중 디스플레이 표시 여부 변경 감지
         settings.$showOnAllScreens
@@ -104,7 +111,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
     }
+}
 
+// MARK: - 5. 메뉴바 및 단축키 액션 핸들러 (Actions)
+extension AppDelegate {
     @objc public func refreshCalendars() {
         calendarService.loadCalendars()
         calendarService.fetchEvents(settings: settings)

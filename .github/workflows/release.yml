@@ -105,7 +105,7 @@ jobs:
             desc "Subtle macOS screen-edge timeline bar for today's calendar events"
             homepage "https://github.com/rareram/NudgeLine"
 
-            depends_on macos: :sonoma
+            depends_on macos: :sequoia
 
             preflight do
               # 1. 업그레이드 전 실행 중인 구버전 NudgeLine 안전 종료

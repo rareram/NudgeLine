@@ -3,7 +3,7 @@ import AppKit
 import SwiftUI
 import Combine
 
-// 마우스 활성화 없이 즉각 클릭을 수신하는 NSHostingView
+// MARK: - 1. FirstMouse 호버 브릿지 뷰 (FirstMouseHostingView)
 public final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
     public override var acceptsFirstResponder: Bool { true }
     private var trackingArea: NSTrackingArea?
@@ -34,7 +34,7 @@ public final class FirstMouseHostingView<Content: View>: NSHostingView<Content> 
     }
 }
 
-// 팝오버 단일 패널 윈도우 인스턴스
+// MARK: - 2. 팝오버 단일 패널 윈도우 인스턴스 (PopoverPanel)
 public final class PopoverPanel: NSPanel {
     public static let shared = PopoverPanel()
 
@@ -95,8 +95,10 @@ public final class PopoverPanel: NSPanel {
         let mouseLoc = NSEvent.mouseLocation
         return NSScreen.screens.first(where: { $0.frame.contains(mouseLoc) }) ?? NSScreen.main ?? NSScreen.screens.first
     }
+}
 
-    // 일정 호버 팝오버 표시 및 좌표 애니메이션
+// MARK: - 3. 일정 호버 팝오버 표시 및 좌표 애니메이션
+extension PopoverPanel {
     public func show(
         events: [CalendarEvent],
         clusterId: String,
@@ -149,103 +151,90 @@ public final class PopoverPanel: NSPanel {
             finalX = max(visibleFrame.minX + 8, min(visibleFrame.maxX - targetWidth - 8, idealFinalX))
             finalY = visibleFrame.minY + thickness + 6
             startX = finalX
-            startY = visibleFrame.minY + thickness - 16
+            startY = finalY - 8
         } else {
-            let centerOffset = blockOffset + (blockLength / 2)
-            let idealFinalY = visibleFrame.maxY - centerOffset - (targetHeight / 2)
+            let idealFinalY = visibleFrame.maxY - blockOffset - (blockLength / 2) - (targetHeight / 2)
             finalY = max(visibleFrame.minY + 8, min(visibleFrame.maxY - targetHeight - 8, idealFinalY))
 
             switch barPosition {
             case .left:
-                finalX = fullFrame.minX + thickness
-                startX = finalX - 20
+                finalX = fullFrame.minX + thickness + 6
+                startX = finalX - 8
                 startY = finalY
             case .right:
-                finalX = fullFrame.maxX - thickness - targetWidth
-                startX = finalX + 20
+                finalX = fullFrame.maxX - thickness - targetWidth - 6
+                startX = finalX + 8
                 startY = finalY
             case .bottom:
-                finalX = visibleFrame.minX + blockOffset
+                let idealFinalX = visibleFrame.minX + blockOffset + (blockLength / 2) - (targetWidth / 2)
+                finalX = max(visibleFrame.minX + 8, min(visibleFrame.maxX - targetWidth - 8, idealFinalX))
+                finalY = visibleFrame.minY + thickness + 6
                 startX = finalX
-                startY = visibleFrame.minY + thickness - 16
+                startY = finalY - 8
             }
         }
 
-        let finalFrame = NSRect(
-            x: finalX,
-            y: finalY,
-            width: targetWidth,
-            height: targetHeight
-        )
-
-        let startFrame = NSRect(
-            x: startX,
-            y: startY,
-            width: finalFrame.width,
-            height: finalFrame.height
-        )
-
-        let isNewAppearance = !self.isVisible || currentClusterId != clusterId
+        let isNewCluster = currentClusterId != clusterId || !self.isVisible
         currentClusterId = clusterId
+
+        let finalFrame = NSRect(x: finalX, y: finalY, width: targetWidth, height: targetHeight)
+        let startFrame = NSRect(x: startX, y: startY, width: targetWidth, height: targetHeight)
 
         if !self.isVisible {
             self.setFrame(startFrame, display: true, animate: false)
             self.alphaValue = 0.0
             self.orderFrontRegardless()
-
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.14
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.15
+                ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 self.animator().setFrame(finalFrame, display: true)
                 self.animator().alphaValue = 1.0
             }
-        } else if isNewAppearance {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.12
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        } else if isNewCluster {
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.12
+                ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 self.animator().setFrame(finalFrame, display: true)
                 self.animator().alphaValue = 1.0
             }
+        } else {
+            self.setFrame(finalFrame, display: true, animate: false)
         }
     }
+}
 
-    // 현재 시각 인디케이터 호버 툴팁 표시
+// MARK: - 4. 현재 시각 미니 툴팁 표시
+extension PopoverPanel {
     public func showTimeTooltip(
         currentTime: Date,
-        settings: AppSettings,
         timeOffset: CGFloat,
         isHorizontal: Bool,
-        barPosition: BarPosition
+        barPosition: BarPosition,
+        settings: AppSettings = .shared
     ) {
         showGeneration += 1
         hasEnteredPopover = false
         hideTimer?.invalidate()
         hideTimer = nil
-        self.isDetailMode = false
 
         guard let screen = currentTargetScreen() else { return }
 
-        let visibleFrame = screen.visibleFrame
-        let fullFrame = screen.frame
-        let thickness = max(settings.barWidth, settings.hoverWidth)
-
-        let tooltipView = AnyView(
-            CurrentTimeTooltipView(
-                currentTime: currentTime,
-                settings: settings
-            )
-        )
+        let anyView = AnyView(CurrentTimeTooltipView(currentTime: currentTime, settings: settings))
 
         if let hosting = hostingView {
-            hosting.rootView = tooltipView
+            hosting.rootView = anyView
         } else {
-            let hosting = FirstMouseHostingView(rootView: tooltipView)
+            let hosting = FirstMouseHostingView(rootView: anyView)
             self.contentView = hosting
             self.hostingView = hosting
         }
 
-        let targetWidth: CGFloat = 110
-        let targetHeight: CGFloat = 22
+        let targetWidth: CGFloat = 110.0
+        let targetHeight: CGFloat = 24.0
+
+        let visibleFrame = screen.visibleFrame
+        let fullFrame = screen.frame
+        let thickness = max(settings.barWidth, settings.hoverWidth)
 
         var finalX: CGFloat
         var finalY: CGFloat
@@ -289,7 +278,10 @@ public final class PopoverPanel: NSPanel {
             }
         }
     }
+}
 
+// MARK: - 5. 팝오버 닫기 및 애니메이션 타이머
+extension PopoverPanel {
     // 팝오버 숨김 타이머 (대각선 진입 시 0.20초 보호, 팝오버 이탈 시 0.04초 즉시 닫기)
     public func hide(delayed: Bool = false) {
         hideTimer?.invalidate()
@@ -330,7 +322,7 @@ public final class PopoverPanel: NSPanel {
     }
 }
 
-// MARK: - 현재 시각 미니 툴팁 뷰
+// MARK: - 6. 현재 시각 미니 툴팁 뷰 (CurrentTimeTooltipView)
 private struct CurrentTimeTooltipView: View {
     let currentTime: Date
     let settings: AppSettings

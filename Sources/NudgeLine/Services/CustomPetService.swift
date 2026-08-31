@@ -1,11 +1,10 @@
 // 사용자 정의 펫 모델, 디스크 파일 영속화 및 프레임 메모리 캐싱 서비스
 import Foundation
-import SwiftUI
 import AppKit
 import Combine
 
-// 사용자 정의 펫 메타데이터 모델
-public struct CustomPet: Identifiable, Codable, Hashable {
+// MARK: - 1. 사용자 정의 펫 메타데이터 모델 (CustomPet)
+public struct CustomPet: Identifiable, Codable, Hashable, Sendable {
     public let id: String
     public var name: String
     public var fps: Double
@@ -48,14 +47,22 @@ public struct CustomPet: Identifiable, Codable, Hashable {
     }
 }
 
+// MARK: - 2. 커스텀 펫 관리자 본체 (CustomPetService)
 public final class CustomPetService: ObservableObject {
     public static let shared = CustomPetService()
 
     @Published public private(set) var customPets: [CustomPet] = []
     private var imageCache: [String: [NSImage]] = [:]
     private let cacheLock = NSLock()
-
     private let fileManager = FileManager.default
+
+    private init() {
+        loadAllPets()
+    }
+}
+
+// MARK: - 3. 디스크 저장소 경로 및 구버전 마이그레이션
+extension CustomPetService {
     private var petsDirectoryURL: URL {
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? fileManager.temporaryDirectory
@@ -72,11 +79,10 @@ public final class CustomPetService: ObservableObject {
         }
         return dir
     }
+}
 
-    private init() {
-        loadAllPets()
-    }
-
+// MARK: - 4. 펫 목록 및 프레임 인메모리 캐싱
+extension CustomPetService {
     // 디스크에 저장된 모든 커스텀 펫 메타데이터 및 이미지 프레임 프리로드
     public func loadAllPets() {
         let dir = petsDirectoryURL
@@ -130,7 +136,10 @@ public final class CustomPetService: ObservableObject {
         }
         return images
     }
+}
 
+// MARK: - 5. 신규 펫 생성 및 영속화 (CRUD)
+extension CustomPetService {
     // 신규 커스텀 펫 저장 (PNG 프레임 파일 및 metadata.json 생성)
     @discardableResult
     public func savePet(
@@ -187,10 +196,10 @@ public final class CustomPetService: ObservableObject {
         }
         loadAllPets()
 
-        // 활성 선택 펫 삭제 시 기본 펫으로 롤백
+        // 활성 선택 펫 삭제 시 기본 펫(백호)으로 롤백
         if AppSettings.shared.selectedCustomPetId == id {
             AppSettings.shared.selectedCustomPetId = nil
-            AppSettings.shared.selectedPetType = .cat
+            AppSettings.shared.selectedPetType = .whiteTiger
         }
     }
 }

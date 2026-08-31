@@ -5,32 +5,32 @@ import SwiftUI
 import Combine
 import AppKit
 
-// 개별 캘린더 메타데이터 모델
-public struct CalendarInfo: Identifiable {
+// MARK: - 1. 캘린더 메타데이터 모델
+public struct CalendarInfo: Identifiable, Sendable {
     public let id: String
     public let title: String
     public let defaultColor: Color
     public let sourceTitle: String
-    public let allowsContentModifications: Bool
 }
 
-// 캘린더 계정별 그룹 모델 (iCloud, Google, Exchange 등)
-public struct CalendarSourceGroup: Identifiable {
+public struct CalendarSourceGroup: Identifiable, Sendable {
     public let id: String
     public let title: String
     public var calendars: [CalendarInfo]
 }
 
+// MARK: - 2. 캘린더 동기화 서비스 본체 (CalendarService)
 public final class CalendarService: ObservableObject {
     public static let shared = CalendarService()
 
     private let eventStore = EKEventStore()
+    private let fetchSerialQueue = DispatchQueue(label: "com.nudgeline.fetchSerialQueue", qos: .userInitiated)
     private var cancellables = Set<AnyCancellable>()
+    private var isSleeping: Bool = false
 
     @Published public private(set) var authorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published public private(set) var events: [CalendarEvent] = []
     @Published public private(set) var sourceGroups: [CalendarSourceGroup] = []
-    @Published public private(set) var lastRefreshedAt: Date = Date()
     @Published public var errorMessage: String? = nil
 
     private init() {
@@ -38,7 +38,10 @@ public final class CalendarService: ObservableObject {
         self.authorizationStatus = initialStatus
         setupEventStoreObserver()
     }
+}
 
+// MARK: - 3. 캘린더 접근 권한(TCC) 관리
+extension CalendarService {
     // 캘린더 TCC 권한 상태 갱신 (권한 획득 시 데이터 자동 로드)
     public func checkAuthorizationStatus() {
         let status = EKEventStore.authorizationStatus(for: .event)
@@ -51,14 +54,10 @@ public final class CalendarService: ObservableObject {
 
     public func isAuthorized(status: EKAuthorizationStatus? = nil) -> Bool {
         let st = status ?? EKEventStore.authorizationStatus(for: .event)
-        if #available(macOS 14.0, *) {
-            return st == .fullAccess
-        } else {
-            return st == .authorized
-        }
+        return st == .fullAccess
     }
 
-    // macOS 14+ Full Access 권한 요청
+    // macOS 15+ Full Access 권한 요청
     public func requestAccess() {
         eventStore.requestFullAccessToEvents { [weak self] granted, error in
             DispatchQueue.main.async {
@@ -70,8 +69,16 @@ public final class CalendarService: ObservableObject {
         }
     }
 
-    private let fetchSerialQueue = DispatchQueue(label: "com.nudgeline.fetchSerialQueue", qos: .userInitiated)
+    // macOS 시스템 설정 개인정보 보호 > 캘린더 화면 딥링크 오픈
+    public static func openPrivacySettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+}
 
+// MARK: - 4. 캘린더 목록 및 일정 비동기 조회 (Data Fetching)
+extension CalendarService {
     // 등록된 모든 캘린더 목록 및 소스 계정별 그룹 로드
     public func loadCalendars() {
         guard isAuthorized() else { return }
@@ -96,8 +103,7 @@ public final class CalendarService: ObservableObject {
                     id: cal.calendarIdentifier,
                     title: cal.title,
                     defaultColor: color,
-                    sourceTitle: srcTitle,
-                    allowsContentModifications: cal.allowsContentModifications
+                    sourceTitle: srcTitle
                 )
 
                 if grouped[srcId] != nil {
@@ -150,13 +156,13 @@ public final class CalendarService: ObservableObject {
 
             DispatchQueue.main.async {
                 self.events = filtered
-                self.lastRefreshedAt = Date()
             }
         }
     }
+}
 
-    private var isSleeping: Bool = false
-
+// MARK: - 5. 시스템 알림 및 백그라운드 동기화 옵저버 (Combine Observers)
+extension CalendarService {
     // 시스템 캘린더 변경 알림, 절전/복귀 전원 이벤트 및 주기적 갱신 타이머 등록
     private func setupEventStoreObserver() {
         // 1. 시스템 캘린더 DB 변경 감지

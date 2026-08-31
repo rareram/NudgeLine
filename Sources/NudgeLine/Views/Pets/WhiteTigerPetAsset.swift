@@ -1,4 +1,4 @@
-// 백호 Base64 애니메이션 스프라이트 프레임 에셋
+// 백호 Base64 애니메이션 스프라이트 프레임 에셋 (원본)
 import AppKit
 import SwiftUI
 

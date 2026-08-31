@@ -22,9 +22,9 @@ public struct HangingPetIndicatorView: View {
     public var body: some View {
         Group {
             switch petType {
-            case .cat:
+            case .calicoCat:
                 CatPetAsset(isHorizontal: isHorizontal, isRightEdge: isRightEdge, accentColor: accentColor)
-            case .dog:
+            case .jindoDog:
                 JindoDogPetAsset(isHorizontal: isHorizontal, isRightEdge: isRightEdge, accentColor: accentColor)
             case .whiteTiger:
                 WhiteTigerPetAsset(isHorizontal: isHorizontal, isRightEdge: isRightEdge, accentColor: accentColor)

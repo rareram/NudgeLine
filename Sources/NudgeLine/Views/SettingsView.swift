@@ -274,7 +274,7 @@ private struct AppearanceTab: View {
                     settings.selectedPetType = .custom
                     settings.selectedCustomPetId = String(newValue.dropFirst(7))
                 } else {
-                    settings.selectedPetType = HangingPetType(rawValue: newValue) ?? .cat
+                    settings.selectedPetType = HangingPetType(rawValue: newValue) ?? .whiteTiger
                     settings.selectedCustomPetId = ""
                 }
             }
@@ -559,9 +559,7 @@ private struct ScheduleTab: View {
                                 .buttonStyle(.borderedProminent)
 
                                 Button(L10n.tr(.openSystemPrivacy, lang: settings.language)) {
-                                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
-                                        NSWorkspace.shared.open(url)
-                                    }
+                                    CalendarService.openPrivacySettings()
                                 }
                             }
                         }

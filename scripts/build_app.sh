@@ -40,8 +40,8 @@ fi
 
 if [[ "${BUILD_UNIVERSAL}" == true ]]; then
     echo ">> 1. Swift Package Manager 유니버설 빌드 (arm64 + x86_64, ${CONFIGURATION})..."
-    swift build -c "${CONFIGURATION}" ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"} --triple arm64-apple-macosx14.0
-    swift build -c "${CONFIGURATION}" ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"} --triple x86_64-apple-macosx14.0
+    swift build -c "${CONFIGURATION}" ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"} --triple arm64-apple-macosx15.0
+    swift build -c "${CONFIGURATION}" ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"} --triple x86_64-apple-macosx15.0
     
     mkdir -p "${ROOT_DIR}/.build/universal/${CONFIGURATION}"
     lipo -create \

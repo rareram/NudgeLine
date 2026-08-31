@@ -3,7 +3,8 @@ import Foundation
 import SwiftUI
 import Combine
 
-public enum EventHoverStyle: String, Codable, CaseIterable, Sendable {
+// MARK: - 1. 환경설정 열거형 모델 (Enums)
+public enum EventHoverStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     case card = "card"               // 액션 카드 (미팅/캘린더)
     case simpleInfo = "simpleInfo"   // 요약 말풍선 (초경량)
 
@@ -24,10 +25,12 @@ public enum EventHoverStyle: String, Codable, CaseIterable, Sendable {
     }
 }
 
-public enum EventCardTheme: String, Codable, CaseIterable, Sendable {
+public enum EventCardTheme: String, Codable, CaseIterable, Identifiable, Sendable {
     case adaptive = "adaptive"       // 시스템 테마 (자동)
     case dark = "dark"               // 다크
     case light = "light"             // 라이트
+
+    public var id: String { rawValue }
 
     public func title(lang: AppLanguage = .system) -> String {
         switch self {
@@ -46,11 +49,13 @@ public enum EventCardTheme: String, Codable, CaseIterable, Sendable {
     }
 }
 
-public enum CurrentTimeIndicatorStyle: String, Codable, CaseIterable, Sendable {
+public enum CurrentTimeIndicatorStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     case triangleTick = "triangleTick" // 삼각 틱 (타입 3)
     case roundDome = "roundDome"       // 라운드 돔 (타입 2)
     case block = "block"               // 돌출 블록 (타입 1)
     case pointRing = "pointRing"       // 포인트 링 (타입 4)
+
+    public var id: String { rawValue }
 
     public func title(lang: AppLanguage = .system) -> String {
         switch self {
@@ -62,25 +67,25 @@ public enum CurrentTimeIndicatorStyle: String, Codable, CaseIterable, Sendable {
     }
 }
 
-public enum HangingPetType: String, Codable, CaseIterable, Identifiable {
-    case cat = "cat"                       // 삼색고양이
-    case dog = "dog"                       // 진도백구
-    case whiteTiger = "whiteTiger"         // 백호
-    case custom = "custom"                 // 사용자 설정 펫
+public enum HangingPetType: String, Codable, CaseIterable, Identifiable, Sendable {
+    case calicoCat   = "calicoCat"   // 삼색고양이
+    case jindoDog    = "jindoDog"    // 진도백구
+    case whiteTiger  = "whiteTiger"  // 백호 (기본 펫)
+    case custom      = "custom"      // 사용자 설정 펫
 
     public var id: String { rawValue }
 
     public func title(lang: AppLanguage = .system) -> String {
         switch self {
-        case .cat: return L10n.tr(.styleHangingCat, lang: lang)
-        case .dog: return L10n.tr(.styleHangingDog, lang: lang)
+        case .calicoCat: return L10n.tr(.styleHangingCat, lang: lang)
+        case .jindoDog: return L10n.tr(.styleHangingDog, lang: lang)
         case .whiteTiger: return L10n.tr(.styleHangingWhiteTiger, lang: lang)
         case .custom: return L10n.tr(.styleCustomPet, lang: lang)
         }
     }
 }
 
-public enum PetHideStyle: String, Codable, CaseIterable, Identifiable {
+public enum PetHideStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     case tailPeek = "tailPeek"       // 왼쪽으로 숨기 (꼬리 살랑)
     case headPeek = "headPeek"       // 오른쪽으로 숨기 (머리 빼꼼)
     case pop      = "pop"            // 없어지기 (팝/소멸)
@@ -106,11 +111,13 @@ public enum PetHideStyle: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-public enum BarStyleMode: String, Codable, CaseIterable, Sendable {
+public enum BarStyleMode: String, Codable, CaseIterable, Identifiable, Sendable {
     case adaptive = "adaptive"       // 시스템 테마 (자동)
     case dark = "dark"               // 다크
     case light = "light"             // 라이트
     case custom = "custom"           // 사용자 정의 색상
+
+    public var id: String { rawValue }
 
     public func title(lang: AppLanguage = .system) -> String {
         switch self {
@@ -122,10 +129,12 @@ public enum BarStyleMode: String, Codable, CaseIterable, Sendable {
     }
 }
 
-public enum BarPosition: String, Codable, CaseIterable, Sendable {
-    case left = "left"
-    case right = "right"
-    case bottom = "bottom"
+public enum BarPosition: String, Codable, CaseIterable, Identifiable, Sendable {
+    case left = "left"               // 화면 좌측
+    case right = "right"             // 화면 우측
+    case bottom = "bottom"           // 화면 하단
+
+    public var id: String { rawValue }
 
     public func title(lang: AppLanguage = .system) -> String {
         switch self {
@@ -140,10 +149,11 @@ public enum BarPosition: String, Codable, CaseIterable, Sendable {
     }
 }
 
-// 앱 전역 설정 저장소
+// MARK: - 2. 앱 전역 설정 저장소 본체 (AppSettings)
 public final class AppSettings: ObservableObject {
     public static let shared = AppSettings()
 
+    // MARK: 2-1. UserDefaults 저장소 키
     private enum Keys {
         static let language = "settings_language"
         static let eventHoverStyle = "settings_event_hover_style"
@@ -180,6 +190,7 @@ public final class AppSettings: ObservableObject {
 
     private let defaults = UserDefaults.standard
 
+    // MARK: 2-2. 관찰 가능한 상태 프로퍼티 (@Published)
     @Published public var language: AppLanguage {
         didSet { defaults.set(language.rawValue, forKey: Keys.language) }
     }
@@ -250,9 +261,7 @@ public final class AppSettings: ObservableObject {
     }
 
     @Published public var barPosition: BarPosition {
-        didSet {
-            defaults.set(barPosition.rawValue, forKey: Keys.barPosition)
-        }
+        didSet { defaults.set(barPosition.rawValue, forKey: Keys.barPosition) }
     }
 
     @Published public var showOnAllScreens: Bool {
@@ -287,23 +296,16 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(is24HourMode, forKey: Keys.is24HourMode) }
     }
 
-    @Published public var barWidth: Double {
-        didSet {
-            let clamped = max(1.0, min(10.0, barWidth))
-            if barWidth != clamped { barWidth = clamped }
-            defaults.set(clamped, forKey: Keys.barWidth)
-            if hoverWidth < clamped {
-                hoverWidth = clamped
-            }
-        }
+    @Published public var barWidth: CGFloat {
+        didSet { defaults.set(Double(barWidth), forKey: Keys.barWidth) }
     }
 
     @Published public var expandOnHover: Bool {
         didSet { defaults.set(expandOnHover, forKey: Keys.expandOnHover) }
     }
 
-    @Published public var hoverWidth: Double {
-        didSet { defaults.set(hoverWidth, forKey: Keys.hoverWidth) }
+    @Published public var hoverWidth: CGFloat {
+        didSet { defaults.set(Double(hoverWidth), forKey: Keys.hoverWidth) }
     }
 
     @Published public var calendarVisibility: [String: Bool] {
@@ -322,9 +324,10 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(enableSegmentGlow, forKey: Keys.enableSegmentGlow) }
     }
 
+    // MARK: 2-3. 초기화 (UserDefaults 영속 데이터 로드 및 마이그레이션)
     private init() {
-        let savedLanguage = defaults.string(forKey: Keys.language) ?? AppLanguage.system.rawValue
-        self.language = AppLanguage(rawValue: savedLanguage) ?? .system
+        let savedLang = defaults.string(forKey: Keys.language) ?? AppLanguage.system.rawValue
+        self.language = AppLanguage(rawValue: savedLang) ?? .system
 
         let savedHoverStyle = defaults.string(forKey: Keys.eventHoverStyle) ?? EventHoverStyle.card.rawValue
         self.eventHoverStyle = EventHoverStyle(rawValue: savedHoverStyle) ?? .card
@@ -332,20 +335,17 @@ public final class AppSettings: ObservableObject {
         let savedCardTheme = defaults.string(forKey: Keys.eventCardTheme) ?? EventCardTheme.adaptive.rawValue
         self.eventCardTheme = EventCardTheme(rawValue: savedCardTheme) ?? .adaptive
 
-        let savedCardOpacity = defaults.object(forKey: Keys.cardOpacity) != nil ? defaults.double(forKey: Keys.cardOpacity) : 0.30
-        self.cardOpacity = savedCardOpacity
+        let savedOpacity = defaults.double(forKey: Keys.cardOpacity)
+        self.cardOpacity = savedOpacity > 0 ? savedOpacity : 0.30
 
-        let savedStyleMode = defaults.string(forKey: Keys.barStyleMode) ?? BarStyleMode.adaptive.rawValue
-        self.barStyleMode = BarStyleMode(rawValue: savedStyleMode) ?? .adaptive
+        let savedBarStyle = defaults.string(forKey: Keys.barStyleMode) ?? BarStyleMode.adaptive.rawValue
+        self.barStyleMode = BarStyleMode(rawValue: savedBarStyle) ?? .adaptive
 
-        let savedTrackColor = defaults.string(forKey: Keys.trackColorHex) ?? "#000000"
-        self.trackColorHex = savedTrackColor
+        self.trackColorHex = defaults.string(forKey: Keys.trackColorHex) ?? "#000000"
+        let savedTrackOpacity = defaults.double(forKey: Keys.trackOpacity)
+        self.trackOpacity = savedTrackOpacity > 0 ? savedTrackOpacity : 0.20
 
-        let savedTrackOpacity = defaults.object(forKey: Keys.trackOpacity) != nil ? defaults.double(forKey: Keys.trackOpacity) : 0.20
-        self.trackOpacity = savedTrackOpacity
-
-        let savedCurrentTimeColor = defaults.string(forKey: Keys.currentTimeColorHex) ?? "#FF3B30"
-        self.currentTimeColorHex = savedCurrentTimeColor
+        self.currentTimeColorHex = defaults.string(forKey: Keys.currentTimeColorHex) ?? "#FF3B30"
 
         let savedIndicatorStyle = defaults.string(forKey: Keys.currentTimeIndicatorStyle) ?? CurrentTimeIndicatorStyle.triangleTick.rawValue
         self.currentTimeIndicatorStyle = CurrentTimeIndicatorStyle(rawValue: savedIndicatorStyle) ?? .triangleTick
@@ -353,8 +353,15 @@ public final class AppSettings: ObservableObject {
         self.enableIndicatorRim = defaults.object(forKey: Keys.enableIndicatorRim) != nil ? defaults.bool(forKey: Keys.enableIndicatorRim) : false
         self.enableIndicatorGlow = defaults.object(forKey: Keys.enableIndicatorGlow) != nil ? defaults.bool(forKey: Keys.enableIndicatorGlow) : false
 
-        let savedPetType = defaults.string(forKey: Keys.selectedPetType) ?? HangingPetType.cat.rawValue
-        let loadedPetType = HangingPetType(rawValue: savedPetType) ?? .cat
+        let savedPetType = defaults.string(forKey: Keys.selectedPetType) ?? HangingPetType.whiteTiger.rawValue
+        let loadedPetType: HangingPetType
+        if savedPetType == "cat" {
+            loadedPetType = .calicoCat
+        } else if savedPetType == "dog" {
+            loadedPetType = .jindoDog
+        } else {
+            loadedPetType = HangingPetType(rawValue: savedPetType) ?? .whiteTiger
+        }
         self.selectedPetType = loadedPetType
         self.isPetEnabled = defaults.object(forKey: Keys.isPetEnabled) != nil ? defaults.bool(forKey: Keys.isPetEnabled) : true
 
@@ -371,7 +378,6 @@ public final class AppSettings: ObservableObject {
 
         let savedPosition = defaults.string(forKey: Keys.barPosition) ?? BarPosition.left.rawValue
         self.barPosition = BarPosition(rawValue: savedPosition) ?? .left
-        self.isPetEnabled = defaults.object(forKey: Keys.isPetEnabled) != nil ? defaults.bool(forKey: Keys.isPetEnabled) : true
 
         self.showOnAllScreens = defaults.bool(forKey: Keys.showOnAllScreens)
         self.hideOnScreenShare = defaults.object(forKey: Keys.hideOnScreenShare) != nil ? defaults.bool(forKey: Keys.hideOnScreenShare) : true
@@ -405,7 +411,10 @@ public final class AppSettings: ObservableObject {
         self.enableSegmentRim = defaults.object(forKey: Keys.enableSegmentRim) != nil ? defaults.bool(forKey: Keys.enableSegmentRim) : false
         self.enableSegmentGlow = defaults.object(forKey: Keys.enableSegmentGlow) != nil ? defaults.bool(forKey: Keys.enableSegmentGlow) : false
     }
+}
 
+// MARK: - 3. 캘린더 가시성 및 사용자 지정 색상 관리
+extension AppSettings {
     public func isCalendarVisible(id: String) -> Bool {
         return calendarVisibility[id] ?? true
     }
@@ -434,7 +443,10 @@ public final class AppSettings: ObservableObject {
             calendarCustomColors.removeValue(forKey: id)
         }
     }
+}
 
+// MARK: - 4. 타임라인 날짜 및 시간 범위 계산 헬퍼
+extension AppSettings {
     public func startDate(for baseDate: Date = Date()) -> Date {
         let calendar = Calendar.current
         if is24HourMode {
@@ -466,7 +478,7 @@ public final class AppSettings: ObservableObject {
     }
 }
 
-// MARK: - Color 및 16진수 Hex 문자열 상호 변환 확장
+// MARK: - 5. SwiftUI Color <-> 16진수 HEX 변환 유틸리티
 public extension Color {
     init?(hex: String) {
         var cleanHex = hex.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -1,40 +1,7 @@
-// 일정 호버 상세 액션 카드 팝오버 뷰 및 블러/말풍선 렌더러
+// 일정 호버 상세 액션 카드 팝오버 뷰 (프로스티드 글래스, 화상회의 링크 바로가기)
 import SwiftUI
 import AppKit
 
-// macOS 네이티브 NSVisualEffectView 래퍼 블러 뷰
-public struct VisualEffectBlur: NSViewRepresentable {
-    public var material: NSVisualEffectView.Material
-    public var blendingMode: NSVisualEffectView.BlendingMode
-    public var state: NSVisualEffectView.State
-
-    public init(
-        material: NSVisualEffectView.Material = .popover,
-        blendingMode: NSVisualEffectView.BlendingMode = .behindWindow,
-        state: NSVisualEffectView.State = .active
-    ) {
-        self.material = material
-        self.blendingMode = blendingMode
-        self.state = state
-    }
-
-    public func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = blendingMode
-        view.state = state
-        view.autoresizingMask = [.width, .height]
-        return view
-    }
-
-    public func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = material
-        nsView.blendingMode = blendingMode
-        nsView.state = state
-    }
-}
-
-// 프로스티드 글래스 일정 상세 카드 팝오버 뷰
 public struct EventPopoverView: View {
     public let events: [CalendarEvent]
     @ObservedObject public var settings: AppSettings
@@ -57,6 +24,15 @@ public struct EventPopoverView: View {
         settings.eventCardTheme.isDark(for: colorScheme)
     }
 
+    private var tintColor: Color {
+        let opacity = settings.cardOpacity
+        if isDarkTheme {
+            return Color.black.opacity(opacity)
+        } else {
+            return Color.white.opacity(max(0.1, opacity * 0.25))
+        }
+    }
+
     public var body: some View {
         let isMulti = events.count > 1
         let direction = bubbleDirection
@@ -64,7 +40,7 @@ public struct EventPopoverView: View {
 
         VStack(alignment: .leading, spacing: 10) {
             if isMulti {
-                // Header badge for overlapping events
+                // 다중 일정 중첩 헤더 배지
                 HStack(spacing: 5) {
                     Image(systemName: "square.2.layers.3d.top.filled")
                         .font(.caption2)
@@ -95,7 +71,7 @@ public struct EventPopoverView: View {
         .frame(minWidth: isMulti ? 220 : 200, maxWidth: 280, alignment: .leading)
         .fixedSize(horizontal: true, vertical: false)
         .background(
-            // Layer 1: Genuine Hardware-Accelerated Frosted Glass Backdrop Blur
+            // 1단계: 하드웨어 가속 프로스티드 글래스 블러
             VisualEffectBlur(
                 material: isDarkTheme ? .hudWindow : .popover,
                 blendingMode: .behindWindow,
@@ -105,32 +81,32 @@ public struct EventPopoverView: View {
             .allowsHitTesting(false)
         )
         .background(
-            // Layer 2: Theme-matched Translucent Tint Layer
+            // 2단계: 테마 투명 틴트 레이어
             bubbleShape
                 .fill(tintColor)
                 .allowsHitTesting(false)
         )
         .overlay(
-            // Layer 3: Ambient Light Shimmer Reflection Gradient
+            // 3단계: 상단 림 라이트 반사 그래디언트
             LinearGradient(
                 colors: [
                     Color.white.opacity(isDarkTheme ? 0.12 : 0.35),
                     Color.white.opacity(0.0)
                 ],
                 startPoint: .top,
-                endPoint: .bottom
+                endPoint: .center
             )
             .clipShape(bubbleShape)
             .allowsHitTesting(false)
         )
         .overlay(
-            // Layer 4: 1px Crystal Edge Rim Highlight
+            // 4단계: 외곽선 스트로크
             bubbleShape
                 .stroke(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(isDarkTheme ? 0.38 : 0.65),
-                            Color.white.opacity(isDarkTheme ? 0.10 : 0.25)
+                            Color.white.opacity(isDarkTheme ? 0.35 : 0.6),
+                            Color.white.opacity(isDarkTheme ? 0.10 : 0.2)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -139,64 +115,42 @@ public struct EventPopoverView: View {
                 )
                 .allowsHitTesting(false)
         )
-        .shadow(color: .black.opacity(0.32), radius: 12, x: 0, y: 5)
+        .shadow(color: .black.opacity(0.28), radius: 10, x: 0, y: 5)
         .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 
-    private var tintColor: Color {
-        isDarkTheme ? Color.black.opacity(settings.cardOpacity) : Color.white.opacity(max(0.1, settings.cardOpacity * 0.25))
-    }
-
+    // MARK: - 개별 일정 카드 뷰
     @ViewBuilder
     private func singleEventCard(event: CalendarEvent) -> some View {
         let textPrimary = isDarkTheme ? Color.white : Color.black.opacity(0.9)
         let textSecondary = isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.65)
-        let textMuted = isDarkTheme ? Color.white.opacity(0.55) : Color.black.opacity(0.48)
+        let textMuted = isDarkTheme ? Color.white.opacity(0.55) : Color.black.opacity(0.45)
+        let calColor = settings.customColor(for: event.calendarIdentifier) ?? event.defaultColor
 
         VStack(alignment: .leading, spacing: 6) {
-            // Source & Calendar Header
-            HStack(spacing: 6) {
+            // 헤더: 캘린더 색상 인디케이터 + 계정/캘린더 이름
+            HStack(spacing: 5) {
                 Circle()
-                    .fill(event.effectiveColor(settings: settings))
+                    .fill(calColor)
                     .frame(width: 8, height: 8)
-                    .shadow(color: event.effectiveColor(settings: settings).opacity(0.6), radius: 2)
 
-                Text("\(event.sourceTitle(lang: settings.language)) · \(event.calendarTitle)")
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundStyle(textSecondary)
+                Text("\(event.sourceTitle(lang: settings.language)) • \(event.calendarTitle)")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(textMuted)
                     .lineLimit(1)
-
-                Spacer(minLength: 4)
-
-                if event.isAllDay {
-                    Text(L10n.tr(.allDayBadge, lang: settings.language))
-                        .font(.system(size: 10, weight: .bold))
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1.5)
-                        .background(isDarkTheme ? Color.white.opacity(0.18) : Color.black.opacity(0.08))
-                        .foregroundStyle(textPrimary)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                }
             }
 
-            // Title
+            // 일정 제목
             Text(event.title(lang: settings.language))
-                .font(.subheadline)
-                .fontWeight(.semibold)
+                .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2)
 
-            // Time & Duration
-            HStack(spacing: 4) {
-                Image(systemName: "clock")
-                    .font(.caption2)
-                    .foregroundStyle(textSecondary)
-
+            // 시간 범위 및 소요 시간
+            HStack(spacing: 6) {
                 Text(event.formattedTimeRange(lang: settings.language))
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(textPrimary)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(textSecondary)
 
                 if !event.isAllDay {
                     Text(L10n.tr(.durationMinutes(event.durationMinutes), lang: settings.language))
@@ -205,7 +159,7 @@ public struct EventPopoverView: View {
                 }
             }
 
-            // Location if present
+            // 위치 정보
             if let loc = event.location, !loc.isEmpty {
                 HStack(spacing: 4) {
                     Image(systemName: "mappin.and.ellipse")
@@ -219,7 +173,7 @@ public struct EventPopoverView: View {
                 }
             }
 
-            // Notes preview if present
+            // 본문 메모 미리보기
             if let notes = event.notes, !notes.isEmpty {
                 let cleanNotes = notes.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
                 if !cleanNotes.isEmpty {
@@ -237,7 +191,7 @@ public struct EventPopoverView: View {
                 }
             }
 
-            // Meeting Quick Join Button if detected
+            // 화상회의 원클릭 바로가기 버튼 또는 미검증 안내 배지
             if let meeting = event.meetingInfo {
                 if meeting.platform == .unverified {
                     // 미검증 외부 링크: 피싱 방어를 위해 클릭을 차단하고 캘린더 앱 직접 확인 안내 배지로 표출
@@ -286,7 +240,7 @@ public struct EventPopoverView: View {
                 }
             }
 
-            // Open in Calendar Button
+            // Apple 캘린더 앱에서 보기 버튼
             Button(action: {
                 CalendarAppLauncher.open(event: event)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
@@ -301,113 +255,5 @@ public struct EventPopoverView: View {
             .padding(.top, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-// MARK: - 팝오버 말풍선 꼬리 방향 및 기하 Shape
-public enum BubbleArrowDirection: Sendable {
-    case left
-    case right
-    case bottom
-    case none
-}
-
-public struct SpeechBubbleShape: Shape {
-    public var direction: BubbleArrowDirection
-    public var arrowWidth: CGFloat = 8
-    public var arrowHeight: CGFloat = 14
-    public var cornerRadius: CGFloat = 8
-    public var arrowOffsetPercent: CGFloat = 0.5
-
-    public init(
-        direction: BubbleArrowDirection,
-        arrowWidth: CGFloat = 8,
-        arrowHeight: CGFloat = 14,
-        cornerRadius: CGFloat = 8,
-        arrowOffsetPercent: CGFloat = 0.5
-    ) {
-        self.direction = direction
-        self.arrowWidth = arrowWidth
-        self.arrowHeight = arrowHeight
-        self.cornerRadius = cornerRadius
-        self.arrowOffsetPercent = arrowOffsetPercent
-    }
-
-    public func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let r = cornerRadius
-
-        switch direction {
-        case .left:
-            let bodyRect = CGRect(x: rect.minX + arrowWidth, y: rect.minY, width: rect.width - arrowWidth, height: rect.height)
-            let arrowMidY = bodyRect.minY + (bodyRect.height * arrowOffsetPercent)
-            let arrowHalfH = arrowHeight / 2
-
-            path.move(to: CGPoint(x: bodyRect.minX + r, y: bodyRect.minY))
-            path.addLine(to: CGPoint(x: bodyRect.maxX - r, y: bodyRect.minY))
-            path.addArc(center: CGPoint(x: bodyRect.maxX - r, y: bodyRect.minY + r), radius: r, startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false)
-            path.addLine(to: CGPoint(x: bodyRect.maxX, y: bodyRect.maxY - r))
-            path.addArc(center: CGPoint(x: bodyRect.maxX - r, y: bodyRect.maxY - r), radius: r, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
-            path.addLine(to: CGPoint(x: bodyRect.minX + r, y: bodyRect.maxY))
-            path.addArc(center: CGPoint(x: bodyRect.minX + r, y: bodyRect.maxY - r), radius: r, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
-
-            // Left edge with Arrow pointing to the timeline bar
-            path.addLine(to: CGPoint(x: bodyRect.minX, y: min(bodyRect.maxY - r, arrowMidY + arrowHalfH)))
-            path.addLine(to: CGPoint(x: rect.minX, y: arrowMidY))
-            path.addLine(to: CGPoint(x: bodyRect.minX, y: max(bodyRect.minY + r, arrowMidY - arrowHalfH)))
-
-            path.addLine(to: CGPoint(x: bodyRect.minX, y: bodyRect.minY + r))
-            path.addArc(center: CGPoint(x: bodyRect.minX + r, y: bodyRect.minY + r), radius: r, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
-            path.closeSubpath()
-
-        case .right:
-            let bodyRect = CGRect(x: rect.minX, y: rect.minY, width: rect.width - arrowWidth, height: rect.height)
-            let arrowMidY = bodyRect.minY + (bodyRect.height * arrowOffsetPercent)
-            let arrowHalfH = arrowHeight / 2
-
-            path.move(to: CGPoint(x: bodyRect.minX + r, y: bodyRect.minY))
-            path.addLine(to: CGPoint(x: bodyRect.maxX - r, y: bodyRect.minY))
-            path.addArc(center: CGPoint(x: bodyRect.maxX - r, y: bodyRect.minY + r), radius: r, startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false)
-
-            // Right edge with Arrow
-            path.addLine(to: CGPoint(x: bodyRect.maxX, y: max(bodyRect.minY + r, arrowMidY - arrowHalfH)))
-            path.addLine(to: CGPoint(x: rect.maxX, y: arrowMidY))
-            path.addLine(to: CGPoint(x: bodyRect.maxX, y: min(bodyRect.maxY - r, arrowMidY + arrowHalfH)))
-
-            path.addLine(to: CGPoint(x: bodyRect.maxX, y: bodyRect.maxY - r))
-            path.addArc(center: CGPoint(x: bodyRect.maxX - r, y: bodyRect.maxY - r), radius: r, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
-            path.addLine(to: CGPoint(x: bodyRect.minX + r, y: bodyRect.maxY))
-            path.addArc(center: CGPoint(x: bodyRect.minX + r, y: bodyRect.maxY - r), radius: r, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
-            path.addLine(to: CGPoint(x: bodyRect.minX, y: bodyRect.minY + r))
-            path.addArc(center: CGPoint(x: bodyRect.minX + r, y: bodyRect.minY + r), radius: r, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
-            path.closeSubpath()
-
-        case .bottom:
-            let bodyRect = CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height - arrowWidth)
-            let arrowMidX = bodyRect.minX + (bodyRect.width * arrowOffsetPercent)
-            let arrowHalfW = arrowHeight / 2
-
-            path.move(to: CGPoint(x: bodyRect.minX + r, y: bodyRect.minY))
-            path.addLine(to: CGPoint(x: bodyRect.maxX - r, y: bodyRect.minY))
-            path.addArc(center: CGPoint(x: bodyRect.maxX - r, y: bodyRect.minY + r), radius: r, startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false)
-            path.addLine(to: CGPoint(x: bodyRect.maxX, y: bodyRect.maxY - r))
-            path.addArc(center: CGPoint(x: bodyRect.maxX - r, y: bodyRect.maxY - r), radius: r, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
-
-            // Bottom edge with Arrow
-            path.addLine(to: CGPoint(x: min(bodyRect.maxX - r, arrowMidX + arrowHalfW), y: bodyRect.maxY))
-            path.addLine(to: CGPoint(x: arrowMidX, y: rect.maxY))
-            path.addLine(to: CGPoint(x: max(bodyRect.minX + r, arrowMidX - arrowHalfW), y: bodyRect.maxY))
-
-            path.addLine(to: CGPoint(x: bodyRect.minX + r, y: bodyRect.maxY))
-            path.addArc(center: CGPoint(x: bodyRect.minX + r, y: bodyRect.maxY - r), radius: r, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
-            path.addLine(to: CGPoint(x: bodyRect.minX, y: bodyRect.minY + r))
-            path.addArc(center: CGPoint(x: bodyRect.minX + r, y: bodyRect.minY + r), radius: r, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
-            path.closeSubpath()
-
-        case .none:
-            path.addRoundedRect(in: rect, cornerSize: CGSize(width: r, height: r))
-        }
-
-        return path
     }
 }
