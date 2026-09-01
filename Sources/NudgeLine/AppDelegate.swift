@@ -5,7 +5,6 @@ import Combine
 
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var overlayPanels: [OverlayPanel] = []
-    private var settingsWindow: NSWindow?
     private var statusItem: NSStatusItem?
     private var cancellables = Set<AnyCancellable>()
 
@@ -122,18 +121,7 @@ extension AppDelegate {
 
     // 환경설정 단일 윈도우 인스턴스 오픈
     @objc public func openSettings() {
-        if settingsWindow == nil {
-            let hostingController = NSHostingController(rootView: SettingsView(settings: settings, calendarService: calendarService))
-            let window = NSWindow(contentViewController: hostingController)
-            window.title = "NudgeLine"
-            window.styleMask = [.titled, .closable, .miniaturizable]
-            window.center()
-            window.isReleasedWhenClosed = false
-            self.settingsWindow = window
-        }
-
-        NSApp.activate(ignoringOtherApps: true)
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        SettingsWindowController.shared.showSettings()
     }
 
     @objc public func quitApp() {

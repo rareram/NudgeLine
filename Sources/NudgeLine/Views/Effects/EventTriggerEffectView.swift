@@ -3,6 +3,7 @@ import SwiftUI
 import AppKit
 
 public struct EventTriggerEffectView: View {
+    public static let canvasSize: CGFloat = 110.0
     public static let frameCount: Int = 16
     public static let frameInterval: TimeInterval = 0.062 // 16프레임 * 62ms ≈ 1.0초
 
@@ -30,12 +31,12 @@ public struct EventTriggerEffectView: View {
         Group {
             if !isCompleted {
                 effectImageView
-                    .frame(width: 80, height: 80)
+                    .frame(width: Self.canvasSize, height: Self.canvasSize)
                     .rotationEffect(rotationAngle)
                     .scaleEffect(x: scaleX, y: 1.0)
                     .allowsHitTesting(false)
-                    .onAppear {
-                        startFrameAnimation()
+                    .task {
+                        await runFrameAnimation()
                     }
                     .onDisappear {
                         isCompleted = true
@@ -43,8 +44,10 @@ public struct EventTriggerEffectView: View {
             }
         }
     }
+}
 
-    // MARK: - 프레임 이미지 렌더링 (다형성 지원)
+// MARK: - 서브뷰 및 시각 변환 (Subviews & Transformations)
+extension EventTriggerEffectView {
     @ViewBuilder
     private var effectImageView: some View {
         if let nsImage = effectType.image(frameIndex: currentFrame) {
@@ -55,7 +58,6 @@ public struct EventTriggerEffectView: View {
         }
     }
 
-    // MARK: - 방향별 변환 (Rotation / Scale)
     private var rotationAngle: Angle {
         if isHorizontal {
             // 하단 바: 위쪽으로 방전되도록 -90도 회전
@@ -71,28 +73,29 @@ public struct EventTriggerEffectView: View {
         }
         return 1.0
     }
+}
 
-    // MARK: - 16프레임 1.0초(프레임당 62ms) 실키 스무스 애니메이션 구동
-    private func startFrameAnimation() {
+// MARK: - 16프레임 구조화된 동시성 애니메이션 (Structured Concurrency Engine)
+extension EventTriggerEffectView {
+    @MainActor
+    private func runFrameAnimation() async {
         currentFrame = 0
 
         for f in 1..<Self.frameCount {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(f) * Self.frameInterval) {
-                if !self.isCompleted {
-                    self.currentFrame = f
-                }
-            }
+            guard !Task.isCancelled && !isCompleted else { return }
+            try? await Task.sleep(nanoseconds: UInt64(Self.frameInterval * 1_000_000_000))
+            guard !Task.isCancelled && !isCompleted else { return }
+            currentFrame = f
         }
 
-        // 16프레임 완료 후 1.0초 시점에 완전 소멸 및 콜백
-        DispatchQueue.main.asyncAfter(deadline: .now() + Double(Self.frameCount) * Self.frameInterval + 0.01) {
-            guard !self.isCompleted else { return }
-            self.isCompleted = true
-            self.onComplete()
-        }
+        // 16프레임 완료 후 종료 콜백 실행
+        guard !Task.isCancelled && !isCompleted else { return }
+        isCompleted = true
+        onComplete()
     }
 }
 
+// MARK: - 알림 센터 식별자 (Notifications)
 extension Notification.Name {
     public static let previewEventContactEffect = Notification.Name("NudgeLine.previewEventContactEffect")
 }

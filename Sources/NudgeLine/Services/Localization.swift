@@ -42,6 +42,7 @@ public struct L10n {
         // 메뉴바 및 컨텍스트 메뉴
         case refresh
         case settings
+        case settingsWindowTitle
         case quit
 
         // 환경설정 4대 핵심 탭
@@ -193,6 +194,7 @@ extension L10n.Key {
         switch self {
         case .refresh: return "새로고침"
         case .settings: return "설정..."
+        case .settingsWindowTitle: return "NudgeLine 설정"
         case .quit: return "NudgeLine 종료"
 
         case .tabTimeline: return "타임라인"
@@ -328,6 +330,7 @@ extension L10n.Key {
         switch self {
         case .refresh: return "Refresh"
         case .settings: return "Settings..."
+        case .settingsWindowTitle: return "NudgeLine Settings"
         case .quit: return "Quit NudgeLine"
 
         case .tabTimeline: return "Timeline"

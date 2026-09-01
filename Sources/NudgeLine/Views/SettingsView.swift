@@ -6,134 +6,35 @@ import AppKit
 public struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var calendarService: CalendarService
-    @ObservedObject var petService: CustomPetService = .shared
+    @ObservedObject var tabManager: SettingsWindowController.TabManager
 
-    @State private var selectedTab = 0
-
-    public init(settings: AppSettings = .shared, calendarService: CalendarService = .shared) {
+    public init(
+        settings: AppSettings = .shared,
+        calendarService: CalendarService = .shared,
+        tabManager: SettingsWindowController.TabManager
+    ) {
         self.settings = settings
         self.calendarService = calendarService
+        self.tabManager = tabManager
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            // 상단 탭 툴바
-            HStack(spacing: 16) {
-                TabToolbarButton(
-                    title: L10n.tr(.tabTimeline, lang: settings.language),
-                    icon: "guidepoint.vertical.arrowtriangle.forward",
-                    isSelected: selectedTab == 0
-                ) {
-                    selectedTab = 0
-                }
-
-                TabToolbarButton(
-                    title: L10n.tr(.tabAppearance, lang: settings.language),
-                    icon: "calendar.day.timeline.leading",
-                    isSelected: selectedTab == 1
-                ) {
-                    selectedTab = 1
-                }
-
-                TabToolbarButton(
-                    title: L10n.tr(.tabSchedule, lang: settings.language),
-                    icon: "calendar.badge.clock",
-                    isSelected: selectedTab == 2
-                ) {
-                    selectedTab = 2
-                }
-
-                TabToolbarButton(
-                    title: L10n.tr(.tabGeneral, lang: settings.language),
-                    icon: "gear",
-                    isSelected: selectedTab == 3
-                ) {
-                    selectedTab = 3
-                }
-            }
-            .padding(.top, 12)
-            .padding(.bottom, 10)
-            .frame(maxWidth: .infinity)
-
-            Divider()
-
-            // 2. Content Area (파인더 방식: 콘텐츠는 즉시 교체하고, 윈도우 프레임만 애니메이션)
-            Group {
-                switch selectedTab {
-                case 0:
-                    TimelineTab(settings: settings)
-                case 1:
-                    AppearanceTab(settings: settings)
-                case 2:
-                    ScheduleTab(settings: settings, calendarService: calendarService)
-                case 3:
-                    GeneralTab(settings: settings)
-                default:
-                    EmptyView()
-                }
-            }
-            .frame(width: 470, alignment: .top)
-            .padding(.vertical, 10)
-        }
-        .frame(width: 480)
-        .onAppear {
-            resizeWindow()
-        }
-        .onChange(of: selectedTab) { _, _ in
-            resizeWindow()
-        }
-        .onChange(of: petService.customPets.count) { _, _ in
-            resizeWindow()
-        }
-    }
-
-    // 탭 전환 시 실제 콘텐츠 ideal size(NSHostingView fittingSize)에 맞춰 NSWindow 프레임을 부드럽게 동기화
-    private func resizeWindow() {
-        DispatchQueue.main.async {
-            guard let window = NSApp.windows.first(where: { $0.title == "NudgeLine" && $0.isVisible }),
-                  let contentView = window.contentView else { return }
-
-            let idealSize = contentView.fittingSize
-            guard idealSize.height > 0 else { return }
-
-            let targetContentSize = NSSize(width: 480, height: idealSize.height)
-            let newWindowFrame = window.frameRect(forContentRect: NSRect(origin: window.frame.origin, size: targetContentSize))
-            let adjustedOrigin = NSPoint(x: window.frame.minX, y: window.frame.maxY - newWindowFrame.height)
-            let finalFrame = NSRect(origin: adjustedOrigin, size: newWindowFrame.size)
-
-            if abs(window.frame.height - finalFrame.height) > 1 {
-                window.setFrame(finalFrame, display: true, animate: true)
+        Group {
+            switch tabManager.selectedTab {
+            case .timeline:
+                TimelineTab(settings: settings)
+            case .appearance:
+                AppearanceTab(settings: settings)
+            case .schedule:
+                ScheduleTab(settings: settings, calendarService: calendarService)
+            case .general:
+                GeneralTab(settings: settings)
             }
         }
-    }
-}
-
-// MARK: - Finder Style Toolbar Button
-private struct TabToolbarButton: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .regular))
-                    .frame(height: 24)
-                Text(title)
-                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-            }
-            .foregroundStyle(isSelected ? Color.accentColor : Color.primary.opacity(0.75))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        .frame(width: SettingsWindowController.contentWidth, alignment: .top)
+        .padding(.horizontal, SettingsWindowController.contentHorizontalPadding)
+        .padding(.vertical, 10)
+        .frame(width: SettingsWindowController.windowWidth)
     }
 }
 

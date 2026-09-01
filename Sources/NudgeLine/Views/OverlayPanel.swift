@@ -77,7 +77,7 @@ extension OverlayPanel {
         let visibleFrame = screen.visibleFrame
         let fullFrame = screen.frame
         let maxThickness: CGFloat = max(settings.barWidth, settings.hoverWidth)
-        let panelThickness: CGFloat = max(maxThickness + 54, 64.0)
+        let panelThickness: CGFloat = max(maxThickness + EventTriggerEffectView.canvasSize - 10.0, EventTriggerEffectView.canvasSize)
 
         let newFrame: NSRect
         switch settings.barPosition {

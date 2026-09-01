@@ -477,6 +477,10 @@ private struct LivePetPreviewBox: View {
 
 // MARK: - 5. 커스텀 펫 실시간 숨김 모션 프리뷰 박스 (100% Retina 크기, 가로/세로 정중앙 정렬)
 private struct LivePetHidePreviewBox: View {
+    private static let offScreenBlurRadius: CGFloat = 1.2
+    private static let offScreenOpacity: Double = 0.65
+    private static let offScreenBgDimOpacity: Double = 0.15
+
     let frames: [NSImage]
     let rotation: Double
     let offset: Double
@@ -495,16 +499,31 @@ private struct LivePetHidePreviewBox: View {
                     let centerY = geo.size.height / 2.0
 
                     ZStack(alignment: .topLeading) {
-                        // 1. 100% Retina 크기(40x58) 회전 펫 (앞발 핀 힌지 회전)
-                        Image(nsImage: image)
-                            .resizable()
-                            .interpolation(.high)
-                            .scaledToFit()
-                            .frame(width: 40, height: 58)
-                            .rotationEffect(.degrees(rotation), anchor: UnitPoint(x: 0.0, y: 0.27))
-                            .position(x: wallX + 20.0 + CGFloat(offset), y: centerY + 13.34)
+                        // 1. 화면 바깥쪽(좌측) 어두운 배경 딤
+                        Rectangle()
+                            .fill(Color.black.opacity(Self.offScreenBgDimOpacity))
+                            .frame(width: wallX, height: geo.size.height)
+                            .position(x: wallX / 2.0, y: centerY)
 
-                        // 2. 세로 벽면 라인 (가로 정중앙 최상위 레이어로 펫 위에 표시)
+                        // 2. 화면 바깥으로 넘어간 펫 (은은하고 섬세한 소프트 블러 + 아웃포커싱 음영)
+                        petImageView(image: image, wallX: wallX, centerY: centerY)
+                            .blur(radius: Self.offScreenBlurRadius)
+                            .opacity(Self.offScreenOpacity)
+                            .mask(
+                                Rectangle()
+                                    .frame(width: wallX, height: geo.size.height)
+                                    .position(x: wallX / 2.0, y: centerY)
+                            )
+
+                        // 3. 화면 안쪽 펫 (100% 선명한 원본)
+                        petImageView(image: image, wallX: wallX, centerY: centerY)
+                            .mask(
+                                Rectangle()
+                                    .frame(width: wallX, height: geo.size.height)
+                                    .position(x: wallX + wallX / 2.0, y: centerY)
+                            )
+
+                        // 4. 세로 화면 경계 가이드라인 (파란색 에지 라인)
                         Rectangle()
                             .fill(Color.accentColor.opacity(0.9))
                             .frame(width: 2, height: geo.size.height)
@@ -514,5 +533,16 @@ private struct LivePetHidePreviewBox: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func petImageView(image: NSImage, wallX: CGFloat, centerY: CGFloat) -> some View {
+        Image(nsImage: image)
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .frame(width: 40, height: 58)
+            .rotationEffect(.degrees(rotation), anchor: UnitPoint(x: 0.0, y: 0.27))
+            .position(x: wallX + 20.0 + CGFloat(offset), y: centerY + 13.34)
     }
 }

@@ -519,22 +519,24 @@ private struct CurrentTimeIndicatorView: View {
     }
 
     private var effectOffsetX: CGFloat {
+        let size = EventTriggerEffectView.canvasSize
         switch settings.barPosition {
         case .left:
             return 0
         case .right:
-            return -80.0
+            return -size
         case .bottom:
-            return -40.0
+            return -size / 2.0
         }
     }
 
     private var effectOffsetY: CGFloat {
+        let size = EventTriggerEffectView.canvasSize
         switch settings.barPosition {
         case .left, .right:
-            return -40.0
+            return -size / 2.0
         case .bottom:
-            return -80.0
+            return -size
         }
     }
 
