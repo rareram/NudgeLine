@@ -40,6 +40,7 @@ public struct EventTriggerEffectView: View {
                     }
                     .onDisappear {
                         isCompleted = true
+                        onComplete()
                     }
             }
         }
@@ -80,16 +81,32 @@ extension EventTriggerEffectView {
     @MainActor
     private func runFrameAnimation() async {
         currentFrame = 0
+        let startTime = Date()
 
         for f in 1..<Self.frameCount {
-            guard !Task.isCancelled && !isCompleted else { return }
+            guard !Task.isCancelled && !isCompleted else {
+                onComplete()
+                return
+            }
             try? await Task.sleep(nanoseconds: UInt64(Self.frameInterval * 1_000_000_000))
-            guard !Task.isCancelled && !isCompleted else { return }
+            guard !Task.isCancelled && !isCompleted else {
+                onComplete()
+                return
+            }
+            // 미션컨트롤, 스페이스 전환 등으로 인한 지연 시 잔여 프레임 강제 종료 (최대 1.5초 초과 방지)
+            if Date().timeIntervalSince(startTime) > 1.5 {
+                isCompleted = true
+                onComplete()
+                return
+            }
             currentFrame = f
         }
 
         // 16프레임 완료 후 종료 콜백 실행
-        guard !Task.isCancelled && !isCompleted else { return }
+        guard !Task.isCancelled && !isCompleted else {
+            onComplete()
+            return
+        }
         isCompleted = true
         onComplete()
     }

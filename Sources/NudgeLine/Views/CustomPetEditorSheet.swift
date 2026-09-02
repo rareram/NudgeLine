@@ -459,7 +459,8 @@ private struct LivePetPreviewBox: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary.opacity(0.5))
             } else {
-                TimelineView(.periodic(from: .now, by: 1.0 / max(1.0, fps))) { context in
+                // 시스템 ProMotion/60Hz 렌더링 주기 동기화 및 뷰 비가시화 시 자동 절전 지원
+                TimelineView(.animation(minimumInterval: 1.0 / max(1.0, fps))) { context in
                     let count = max(1, frames.count)
                     let index = Int(context.date.timeIntervalSince1970 * fps) % count
                     if let image = frames[safe: index] {

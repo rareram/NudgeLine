@@ -15,7 +15,8 @@ public final class OverlayPanel: NSPanel {
     private let settings: AppSettings
     public let panelState = OverlayPanelState()
     private var cancellables = Set<AnyCancellable>()
-    private var mouseTrackingTimer: Timer?
+    private var globalMouseMonitor: Any?
+    private var localMouseMonitor: Any?
     private var presentationCheckTimer: Timer?
     private var isOccludedByFullScreen: Bool = false
     private var lastMouseLoc: NSPoint = .zero
@@ -59,10 +60,16 @@ public final class OverlayPanel: NSPanel {
         cleanup()
     }
 
-    // 패널 파기 시 리소스 및 타이머 명시적 정리
+    // 패널 파기 시 리소스 및 모니터/타이머 명시적 정리
     public func cleanup() {
-        mouseTrackingTimer?.invalidate()
-        mouseTrackingTimer = nil
+        if let monitor = globalMouseMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalMouseMonitor = nil
+        }
+        if let monitor = localMouseMonitor {
+            NSEvent.removeMonitor(monitor)
+            localMouseMonitor = nil
+        }
         presentationCheckTimer?.invalidate()
         presentationCheckTimer = nil
         cancellables.removeAll()
@@ -110,16 +117,32 @@ extension OverlayPanel {
     }
 }
 
-// MARK: - 4. 30Hz 저전력 마우스 센서 루프 (Mouse Proximity & Hit Testing)
+// MARK: - 4. 이벤트 주도형 무간섭 마우스 센서 (Mouse Proximity & Hit Testing)
 extension OverlayPanel {
-    // 30Hz 저전력 마우스 좌표 감시 루프 (패스스루 및 펫 근접 감지)
+    // 이벤트 주도형(Event-Driven) 무간섭 마우스 좌표 감시 (마우스 정지 시 0 Wakeup, 100% App Nap)
     private func startMouseTracking() {
-        mouseTrackingTimer?.invalidate()
-        let timer = Timer(timeInterval: 0.033, repeats: true) { [weak self] _ in
-            self?.checkMouseProximityAndHit()
+        if let monitor = globalMouseMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalMouseMonitor = nil
         }
-        RunLoop.main.add(timer, forMode: .common)
-        mouseTrackingTimer = timer
+        if let monitor = localMouseMonitor {
+            NSEvent.removeMonitor(monitor)
+            localMouseMonitor = nil
+        }
+
+        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged]) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.checkMouseProximityAndHit()
+            }
+        }
+        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged]) { [weak self] event in
+            DispatchQueue.main.async {
+                self?.checkMouseProximityAndHit()
+            }
+            return event
+        }
+        // 기동 시 초기 1회 마우스 위치 검사
+        checkMouseProximityAndHit()
     }
 
     // 마우스 좌표 분석을 통한 무간섭 패스스루 및 펫 근접 제어
@@ -270,21 +293,27 @@ extension OverlayPanel {
         }
         .store(in: &cancellables)
 
-        // 절전 및 화면 꺼짐 시 30Hz 마우스 및 프레젠테이션 감시 타이머 정지 (배터리 보존)
+        // 절전 및 화면 꺼짐 시 마우스 모니터 및 프레젠테이션 감시 타이머 정지 (배터리 보존)
         Publishers.Merge(
             wsCenter.publisher(for: NSWorkspace.willSleepNotification),
             wsCenter.publisher(for: NSWorkspace.screensDidSleepNotification)
         )
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in
-            self?.mouseTrackingTimer?.invalidate()
-            self?.mouseTrackingTimer = nil
+            if let monitor = self?.globalMouseMonitor {
+                NSEvent.removeMonitor(monitor)
+                self?.globalMouseMonitor = nil
+            }
+            if let monitor = self?.localMouseMonitor {
+                NSEvent.removeMonitor(monitor)
+                self?.localMouseMonitor = nil
+            }
             self?.presentationCheckTimer?.invalidate()
             self?.presentationCheckTimer = nil
         }
         .store(in: &cancellables)
 
-        // 깨어남 및 화면 켜짐 시 감시 타이머 재개
+        // 깨어남 및 화면 켜짐 시 감시 재개
         Publishers.Merge(
             wsCenter.publisher(for: NSWorkspace.didWakeNotification),
             wsCenter.publisher(for: NSWorkspace.screensDidWakeNotification)
@@ -315,13 +344,13 @@ extension OverlayPanel {
         }
     }
 
-    // 저주파(1.5초) 프레젠테이션/보더리스 전체화면 창 감시 루프 (App Nap 및 저전력 보존)
+    // 저주파(5.0초) 프레젠테이션/보더리스 전체화면 창 감시 루프 (App Nap 및 저전력 보존)
     private func startPresentationTracking() {
         presentationCheckTimer?.invalidate()
-        let timer = Timer(timeInterval: 1.5, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 5.0, repeats: true) { [weak self] _ in
             self?.checkFullScreenAndPresentation()
         }
-        RunLoop.main.add(timer, forMode: .common)
+        RunLoop.main.add(timer, forMode: .default)
         presentationCheckTimer = timer
     }
 

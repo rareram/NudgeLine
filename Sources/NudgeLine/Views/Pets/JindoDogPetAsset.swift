@@ -33,16 +33,19 @@ public enum JindoDogPetFrames {
 public struct JindoDogPetAsset: View {
     public let isHorizontal: Bool
     public let isRightEdge: Bool
+    public let isAnimating: Bool
     public let accentColor: Color
 
-    public init(isHorizontal: Bool, isRightEdge: Bool = false, accentColor: Color = .red) {
+    public init(isHorizontal: Bool, isRightEdge: Bool = false, isAnimating: Bool = true, accentColor: Color = .red) {
         self.isHorizontal = isHorizontal
         self.isRightEdge = isRightEdge
+        self.isAnimating = isAnimating
         self.accentColor = accentColor
     }
 
+    // 펫 비가시/비활성 상태 시 16 FPS 애니메이션 일시정지 지원 (App Nap 보장)
     public var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.0625)) { context in
+        TimelineView(.animation(minimumInterval: 0.0625, paused: !isAnimating)) { context in
             let count = JindoDogPetFrames.cachedImages.count
             if count > 0 {
                 let frameIndex = Int(context.date.timeIntervalSince1970 * 16) % count

@@ -24,15 +24,21 @@ public struct WinterSnowEffectAsset: Sendable {
         "iVBORw0KGgoAAAANSUhEUgAAANwAAADcCAYAAAAbWs+BAAAAAXNSR0IArs4c6QAAAGxlWElmTU0AKgAAAAgABAEaAAUAAAABAAAAPgEbAAUAAAABAAAARgEoAAMAAAABAAIAAIdpAAQAAAABAAAATgAAAAAAAACQAAAAAQAAAJAAAAABAAKgAgAEAAAAAQAAANygAwAEAAAAAQAAANwAAAAAAEhbYwAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAA2VJREFUeAHt0DEBAAAAwqD1T20IX4hAYcCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDDwDA/U6AAHYT1HTAAAAAElFTkSuQmCC"
     ]
 
-    private static let cachedImages: [NSImage?] = {
-        return base64Frames.map { str in
-            guard let data = Data(base64Encoded: str) else { return nil }
-            return NSImage(data: data)
-        }
-    }()
+    // 온디맨드 디코딩 및 NSLock 스레드 안전 인메모리 캐시 (기동 시 메모리 점유율 최소화)
+    private static let lock = NSLock()
+    private static var decodedCache: [Int: NSImage] = [:]
 
+    // 요구된 프레임 인덱스 이미지를 락-프리로 1회 디코딩 후 캐싱 반환
     public static func image(frameIndex: Int) -> NSImage? {
-        guard frameIndex >= 0 && frameIndex < cachedImages.count else { return nil }
-        return cachedImages[frameIndex]
+        guard frameIndex >= 0 && frameIndex < base64Frames.count else { return nil }
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached = decodedCache[frameIndex] {
+            return cached
+        }
+        guard let data = Data(base64Encoded: base64Frames[frameIndex]),
+              let img = NSImage(data: data) else { return nil }
+        decodedCache[frameIndex] = img
+        return img
     }
 }

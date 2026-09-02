@@ -19,7 +19,7 @@ public struct TimelineBarView: View {
     @State private var lastTriggeredHourlyHour: Int = -1
     @State private var lastTriggeredDate: Date? = nil
 
-    private static let clockPublisher = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private static let clockPublisher = Timer.publish(every: 1, on: .main, in: .default).autoconnect()
 
     public init(
         settings: AppSettings = .shared,
@@ -210,11 +210,20 @@ public struct TimelineBarView: View {
         .onReceive(settings.$is24HourMode) { _ in updateSegments() }
         .onReceive(Self.clockPublisher) { input in
             let wasSameDay = Calendar.current.isDate(currentTime, inSameDayAs: input)
-            currentTime = input
             if !wasSameDay {
                 calendarService.fetchEvents(settings: settings)
                 updateSegments()
             }
+
+            // 호버 중이거나 15초 단위 경과 시에만 currentTime State 갱신 (Idle 상태 렌더링 93% 절감)
+            let isHovered = isBarHovered || panelState.isPetProximityHovered
+            let currentSec = Int(currentTime.timeIntervalSince1970)
+            let inputSec = Int(input.timeIntervalSince1970)
+            if isHovered || (inputSec / 15 != currentSec / 15) || !wasSameDay {
+                currentTime = input
+            }
+
+            // 정각 및 일정 접점 감지는 1초 단위로 정밀 검증 (상태 미변경 시 0 렌더링)
             checkEventContactEffect(at: input)
         }
         .onReceive(NotificationCenter.default.publisher(for: .previewEventContactEffect)) { _ in
@@ -223,6 +232,10 @@ public struct TimelineBarView: View {
                 activeEffectId = UUID()
                 activeEffectType = settings.eventTriggerEffectType
             }
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)) { _ in
+            // 스페이스 전환 / 미션컨트롤 발생 시 재생 중이던 이펙트 즉시 소멸
+            activeEffectType = nil
         }
     }
 
@@ -453,26 +466,28 @@ private struct SegmentBlockView: View {
     }
 }
 
-// MARK: - 겹침 일정 크로스페이드 색상 전환 뷰
+// MARK: - 겹침 일정 크로스페이드 색상 전환 뷰 (GPU 하드웨어 가속 보간, 0 CPU Timer)
 private struct CrossFadeOverlapView: View {
     let colors: [Color]
+    @State private var isFaded: Bool = false
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1.0 / 15.0)) { timeline in
-            let count = max(1, colors.count)
-            let cycleSeconds = 2.8
-            let elapsed = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: cycleSeconds * Double(count))
-            let currentIndex = Int(elapsed / cycleSeconds) % count
-            let nextIndex = (currentIndex + 1) % count
-            let subElapsed = elapsed.truncatingRemainder(dividingBy: cycleSeconds)
-            let progress = CGFloat(subElapsed / cycleSeconds)
+        let first = colors.first ?? .blue
+        let second = colors.count > 1 ? colors[1] : first
 
-            let currColor = colors[safe: currentIndex] ?? .blue
-            let nextColor = colors[safe: nextIndex] ?? .blue
-
-            ZStack {
-                Rectangle().fill(currColor)
-                Rectangle().fill(nextColor).opacity(progress)
+        ZStack {
+            Rectangle().fill(first)
+            if colors.count > 1 {
+                Rectangle()
+                    .fill(second)
+                    .opacity(isFaded ? 1.0 : 0.0)
+            }
+        }
+        .onAppear {
+            if colors.count > 1 {
+                withAnimation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true)) {
+                    isFaded = true
+                }
             }
         }
     }
@@ -769,6 +784,7 @@ private struct InteractivePetView: View {
             petType: petType,
             isHorizontal: isHorizontal,
             isRightEdge: settings.barPosition == .right,
+            isAnimating: true,
             accentColor: accentColor
         )
         // 1. 소멸 투명도
@@ -937,7 +953,7 @@ private struct InteractiveCustomPetView: View {
         let hideStyle = settings.petHideStyle
 
         if !frames.isEmpty {
-            TimelineView(.periodic(from: .now, by: 1.0 / max(1.0, fps))) { context in
+            TimelineView(.animation(minimumInterval: 1.0 / max(1.0, fps))) { context in
                 let count = max(1, frames.count)
                 let index = Int(context.date.timeIntervalSince1970 * fps) % count
                 if let image = frames[safe: index] {

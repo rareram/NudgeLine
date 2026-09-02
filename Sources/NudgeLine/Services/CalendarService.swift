@@ -185,8 +185,8 @@ extension CalendarService {
             }
             .store(in: &cancellables)
 
-        // 3. 백그라운드 30초 주기 자동 갱신 (절전/화면 꺼짐 중에는 쿼리 완전 차단하여 배터리 절감)
-        Timer.publish(every: 30, on: .main, in: .common)
+        // 3. 백그라운드 5분(300초) 주기 보조 갱신 (실시간 변경은 EKEventStoreChangedNotification으로 즉시 0초 반영됨)
+        Timer.publish(every: 300, on: .main, in: .default)
             .autoconnect()
             .sink { [weak self] _ in
                 guard let self = self, !self.isSleeping else { return }
