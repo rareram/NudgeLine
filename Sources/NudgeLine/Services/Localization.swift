@@ -79,7 +79,6 @@ public struct L10n {
         case manageAccountsButton
         case openCalendarApp
         case resetDefault
-        case allDayBadge
 
         // 업무 시간 및 타임라인 범위
         case mode24Hours
@@ -135,7 +134,6 @@ public struct L10n {
         case effectCherry
         case effectAutumn
         case effectWinter
-        case effectNone
 
         // 펫 숨김 모션
         case petHideMotionLabel
@@ -174,11 +172,6 @@ public struct L10n {
         case overlappingEvents(Int)
         case joinMeeting(String)
         case unverifiedMeetingLink
-
-        // 시간 표시자 툴팁
-        case todayDate(String)
-        case remainingWorkTime(String)
-        case remainingDayTime(String)
 
         // 일반 설정
         case launchAtLogin
@@ -228,7 +221,6 @@ extension L10n.Key {
         case .manageAccountsButton: return "시스템 계정 관리..."
         case .openCalendarApp: return "캘린더 앱 열기"
         case .resetDefault: return "기본값"
-        case .allDayBadge: return "종일"
 
         case .mode24Hours: return "24시간 전체 타임라인 (00:00 ~ 24:00)"
         case .workStartTime: return "업무 시작 시각:"
@@ -277,11 +269,10 @@ extension L10n.Key {
         case .showEventTriggerEffectLabel: return "알림 효과 표시:"
         case .hourlyAlertLabel: return "정각 알림"
         case .eventTriggerEffectStyleLabel: return "효과 종류:"
-        case .effectThunder: return "일렉트릭 썬더"
-        case .effectCherry: return "체리블라섬"
-        case .effectAutumn: return "낙엽 회오리"
-        case .effectWinter: return "눈꽃 크리스탈"
-        case .effectNone: return "효과 끄기"
+        case .effectThunder: return "네온 썬더"
+        case .effectCherry: return "체리 블라섬"
+        case .effectAutumn: return "메이플 리프"
+        case .effectWinter: return "스노우 플러리"
 
         case .petHideMotionLabel: return "마우스 접근 시 숨기:"
         case .hideStyleTailPeek: return "숨기 (꼬리 살랑)"
@@ -317,9 +308,6 @@ extension L10n.Key {
         case .overlappingEvents(let count): return "일정 \(count)개 겹침"
         case .joinMeeting(let p): return "\(p) 바로 참여"
         case .unverifiedMeetingLink: return "⚠️ 링크 확인 필요"
-        case .todayDate(let d): return "오늘: \(d)"
-        case .remainingWorkTime(let t): return "남은 업무 시간: \(t)"
-        case .remainingDayTime(let t): return "남은 하루 시간: \(t)"
         }
     }
 }
@@ -364,7 +352,6 @@ extension L10n.Key {
         case .manageAccountsButton: return "Manage System Accounts..."
         case .openCalendarApp: return "Open Calendar App"
         case .resetDefault: return "Default"
-        case .allDayBadge: return "All Day"
 
         case .mode24Hours: return "Full 24-Hour Timeline (00:00 - 24:00)"
         case .workStartTime: return "Start Time:"
@@ -413,11 +400,10 @@ extension L10n.Key {
         case .showEventTriggerEffectLabel: return "Show Alert Effect:"
         case .hourlyAlertLabel: return "On the Hour"
         case .eventTriggerEffectStyleLabel: return "Effect Type:"
-        case .effectThunder: return "Electric Thunder"
+        case .effectThunder: return "Neon Thunder"
         case .effectCherry: return "Cherry Blossom"
-        case .effectAutumn: return "Leaf Swirl"
-        case .effectWinter: return "Snow Crystal"
-        case .effectNone: return "None"
+        case .effectAutumn: return "Maple Leaf"
+        case .effectWinter: return "Snow Flurry"
 
         case .petHideMotionLabel: return "Hover Hide Motion:"
         case .hideStyleTailPeek: return "Hide (Tail Wag)"
@@ -453,10 +439,6 @@ extension L10n.Key {
         case .overlappingEvents(let count): return "\(count) Overlapping Events"
         case .joinMeeting(let p): return "Join \(p)"
         case .unverifiedMeetingLink: return "⚠️ Verify Link"
-
-        case .todayDate(let d): return "Today: \(d)"
-        case .remainingWorkTime(let t): return "Remaining Work Time: \(t)"
-        case .remainingDayTime(let t): return "Remaining Day Time: \(t)"
         }
     }
 }

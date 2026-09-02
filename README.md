@@ -91,9 +91,9 @@ brew install rareram/tap/nudgeline
 ### 3. Event Alert Effects (Micro-Effects)
 - **4 Themes (1.0s 16-Frame Silky Smooth)**:
   - `Cherry Blossom`: Pink flower petals bursting outward with gentle 3D tumbling.
-  - `Electric Thunder`: Vivid neon cyan and white lightning arcs discharging into the screen.
-  - `Leaf Swirl`: Vibrant crimson, orange, and golden starfish maple leaves swirling in the autumn breeze.
-  - `Snow Crystal`: 6-fold dendritic snowflakes and radiant cyan ice crystals in a winter blizzard flurry.
+  - `Neon Thunder`: Vivid neon cyan and white lightning arcs discharging into the screen.
+  - `Maple Leaf`: Vibrant crimson, orange, and golden starfish maple leaves swirling in the autumn breeze.
+  - `Snow Flurry`: 6-fold dendritic snowflakes and radiant cyan ice crystals in a winter blizzard flurry.
 - **On the Hour Notification**: Optional hourly alert triggered precisely at `00m 00s` on every hour.
 - **Smart Triggering**: Discharges seamlessly when an upcoming calendar event starts, with a 3-minute cooldown state machine.
 

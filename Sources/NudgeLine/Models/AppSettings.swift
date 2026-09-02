@@ -113,10 +113,10 @@ public enum PetHideStyle: String, Codable, CaseIterable, Identifiable, Sendable 
 }
 
 public enum EventTriggerEffectType: String, Codable, CaseIterable, Identifiable, Sendable {
-    case cherry  = "cherry"          // 체리블라섬
-    case thunder = "thunder"         // 일렉트릭 썬더
-    case autumn  = "autumn"          // 낙엽 회오리
-    case winter  = "winter"          // 눈꽃 크리스탈
+    case cherry  = "cherry"          // 체리 블라섬 (Cherry Blossom)
+    case thunder = "thunder"         // 네온 썬더 (Neon Thunder)
+    case autumn  = "autumn"          // 메이플 리프 (Maple Leaf)
+    case winter  = "winter"          // 스노우 플러리 (Snow Flurry)
 
     public var id: String { rawValue }
 
