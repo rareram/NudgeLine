@@ -238,7 +238,7 @@ public struct TimelineBarView: View {
         // 1. 캘린더 일정 시작 접점 알림 (최우선 순위)
         for event in calendarService.events where !event.isAllDay {
             let diff = abs(time.timeIntervalSince(event.startDate))
-            if diff <= 1.5 {
+            if diff <= 2.5 {
                 let eventKey = "\(event.id)_\(Int(event.startDate.timeIntervalSince1970))"
                 if lastTriggeredEventKey != eventKey {
                     let isCoolingDown = lastTriggeredDate.map { time.timeIntervalSince($0) < 180 } ?? false
@@ -254,8 +254,8 @@ public struct TimelineBarView: View {
             }
         }
 
-        // 2. 매시간 정각 알림 (00분 00초)
-        if settings.enableHourlyAlertEffect && minute == 0 && (second <= 1 || second >= 59) {
+        // 2. 매시간 정각 알림 (00분 00초 ~ 04초 윈도우 보장)
+        if settings.enableHourlyAlertEffect && minute == 0 && second <= 4 {
             if lastTriggeredHourlyHour != currentHour {
                 let isCoolingDown = lastTriggeredDate.map { time.timeIntervalSince($0) < 180 } ?? false
                 if !isCoolingDown {
