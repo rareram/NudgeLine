@@ -18,8 +18,13 @@ if [[ -z "${DEVELOPER_DIR:-}" || ! -d "${DEVELOPER_DIR}" || "${DEVELOPER_DIR}" =
     fi
 fi
 
-echo ">> 1. 1024x1024 원본 아이콘 생성 중..."
-swift "${SCRIPT_DIR}/make_sample_icon.swift" "${ROOT_DIR}/Resources/icon_1024.png"
+if [[ ! -f "${ROOT_DIR}/Resources/icon_1024.png" ]]; then
+    echo ">> 1. 1024x1024 원본 아이콘 생성 중..."
+    swift "${SCRIPT_DIR}/make_sample_icon.swift" "${ROOT_DIR}/Resources/icon_1024.png"
+else
+    echo ">> 1. 기존 고해상도 icon_1024.png 사용"
+fi
+
 
 echo ">> 2. .iconset 구성 중..."
 ICONSET_DIR="${ROOT_DIR}/Resources/AppIcon.iconset"

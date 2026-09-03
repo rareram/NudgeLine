@@ -127,7 +127,7 @@ cp "${ROOT_DIR}/Resources/Info.plist" "${CONTENTS_DIR}/Info.plist"
 # 아이콘 탑재 (DEV 모드 시 DEV 리본 배지 합성)
 if [[ "${IS_DEV}" == true ]]; then
     DEV_ICNS="${ROOT_DIR}/build/AppIcon_Dev.icns"
-    if [[ ! -f "${DEV_ICNS}" && -f "${ROOT_DIR}/Resources/icon_1024.png" ]]; then
+    if [[ -f "${ROOT_DIR}/Resources/icon_1024.png" ]]; then
         echo ">> DEV 앱 아이콘 배지 합성 중..."
         mkdir -p "${ROOT_DIR}/build/icon_dev.iconset"
         swift "${ROOT_DIR}/scripts/generate_dev_icon.swift" "${ROOT_DIR}/Resources/icon_1024.png" "/tmp/icon_dev_1024.png"

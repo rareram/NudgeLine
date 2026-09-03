@@ -661,8 +661,6 @@ private struct GeneralTab: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 56, height: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
                 }
 
                 Text(settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine")
