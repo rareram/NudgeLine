@@ -165,6 +165,16 @@ if [[ "${IS_DEV}" == true ]]; then
     echo ">> 5. LaunchServices 등록: ${APP_NAME} 런치패드/Spotlight 등록 완료"
 fi
 
-echo "=== 빌드 및 번들 패키징 완료 (${APP_NAME} v${CURRENT_VERSION} Build ${TARGET_BUILD}) ==="
-echo "생성된 앱 경로: ${APP_DIR}"
-echo "직접 실행 명령어: open \"${APP_DIR}\""
+echo ">> 6. 기존 실행 중인 NudgeLine 프로세스 종료 및 재실행..."
+killall "NudgeLine" 2>/dev/null || true
+killall "NudgeLine (Dev)" 2>/dev/null || true
+pkill -x "NudgeLine" 2>/dev/null || true
+pkill -x "NudgeLine (Dev)" 2>/dev/null || true
+sleep 0.5
+
+echo ">> 7. 새로 빌드된 앱 실행: ${APP_DIR}..."
+open "${APP_DIR}"
+
+echo "=== 빌드 및 실행 완료 (${APP_NAME} v${CURRENT_VERSION} Build ${TARGET_BUILD}) ==="
+echo "실행된 앱 경로: ${APP_DIR}"
+
