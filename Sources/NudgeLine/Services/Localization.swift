@@ -68,6 +68,7 @@ public struct L10n {
         case systemPreferencesSection
         case enableSegmentRimLabel
         case enableSegmentGlowLabel
+        case dimPastEventsLabel
         case creditsOriginal
 
         // 캘린더 권한 및 연동
@@ -127,9 +128,10 @@ public struct L10n {
 
         // 일정 알림 효과
         case eventTriggerEffectSection
-        case showEventTriggerEffectLabel
+        case preEventAlertLabel
+        case minutesPrior(Int)
+        case eventContactEffectLabel
         case hourlyAlertLabel
-        case eventTriggerEffectStyleLabel
         case effectThunder
         case effectCherry
         case effectAutumn
@@ -191,21 +193,22 @@ extension L10n.Key {
         case .quit: return "NudgeLine 종료"
 
         case .tabTimeline: return "타임라인"
-        case .tabAppearance: return "인디케이터"
+        case .tabAppearance: return "표시 및 효과"
         case .tabSchedule: return "시간 및 캘린더"
         case .tabGeneral: return "일반"
 
         case .barPositionAndThicknessSection: return "화면 배치 및 크기"
-        case .barHoverEffectsSection: return "마우스 호버 효과"
+        case .barHoverEffectsSection: return "마우스 반응 및 블록"
         case .barBackgroundSection: return "타임라인 배경"
         case .hoverCardStyleSection: return "일정 카드"
         case .timeIndicatorSection: return "시간 표시자"
-        case .workHoursSection: return "업무 시간"
+        case .workHoursSection: return "시간 표시 범위"
         case .visibleCalendarsSection: return "표시할 캘린더"
         case .systemPreferencesSection: return "시스템 설정"
 
         case .enableSegmentRimLabel: return "블록 테두리 강조"
         case .enableSegmentGlowLabel: return "블록 네온 효과"
+        case .dimPastEventsLabel: return "지난 일정 흐리게"
         case .creditsOriginal: return "원작: Andreas Katzian & ARTMIXTURE (2014-2015)"
 
         case .launchAtLogin: return "로그인할 때 자동 실행"
@@ -223,8 +226,8 @@ extension L10n.Key {
         case .resetDefault: return "기본값"
 
         case .mode24Hours: return "24시간 전체 타임라인 (00:00 ~ 24:00)"
-        case .workStartTime: return "업무 시작 시각:"
-        case .workEndTime: return "업무 종료 시각:"
+        case .workStartTime: return "시작 시간:"
+        case .workEndTime: return "종료 시간:"
 
         case .barPositionLabel: return "바 위치:"
         case .showOnAllScreens: return "모든 디스플레이에 표시"
@@ -266,9 +269,10 @@ extension L10n.Key {
         case .languageLabel: return "언어:"
 
         case .eventTriggerEffectSection: return "일정 알림 효과"
-        case .showEventTriggerEffectLabel: return "알림 효과 표시:"
+        case .preEventAlertLabel: return "일정 시작 전 알림:"
+        case .minutesPrior(let min): return "\(min)분 전"
+        case .eventContactEffectLabel: return "일정 시작 효과:"
         case .hourlyAlertLabel: return "정각 알림"
-        case .eventTriggerEffectStyleLabel: return "효과 종류:"
         case .effectThunder: return "네온 썬더"
         case .effectCherry: return "체리 블라섬"
         case .effectAutumn: return "메이플 리프"
@@ -322,21 +326,22 @@ extension L10n.Key {
         case .quit: return "Quit NudgeLine"
 
         case .tabTimeline: return "Timeline"
-        case .tabAppearance: return "Indicators"
-        case .tabSchedule: return "Schedule"
+        case .tabAppearance: return "Appearance"
+        case .tabSchedule: return "Time & Calendars"
         case .tabGeneral: return "General"
 
         case .barPositionAndThicknessSection: return "Position & Size"
-        case .barHoverEffectsSection: return "Hover Effects"
+        case .barHoverEffectsSection: return "Hover & Block Styles"
         case .barBackgroundSection: return "Timeline Background"
         case .hoverCardStyleSection: return "Event Card"
         case .timeIndicatorSection: return "Time Indicator"
-        case .workHoursSection: return "Working Hours"
+        case .workHoursSection: return "Display Time Range"
         case .visibleCalendarsSection: return "Visible Calendars"
         case .systemPreferencesSection: return "System Preferences"
 
         case .enableSegmentRimLabel: return "Block Rim Highlight"
         case .enableSegmentGlowLabel: return "Block Neon Glow"
+        case .dimPastEventsLabel: return "Dim past events"
         case .creditsOriginal: return "Inspired by PixelScheduler (2014-2015) by Andreas Katzian & ARTMIXTURE"
 
         case .launchAtLogin: return "Launch at Login"
@@ -397,9 +402,10 @@ extension L10n.Key {
         case .languageLabel: return "Language:"
 
         case .eventTriggerEffectSection: return "Event Alert Effects"
-        case .showEventTriggerEffectLabel: return "Show Alert Effect:"
+        case .preEventAlertLabel: return "Pre-event Alert:"
+        case .minutesPrior(let min): return "\(min) min prior"
+        case .eventContactEffectLabel: return "Event Start Effect:"
         case .hourlyAlertLabel: return "On the Hour"
-        case .eventTriggerEffectStyleLabel: return "Effect Type:"
         case .effectThunder: return "Neon Thunder"
         case .effectCherry: return "Cherry Blossom"
         case .effectAutumn: return "Maple Leaf"

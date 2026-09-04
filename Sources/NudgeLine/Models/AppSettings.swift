@@ -206,6 +206,8 @@ public final class AppSettings: ObservableObject {
         static let currentTimeIndicatorStyle = "settings_current_time_indicator_style"
         static let enableIndicatorRim = "settings_enable_indicator_rim"
         static let enableIndicatorGlow = "settings_enable_indicator_glow"
+        static let enablePreEventAlert = "settings_enable_pre_event_alert"
+        static let preEventAlertMinutes = "settings_pre_event_alert_minutes"
         static let enableEventTriggerEffect = "settings_enable_event_trigger_effect"
         static let enableHourlyAlertEffect = "settings_enable_hourly_alert_effect"
         static let eventTriggerEffectType = "settings_event_trigger_effect_type"
@@ -215,6 +217,7 @@ public final class AppSettings: ObservableObject {
         static let petHideStyle = "settings_pet_hide_style"
         static let enableSegmentRim = "settings_enable_segment_rim"
         static let enableSegmentGlow = "settings_enable_segment_glow"
+        static let dimPastEvents = "settings_dim_past_events"
         static let hideOnScreenShare = "settings_hide_on_screen_share"
         static let hideOnFullScreen = "settings_hide_on_full_screen"
     }
@@ -367,6 +370,18 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(enableSegmentGlow, forKey: Keys.enableSegmentGlow) }
     }
 
+    @Published public var dimPastEvents: Bool {
+        didSet { defaults.set(dimPastEvents, forKey: Keys.dimPastEvents) }
+    }
+
+    @Published public var enablePreEventAlert: Bool {
+        didSet { defaults.set(enablePreEventAlert, forKey: Keys.enablePreEventAlert) }
+    }
+
+    @Published public var preEventAlertMinutes: Int {
+        didSet { defaults.set(preEventAlertMinutes, forKey: Keys.preEventAlertMinutes) }
+    }
+
     // MARK: 2-3. 초기화 (UserDefaults 영속 데이터 로드 및 마이그레이션)
     private init() {
         let savedLang = defaults.string(forKey: Keys.language) ?? AppLanguage.system.rawValue
@@ -443,7 +458,7 @@ public final class AppSettings: ObservableObject {
         let eMin = defaults.object(forKey: Keys.endMinute) != nil ? defaults.integer(forKey: Keys.endMinute) : 0
         self.endMinute = max(0, min(59, eMin))
 
-        self.is24HourMode = defaults.bool(forKey: Keys.is24HourMode)
+        self.is24HourMode = defaults.object(forKey: Keys.is24HourMode) != nil ? defaults.bool(forKey: Keys.is24HourMode) : true
 
         let savedBarWidth = defaults.double(forKey: Keys.barWidth)
         self.barWidth = savedBarWidth > 0 ? savedBarWidth : 2.0
@@ -458,6 +473,9 @@ public final class AppSettings: ObservableObject {
 
         self.enableSegmentRim = defaults.object(forKey: Keys.enableSegmentRim) != nil ? defaults.bool(forKey: Keys.enableSegmentRim) : false
         self.enableSegmentGlow = defaults.object(forKey: Keys.enableSegmentGlow) != nil ? defaults.bool(forKey: Keys.enableSegmentGlow) : false
+        self.dimPastEvents = defaults.object(forKey: Keys.dimPastEvents) != nil ? defaults.bool(forKey: Keys.dimPastEvents) : false
+        self.enablePreEventAlert = defaults.object(forKey: Keys.enablePreEventAlert) != nil ? defaults.bool(forKey: Keys.enablePreEventAlert) : false
+        self.preEventAlertMinutes = defaults.object(forKey: Keys.preEventAlertMinutes) != nil ? defaults.integer(forKey: Keys.preEventAlertMinutes) : 5
     }
 }
 

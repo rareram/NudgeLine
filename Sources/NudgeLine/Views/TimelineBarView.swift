@@ -18,6 +18,8 @@ public struct TimelineBarView: View {
     @State private var lastTriggeredEventKey: String? = nil
     @State private var lastTriggeredHourlyHour: Int = -1
     @State private var lastTriggeredDate: Date? = nil
+    @State private var pulsingSegmentId: String? = nil
+    @State private var lastTriggeredPreAlertEventKey: String? = nil
 
     private static let clockPublisher = Timer.publish(every: 1, on: .main, in: .default).autoconnect()
 
@@ -63,7 +65,9 @@ public struct TimelineBarView: View {
                         settings: settings,
                         hoveredFocusId: hoveredFocusId,
                         length: segLength,
-                        isHorizontal: isHorizontal
+                        isHorizontal: isHorizontal,
+                        currentTime: currentTime,
+                        isPulsing: pulsingSegmentId == segment.id
                     )
                     .offset(
                         x: isHorizontal ? segOffset : 0,
@@ -225,6 +229,7 @@ public struct TimelineBarView: View {
 
             // 정각 및 일정 접점 감지는 1초 단위로 정밀 검증 (상태 미변경 시 0 렌더링)
             checkEventContactEffect(at: input)
+            checkPreEventAlert(at: input)
         }
         .onReceive(NotificationCenter.default.publisher(for: .previewEventContactEffect)) { _ in
             activeEffectType = nil
@@ -232,6 +237,9 @@ public struct TimelineBarView: View {
                 activeEffectId = UUID()
                 activeEffectType = settings.eventTriggerEffectType
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .previewPreEventAlert)) { _ in
+            previewPreEventAlertPulse()
         }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)) { _ in
             // 스페이스 전환 / 미션컨트롤 발생 시 재생 중이던 이펙트 즉시 소멸
@@ -278,6 +286,74 @@ public struct TimelineBarView: View {
                     activeEffectType = settings.eventTriggerEffectType
                     return
                 }
+            }
+        }
+    }
+
+    // 일정 시작 전 알림 감지 (설정된 5/10/15/20분 전 1회 은은한 바 펄스 트리거)
+    private func checkPreEventAlert(at time: Date) {
+        guard settings.enablePreEventAlert else { return }
+        let targetLeadSec = Double(settings.preEventAlertMinutes * 60)
+
+        for event in calendarService.events where !event.isAllDay {
+            let remainingSec = event.startDate.timeIntervalSince(time)
+            if abs(remainingSec - targetLeadSec) <= 2.5 {
+                let eventKey = "pre_\(event.id)_\(Int(event.startDate.timeIntervalSince1970))"
+                if lastTriggeredPreAlertEventKey != eventKey {
+                    lastTriggeredPreAlertEventKey = eventKey
+
+                    if let matchedSegment = cachedSegments.first(where: { $0.events.contains(where: { $0.id == event.id }) }) {
+                        triggerSegmentPulse(segmentId: matchedSegment.id)
+                    }
+                    return
+                }
+            }
+        }
+    }
+
+    private func triggerSegmentPulse(segmentId: String) {
+        withAnimation(.easeInOut(duration: 0.75).repeatCount(2, autoreverses: true)) {
+            pulsingSegmentId = segmentId
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.1) {
+            withAnimation(.easeOut(duration: 0.3)) {
+                if pulsingSegmentId == segmentId {
+                    pulsingSegmentId = nil
+                }
+            }
+        }
+    }
+
+    private func previewPreEventAlertPulse() {
+        if let target = cachedSegments.first(where: { $0.end >= currentTime }) ?? cachedSegments.last {
+            triggerSegmentPulse(segmentId: target.id)
+        } else {
+            let sampleEvent = CalendarEvent(
+                id: "preview_event",
+                rawTitle: "NudgeLine",
+                startDate: currentTime,
+                endDate: currentTime.addingTimeInterval(1800),
+                isAllDay: false,
+                calendarTitle: "Preview",
+                defaultColor: .blue
+            )
+            let cluster = EventCluster(
+                id: "preview_cluster",
+                start: currentTime,
+                end: currentTime.addingTimeInterval(1800),
+                events: [sampleEvent]
+            )
+            let sampleSegment = TimelineSegment(
+                id: "preview_segment",
+                start: currentTime,
+                end: currentTime.addingTimeInterval(1800),
+                events: [sampleEvent],
+                cluster: cluster
+            )
+            cachedSegments = [sampleSegment]
+            triggerSegmentPulse(segmentId: sampleSegment.id)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
+                updateSegments()
             }
         }
     }
@@ -409,13 +485,18 @@ private struct SegmentBlockView: View {
     let hoveredFocusId: String?
     let length: CGFloat
     let isHorizontal: Bool
+    let currentTime: Date
+    let isPulsing: Bool
 
     var body: some View {
         let isHovered = hoveredFocusId != nil && segment.events.contains(where: { $0.id == hoveredFocusId })
-        let thickness = isHovered && settings.expandOnHover ? settings.hoverWidth : settings.barWidth
+        let isPast = settings.dimPastEvents && segment.end <= currentTime && !isPulsing
+        let thickness = isPulsing ? max(settings.barWidth, 8) : (isHovered && settings.expandOnHover ? settings.hoverWidth : settings.barWidth)
         let isUltraThin = thickness <= 2
         let colors = segment.events.map { $0.effectiveColor(settings: settings) }
         let primaryColor = colors.first ?? .blue
+        let segmentOpacity: Double = (isPast && !isHovered) ? 0.35 : 1.0
+        let segmentSaturation: Double = (isPast && !isHovered) ? 0.35 : 1.0
 
         Group {
             if segment.isOverlap {
@@ -440,6 +521,12 @@ private struct SegmentBlockView: View {
                         .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
                 }
 
+                // 일정 시작 전 알림 브리딩 펄스 글로우 오버레이
+                if isPulsing {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.35))
+                }
+
                 // 세그먼트 구분선
                 if isHorizontal {
                     HStack {
@@ -456,12 +543,19 @@ private struct SegmentBlockView: View {
                 }
             }
         )
-        .shadow(color: (isHovered && settings.enableSegmentGlow) ? primaryColor.opacity(0.9) : .clear, radius: 4)
+        .shadow(
+            color: isPulsing ? primaryColor.opacity(1.0) : ((isHovered && settings.enableSegmentGlow) ? primaryColor.opacity(0.9) : .clear),
+            radius: isPulsing ? 14 : ((isHovered && settings.enableSegmentGlow) ? 4 : 0)
+        )
+        .opacity(segmentOpacity)
+        .saturation(segmentSaturation)
         .frame(
             width: isHorizontal ? max(1, length) : thickness,
             height: isHorizontal ? thickness : max(1, length)
         )
-        .animation(.easeInOut(duration: 0.12), value: isHovered)
+        .animation(.easeInOut(duration: 0.18), value: isHovered)
+        .animation(.easeInOut(duration: 0.25), value: isPast)
+        .animation(.easeInOut(duration: 0.35), value: isPulsing)
         .allowsHitTesting(false)
     }
 }
@@ -765,352 +859,3 @@ private struct RoundDomeShape: Shape {
         return path
     }
 }
-
-// MARK: - 펫 마스코트 피벗 회전 물리 뷰
-private struct InteractivePetView: View {
-    let petType: PetType
-    let isHorizontal: Bool
-    let isBarHovered: Bool
-    let isPetProximityHovered: Bool
-    @ObservedObject var settings: AppSettings
-    let thickness: CGFloat
-    let accentColor: Color
-
-    var body: some View {
-        let isHovered = isBarHovered || isPetProximityHovered
-        let hideStyle = settings.petHideStyle
-
-        HangingPetIndicatorView(
-            petType: petType,
-            isHorizontal: isHorizontal,
-            isRightEdge: settings.barPosition == .right,
-            isAnimating: true,
-            accentColor: accentColor
-        )
-        // 1. 소멸 투명도
-        .opacity(calculateOpacity(isHovered: isHovered, hideStyle: hideStyle))
-        // 2. 블러 효과 (연기 모션)
-        .blur(radius: calculateBlur(isHovered: isHovered, hideStyle: hideStyle))
-        // 3. 스케일 및 왜곡 (팝, 회오리, 슬라임, 연기)
-        .scaleEffect(
-            x: calculateScaleX(isHovered: isHovered, hideStyle: hideStyle),
-            y: calculateScaleY(isHovered: isHovered, hideStyle: hideStyle),
-            anchor: gripPivotAnchor
-        )
-        // 4. 단일 힌지 피벗 회전 (꼬리/머리 빼꼼 및 회오리 720°)
-        .rotationEffect(
-            .degrees(calculateRotationAngle(isHovered: isHovered, hideStyle: hideStyle)),
-            anchor: gripPivotAnchor
-        )
-        // 5. 화면 공간 수평 이동 오프셋
-        .offset(
-            x: calculateOffsetX(isHovered: isHovered, hideStyle: hideStyle),
-            y: calculateOffsetY(isHovered: isHovered, hideStyle: hideStyle)
-        )
-        .animation(
-            isHorizontal ? .spring(response: 0.36, dampingFraction: 0.82) : .spring(response: 0.28, dampingFraction: 0.72),
-            value: isHovered
-        )
-    }
-
-    // 단일 힌지 피벗 (PET_SPEC_RULES §1.2, §2.1): 손 접촉 핀 고정 불변
-    private var gripPivotAnchor: UnitPoint {
-        let centerY: CGFloat = 0.267
-
-        if isHorizontal {
-            return UnitPoint(x: 0.50, y: 0.50)
-        } else if settings.barPosition == .right {
-            return UnitPoint(x: 1.0, y: centerY)
-        } else {
-            return UnitPoint(x: 0.0, y: centerY)
-        }
-    }
-
-    private func calculateOpacity(isHovered: Bool, hideStyle: PetHideStyle) -> Double {
-        guard isHovered else { return 1.0 }
-        switch hideStyle {
-        case .tailPeek, .headPeek:
-            return 1.0
-        case .pop, .vortex, .squish, .smoke:
-            return 0.0
-        }
-    }
-
-    private func calculateBlur(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
-        guard isHovered else { return 0.0 }
-        return hideStyle == .smoke ? 8.0 : 0.0
-    }
-
-    private func calculateScaleX(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
-        guard isHovered else { return 1.0 }
-        switch hideStyle {
-        case .pop, .vortex:
-            return 0.05
-        case .squish:
-            return 1.6
-        case .smoke:
-            return 1.3
-        case .tailPeek, .headPeek:
-            return 1.0
-        }
-    }
-
-    private func calculateScaleY(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
-        if isHorizontal && hideStyle == .tailPeek {
-            return -1.0 // 하단 바 꼬리살랑: 꼬리가 위로 오도록 상하 반전
-        }
-        guard isHovered else { return 1.0 }
-        switch hideStyle {
-        case .pop, .vortex, .squish:
-            return 0.05
-        case .smoke:
-            return 1.3
-        case .tailPeek, .headPeek:
-            return 1.0
-        }
-    }
-
-    // PET_SPEC_RULES §3: 노출량은 지정 오프셋(baseX - 8)과 회전 궤적으로만 제어
-    private func calculateOffsetX(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
-        let baseX: CGFloat = isHorizontal ? -4 : (settings.barPosition == .left ? max(0, thickness - 2) : 0)
-        guard isHovered else { return baseX }
-
-        if isHorizontal {
-            return baseX
-        }
-
-        let isLeft = (settings.barPosition == .left)
-        switch hideStyle {
-        case .tailPeek:
-            return baseX + (isLeft ? -23.0 : 23.0)
-        case .headPeek:
-            return baseX + (isLeft ? 6.0 : -6.0)
-        case .pop, .vortex, .squish, .smoke:
-            return baseX
-        }
-    }
-
-    // 하단 바(두더지 모션: 평상시 머리/꼬리 15px 빼꼼, 호버 시 바닥 아래로 스르륵 쏙 하강 은폐) vs 세로 바 고정 Y 오프셋
-    private func calculateOffsetY(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
-        if isHorizontal {
-            let baseY: CGFloat = 27.0 // 바닥 베젤 뒤에서 머리 또는 꼬리 15px 빼꼼 노출 (+5px 보정)
-            if !isHovered {
-                return baseY
-            }
-            switch hideStyle {
-            case .headPeek, .tailPeek:
-                return 65.0 // 바닥(베젤) 아래로 스르륵 쏙 완전 하강 은폐
-            case .pop, .vortex, .squish, .smoke:
-                return baseY
-            }
-        } else {
-            return -15.5
-        }
-    }
-
-    // PET_SPEC_RULES §3 (Left Bar 기준): tailPeek -80° 위로 회전, headPeek +90° 아래로 회전, vortex 720°
-    private func calculateRotationAngle(isHovered: Bool, hideStyle: PetHideStyle) -> Double {
-        guard isHovered else { return 0.0 }
-
-        if isHorizontal {
-            switch hideStyle {
-            case .vortex: return 720.0
-            case .tailPeek, .headPeek, .pop, .squish, .smoke: return 0.0
-            }
-        }
-
-        let isLeft = (settings.barPosition == .left)
-        switch hideStyle {
-        case .tailPeek:
-            return isLeft ? -85.0 : 85.0
-        case .headPeek:
-            return isLeft ? 85.0 : -85.0
-        case .vortex:
-            return 720.0
-        case .pop, .squish, .smoke:
-            return 0.0
-        }
-    }
-}
-
-// MARK: - 커스텀 펫 피벗 회전 물리 뷰
-private struct InteractiveCustomPetView: View {
-    let petId: String
-    let isHorizontal: Bool
-    let isBarHovered: Bool
-    let isPetProximityHovered: Bool
-    @ObservedObject var settings: AppSettings
-    let thickness: CGFloat
-    let accentColor: Color
-
-    @ObservedObject private var petService = CustomPetService.shared
-
-    var body: some View {
-        let pet = petService.customPets.first { $0.id == petId }
-        let frames = petService.getFrames(for: petId)
-        let fps = pet?.fps ?? 8.0
-        let isHovered = isBarHovered || isPetProximityHovered
-        let hideStyle = settings.petHideStyle
-
-        if !frames.isEmpty {
-            TimelineView(.animation(minimumInterval: 1.0 / max(1.0, fps))) { context in
-                let count = max(1, frames.count)
-                let index = Int(context.date.timeIntervalSince1970 * fps) % count
-                if let image = frames[safe: index] {
-                    Image(nsImage: image)
-                        .resizable()
-                        .interpolation(.high)
-                        .scaledToFit()
-                        .frame(width: isHorizontal ? 35 : 40, height: isHorizontal ? 50 : 58)
-                        .scaleEffect(x: (!isHorizontal && settings.barPosition == .right) ? -1.0 : 1.0, y: 1.0)
-                }
-            }
-            // 1. 소멸 투명도
-            .opacity(calculateOpacity(isHovered: isHovered, hideStyle: hideStyle))
-            // 2. 블러 효과 (연기 모션)
-            .blur(radius: calculateBlur(isHovered: isHovered, hideStyle: hideStyle))
-            // 3. 스케일 및 왜곡 (팝, 회오리, 슬라임, 연기)
-            .scaleEffect(
-                x: calculateScaleX(isHovered: isHovered, hideStyle: hideStyle),
-                y: calculateScaleY(isHovered: isHovered, hideStyle: hideStyle),
-                anchor: gripPivotAnchor
-            )
-            // 4. 단일 힌지 피벗 회전 (꼬리/머리 빼꼼 및 회오리 720°)
-            .rotationEffect(
-                .degrees(calculateRotationAngle(isHovered: isHovered, hideStyle: hideStyle)),
-                anchor: gripPivotAnchor
-            )
-            // 5. 화면 공간 수평 이동 오프셋
-            .offset(
-                x: calculateOffsetX(isHovered: isHovered, hideStyle: hideStyle, pet: pet),
-                y: calculateOffsetY(isHovered: isHovered, hideStyle: hideStyle)
-            )
-            .animation(
-                isHorizontal ? .spring(response: 0.36, dampingFraction: 0.82) : .spring(response: 0.28, dampingFraction: 0.72),
-                value: isHovered
-            )
-        }
-    }
-
-    // 단일 힌지 피벗 (PET_SPEC_RULES §1.2, §2.1): 손 접촉 핀 고정 불변
-    private var gripPivotAnchor: UnitPoint {
-        let centerY: CGFloat = 0.267
-
-        if isHorizontal {
-            return UnitPoint(x: 0.50, y: 0.50)
-        } else if settings.barPosition == .right {
-            return UnitPoint(x: 1.0, y: centerY)
-        } else {
-            return UnitPoint(x: 0.0, y: centerY)
-        }
-    }
-
-    private func calculateOpacity(isHovered: Bool, hideStyle: PetHideStyle) -> Double {
-        guard isHovered else { return 1.0 }
-        switch hideStyle {
-        case .tailPeek, .headPeek:
-            return 1.0
-        case .pop, .vortex, .squish, .smoke:
-            return 0.0
-        }
-    }
-
-    private func calculateBlur(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
-        guard isHovered else { return 0.0 }
-        return hideStyle == .smoke ? 8.0 : 0.0
-    }
-
-    private func calculateScaleX(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
-        guard isHovered else { return 1.0 }
-        switch hideStyle {
-        case .pop, .vortex:
-            return 0.05
-        case .squish:
-            return 1.6
-        case .smoke:
-            return 1.3
-        case .tailPeek, .headPeek:
-            return 1.0
-        }
-    }
-
-    private func calculateScaleY(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
-        if isHorizontal && hideStyle == .tailPeek {
-            return -1.0 // 하단 바 꼬리살랑: 꼬리가 위로 오도록 상하 반전
-        }
-        guard isHovered else { return 1.0 }
-        switch hideStyle {
-        case .pop, .vortex, .squish:
-            return 0.05
-        case .smoke:
-            return 1.3
-        case .tailPeek, .headPeek:
-            return 1.0
-        }
-    }
-
-    private func calculateOffsetX(isHovered: Bool, hideStyle: PetHideStyle, pet: CustomPet?) -> CGFloat {
-        let baseX: CGFloat = isHorizontal ? -4 : (settings.barPosition == .left ? max(0, thickness - 2) : 0)
-        guard isHovered else { return baseX }
-
-        if isHorizontal {
-            return baseX
-        }
-
-        let isLeft = (settings.barPosition == .left)
-        let leftOffset = pet?.leftHideOffset ?? -23.0
-        let rightOffset = pet?.rightHideOffset ?? 6.0
-
-        switch hideStyle {
-        case .tailPeek:
-            return baseX + (isLeft ? leftOffset : -leftOffset)
-        case .headPeek:
-            return baseX + (isLeft ? rightOffset : -rightOffset)
-        case .pop, .vortex, .squish, .smoke:
-            return baseX
-        }
-    }
-
-    // 하단 바(두더지 모션: 평상시 머리/꼬리 빼꼼, 호버 시 바닥 아래로 스르륵 하강 은폐) vs 세로 바 고정 Y 오프셋
-    private func calculateOffsetY(isHovered: Bool, hideStyle: PetHideStyle) -> CGFloat {
-        if isHorizontal {
-            let baseY: CGFloat = 27.0 // 위로 5px 보정
-            if !isHovered {
-                return baseY
-            }
-            switch hideStyle {
-            case .headPeek, .tailPeek:
-                return 65.0 // 바닥(베젤) 아래로 스르륵 쏙 하강 은폐
-            case .pop, .vortex, .squish, .smoke:
-                return baseY
-            }
-        } else {
-            return -6.0
-        }
-    }
-
-    private func calculateRotationAngle(isHovered: Bool, hideStyle: PetHideStyle) -> Double {
-        guard isHovered else { return 0.0 }
-
-        if isHorizontal {
-            switch hideStyle {
-            case .vortex: return 720.0
-            case .tailPeek, .headPeek, .pop, .squish, .smoke: return 0.0
-            }
-        }
-
-        let isLeft = (settings.barPosition == .left)
-
-        switch hideStyle {
-        case .tailPeek:
-            return isLeft ? -85.0 : 85.0
-        case .headPeek:
-            return isLeft ? 85.0 : -85.0
-        case .vortex:
-            return 720.0
-        case .pop, .squish, .smoke:
-            return 0.0
-        }
-    }
-}
-

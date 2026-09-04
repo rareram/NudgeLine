@@ -115,4 +115,5 @@ extension EventTriggerEffectView {
 // MARK: - 알림 센터 식별자 (Notifications)
 extension Notification.Name {
     public static let previewEventContactEffect = Notification.Name("NudgeLine.previewEventContactEffect")
+    public static let previewPreEventAlert = Notification.Name("NudgeLine.previewPreEventAlert")
 }

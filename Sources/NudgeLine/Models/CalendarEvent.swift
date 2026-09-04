@@ -97,6 +97,38 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
         self.meetingInfo = CalendarEvent.extractMeetingInfo(url: ekEvent.url, location: ekEvent.location, notes: ekEvent.notes)
     }
 
+    public init(
+        id: String = UUID().uuidString,
+        rawTitle: String = "",
+        startDate: Date = Date(),
+        endDate: Date = Date(),
+        isAllDay: Bool = false,
+        calendarIdentifier: String = "preview_cal",
+        calendarTitle: String = "Calendar",
+        rawSourceTitle: String = "",
+        defaultColor: Color = .blue,
+        location: String? = nil,
+        url: URL? = nil,
+        notes: String? = nil,
+        status: EKEventStatus = .confirmed,
+        meetingInfo: MeetingInfo? = nil
+    ) {
+        self.id = id
+        self.rawTitle = rawTitle
+        self.startDate = startDate
+        self.endDate = endDate
+        self.isAllDay = isAllDay
+        self.calendarIdentifier = calendarIdentifier
+        self.calendarTitle = calendarTitle
+        self.rawSourceTitle = rawSourceTitle
+        self.defaultColor = defaultColor
+        self.location = location
+        self.url = url
+        self.notes = notes
+        self.status = status
+        self.meetingInfo = meetingInfo
+    }
+
     public func title(lang: AppLanguage = AppSettings.shared.language) -> String {
         rawTitle.isEmpty ? L10n.tr(.untitledEvent, lang: lang) : rawTitle
     }

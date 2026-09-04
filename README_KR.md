@@ -1,7 +1,7 @@
 # NudgeLine
 
 <p align="center">
-  <img src="docs/images/app_icon.png" width="128" height="128" alt="NudgeLine Icon" />
+  <img src="docs/images/app_icon.png?v=2" width="128" height="128" alt="NudgeLine Icon" />
 </p>
 
 <p align="center">
