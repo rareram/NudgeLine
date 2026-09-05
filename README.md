@@ -82,14 +82,16 @@ brew install rareram/tap/nudgeline
 - **Multi-Monitor**: Show on the primary display or across all connected screens.
 - **Thickness**: Adjustable from 1px to 10px, with optional expansion on hover.
 - **Overlaps**: Seamless breathing cross-fade between concurrent events.
+- **Past Event Dimming**: Completed events automatically dim (35% opacity and saturation) to cleanly distinguish past from remaining events, instantly restoring to 100% full vibrance upon mouse hover.
 
 ### 2. Time Indicators
 - **Styles**: Triangle Tick, Round Dome, Protruding Block, and Point Ring.
 - **Visual Effects**: Custom indicator color, rim highlight, and neon glow toggles.
 - **Focus Lift**: Automatically prioritizes the shortest event when hovering over overlapping meetings.
 
-### 3. Event Alert Effects (Micro-Effects)
-- **4 Themes (1.0s 16-Frame Silky Smooth)**:
+### 3. Event Alerts & Pre-Event Notifications
+- **Pre-Event Alert (Breathing Pulse)**: Gentle 3.0-second ambient breathing pulse (expands bar to 8px with a 14px neon aura) 5, 10, 15, or 20 minutes before an upcoming meeting starts, providing silent awareness without popups or sound.
+- **Event Start Effects (4 Themes, 1.0s 16-Frame)**:
   - `Cherry Blossom`: Pink flower petals bursting outward with gentle 3D tumbling.
   - `Neon Thunder`: Vivid neon cyan and white lightning arcs discharging into the screen.
   - `Maple Leaf`: Vibrant crimson, orange, and golden starfish maple leaves swirling in the autumn breeze.
@@ -118,10 +120,10 @@ brew install rareram/tap/nudgeline
   - `Toggle Pet` / `NudgeLine 펫 토글`: Toggle pet companion visibility on the timeline bar.
 
 ### 7. Settings Window (4 Tabs)
-- **Timeline**: Position, thickness, hover expand, background style (Auto, Dark, Light, Custom), and track opacity.
-- **Indicators**: Card style/theme/opacity, time indicator shape/color, event alert effects (4 themes, preview button, on the hour checkbox), pet selection (Default White Tiger, Calico Cat, Jindo Dog), hide motion, and custom pet list.
+- **Timeline**: Position, thickness, hover expand, block border and neon highlights, past event dimming toggle, background style (Auto, Dark, Light, Custom), and track opacity.
+- **Appearance**: Event card style/theme/opacity, time indicator shape/color, pre-event alert (toggle, minute picker, preview), event start effect (toggle, 4 seasonal themes picker, preview), on the hour notification checkbox, pet selection (Default White Tiger, Calico Cat, Jindo Dog), hide motion, and custom pet manager.
 - **Schedule**: 24-hour mode, work hours (start/end), visible calendars with color pickers, and 1-click System Settings privacy deep link.
-- **General**: Language (System, Korean, English), launch at login (`SMAppService`), multi-display toggle, hide on screen share, hide in full screen, and app info.
+- **General**: Language (System, Korean, English), launch at login (`SMAppService`), multi-display toggle, exclude from meetings/capture, hide in full screen, and app info.
 
 ---
 
@@ -145,6 +147,18 @@ open "build/NudgeLine (Dev).app"
 # Or production release build
 ./scripts/build_app.sh --release
 open "build/NudgeLine.app"
+```
+
+### Running Unit Tests (Manual Testing)
+
+You can manually run the unit test suite to verify the localization dictionary (L10n), default configuration models (AppSettings), and calendar event model integrity:
+
+```bash
+# Run local unit tests
+./scripts/run_tests.sh
+
+# Or directly via Swift Package Manager (Xcode environment)
+swift test
 ```
 
 ---
@@ -193,8 +207,11 @@ NudgeLine/
 │               ├── CatPetAsset.swift
 │               ├── JindoDogPetAsset.swift
 │               └── WhiteTigerPetAsset.swift
+├── Tests/
+│   └── NudgeLineTests/                   # Swift Testing unit test suite
 └── scripts/
     ├── build_app.sh                      # Local Dev & Release bundle packager
+    ├── run_tests.sh                      # Local unit test runner
     ├── generate_dev_icon.swift           # DEV icon badging script
     ├── generate_app_icon.sh              # Production icon generator script
     ├── generate_custom_pet.py            # CLI sprite generator for Swift models

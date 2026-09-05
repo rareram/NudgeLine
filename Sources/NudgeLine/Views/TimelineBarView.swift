@@ -144,6 +144,34 @@ public struct TimelineBarView: View {
                                 settings: settings
                             )
                         }
+                    } else if !calendarService.isAuthorized() {
+                        // [권한 미승인 상태 안내]
+                        // - 배경: 캘린더 접근 권한이 없어 일정을 불러올 수 없는 상태
+                        // - 해결: 타임라인 바 호버 시 원클릭 시스템 설정 딥링크 버튼이 포함된 팝오버 표출
+                        if hoveredActiveId != "__PERMISSION_NOTICE__" {
+                            hoveredActiveId = "__PERMISSION_NOTICE__"
+                            hoveredFocusId = nil
+                            PopoverPanel.shared.showPermissionNotice(
+                                cursorOffset: cursorCoord,
+                                isHorizontal: isHorizontal,
+                                barPosition: settings.barPosition,
+                                settings: settings
+                            )
+                        }
+                    } else if calendarService.events.isEmpty {
+                        // [오늘 예정된 일정 부재 안내]
+                        // - 배경: 권한은 승인되었으나 당일 남은 캘린더 일정이 0개인 상태
+                        // - 해결: 빈 바 호버 시 24px 글래스모피즘 안내 캡슐 툴팁 표출
+                        if hoveredActiveId != "__EMPTY_SCHEDULE_TOOLTIP__" {
+                            hoveredActiveId = "__EMPTY_SCHEDULE_TOOLTIP__"
+                            hoveredFocusId = nil
+                            PopoverPanel.shared.showEmptyScheduleTooltip(
+                                cursorOffset: cursorCoord,
+                                isHorizontal: isHorizontal,
+                                barPosition: settings.barPosition,
+                                settings: settings
+                            )
+                        }
                     } else if let resolved = resolveHoveredEvents(
                         at: cursorCoord,
                         allEvents: calendarService.events,
@@ -481,7 +509,7 @@ public struct TimelineBarView: View {
 // MARK: - 일정 세그먼트 블록 뷰
 private struct SegmentBlockView: View {
     let segment: TimelineSegment
-    let settings: AppSettings
+    @ObservedObject var settings: AppSettings
     let hoveredFocusId: String?
     let length: CGFloat
     let isHorizontal: Bool

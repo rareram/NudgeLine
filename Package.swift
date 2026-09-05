@@ -19,6 +19,11 @@ let package = Package(
             name: "NudgeLine",
             dependencies: [],
             path: "Sources/NudgeLine"
+        ),
+        .testTarget(
+            name: "NudgeLineTests",
+            dependencies: ["NudgeLine"],
+            path: "Tests/NudgeLineTests"
         )
     ]
 )

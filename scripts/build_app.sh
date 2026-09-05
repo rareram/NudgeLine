@@ -18,6 +18,15 @@ if [[ -z "${DEVELOPER_DIR:-}" || ! -d "${DEVELOPER_DIR}" || "${DEVELOPER_DIR}" =
     fi
 fi
 
+# CLT 독립 환경 빌드 시스템 및 SDK 보정
+BUILD_SYSTEM_ARGS=()
+if [[ ! -d "/Applications/Xcode.app" ]]; then
+    BUILD_SYSTEM_ARGS+=(--build-system native)
+    if [[ -z "${SDKROOT:-}" && -d "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk" ]]; then
+        export SDKROOT="/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
+    fi
+fi
+
 echo "=== NudgeLine 빌드 시작 ==="
 
 cd "${ROOT_DIR}"
@@ -54,8 +63,8 @@ fi
 
 if [[ "${BUILD_UNIVERSAL}" == true ]]; then
     echo ">> 1. Swift Package Manager 유니버설 빌드 (arm64 + x86_64, ${CONFIGURATION})..."
-    swift build -c "${CONFIGURATION}" ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"} --triple arm64-apple-macosx15.0
-    swift build -c "${CONFIGURATION}" ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"} --triple x86_64-apple-macosx15.0
+    swift build ${BUILD_SYSTEM_ARGS[@]+"${BUILD_SYSTEM_ARGS[@]}"} -c "${CONFIGURATION}" ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"} --triple arm64-apple-macosx15.0
+    swift build ${BUILD_SYSTEM_ARGS[@]+"${BUILD_SYSTEM_ARGS[@]}"} -c "${CONFIGURATION}" ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"} --triple x86_64-apple-macosx15.0
     
     mkdir -p "${ROOT_DIR}/.build/universal/${CONFIGURATION}"
     lipo -create \
@@ -66,7 +75,7 @@ if [[ "${BUILD_UNIVERSAL}" == true ]]; then
     BIN_PATH="${ROOT_DIR}/.build/universal/${CONFIGURATION}/NudgeLine"
 else
     echo ">> 1. Swift Package Manager 빌드 (${CONFIGURATION})..."
-    swift build -c "${CONFIGURATION}" ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"}
+    swift build ${BUILD_SYSTEM_ARGS[@]+"${BUILD_SYSTEM_ARGS[@]}"} -c "${CONFIGURATION}" ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"}
     BIN_PATH="${ROOT_DIR}/.build/${CONFIGURATION}/NudgeLine"
 fi
 

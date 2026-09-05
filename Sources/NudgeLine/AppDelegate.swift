@@ -27,6 +27,23 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             calendarService.requestAccess()
         }
+
+        // [신규 설치 온보딩 안내] 최초 1회 실행 감지 시 네이티브 설정창 자동 오픈
+        checkFirstLaunchAndOpenSettings()
+    }
+
+    /// [신규 설치 온보딩] 최초 1회 실행 시 네이티브 설정창 자동 오픈
+    /// - 배경: 신규 설치 직후 빈 타임라인만 노출되어 사용자가 앱의 존재 및 설정 진입 방법을 인지하기 어려움
+    /// - 해결: UserDefaults 영속 플래그(`hasLaunchedBefore`)를 확인하여 최초 실행 시 0.35초 지연 후 설정창 1회 자동 호출
+    /// - 효과: 초기 사용자 설정 온보딩을 직관적으로 유도하며, 향후 앱 업데이트(brew upgrade) 시 불필요한 재오픈 방지
+    private func checkFirstLaunchAndOpenSettings() {
+        let hasLaunchedBeforeKey = "hasLaunchedBefore"
+        guard !UserDefaults.standard.bool(forKey: hasLaunchedBeforeKey) else { return }
+
+        UserDefaults.standard.set(true, forKey: hasLaunchedBeforeKey)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.openSettings()
+        }
     }
 }
 

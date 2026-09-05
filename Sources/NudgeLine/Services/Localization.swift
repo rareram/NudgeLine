@@ -77,6 +77,7 @@ public struct L10n {
         case permissionRequestFailed(String)
         case openSystemPrivacy
         case noCalendars
+        case noEventsToday
         case manageAccountsButton
         case openCalendarApp
         case resetDefault
@@ -221,6 +222,7 @@ extension L10n.Key {
         case .permissionRequestFailed(let err): return "캘린더 권한 요청 실패: \(err)"
         case .openSystemPrivacy: return "시스템 설정 열기"
         case .noCalendars: return "등록된 캘린더가 없습니다."
+        case .noEventsToday: return "오늘 예정된 일정이 없습니다."
         case .manageAccountsButton: return "시스템 계정 관리..."
         case .openCalendarApp: return "캘린더 앱 열기"
         case .resetDefault: return "기본값"
@@ -354,6 +356,7 @@ extension L10n.Key {
         case .permissionRequestFailed(let err): return "Calendar permission request failed: \(err)"
         case .openSystemPrivacy: return "Open System Settings"
         case .noCalendars: return "No calendars found."
+        case .noEventsToday: return "No events scheduled for today."
         case .manageAccountsButton: return "Manage System Accounts..."
         case .openCalendarApp: return "Open Calendar App"
         case .resetDefault: return "Default"
