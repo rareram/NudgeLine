@@ -167,6 +167,7 @@ public struct TimelineBarView: View {
                             hoveredFocusId = nil
                             PopoverPanel.shared.showEmptyScheduleTooltip(
                                 cursorOffset: cursorCoord,
+                                allDayEvents: [],
                                 isHorizontal: isHorizontal,
                                 barPosition: settings.barPosition,
                                 settings: settings
@@ -193,8 +194,24 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else {
-                        // 빈 배경 영역
-                        if hoveredActiveId != nil {
+                        // [빈 배경 영역 및 종일 일정 툴팁 분기]
+                        // - 배경: 커서가 시간 일정 블록 외부에 있거나 당일 시간 일정이 전무한 상태
+                        // - 해결: 종일 일정이 존재하면 해당 캡슐 툴팁을 표출하고, 전혀 없으면 팝오버를 지연 소멸
+                        let allDayEvents = calendarService.events.filter { $0.isAllDay }
+                        if !allDayEvents.isEmpty {
+                            let allDayClusterId = "__ALL_DAY_TOOLTIP__" + allDayEvents.map(\.id).sorted().joined(separator: "_")
+                            if hoveredActiveId != allDayClusterId {
+                                hoveredActiveId = allDayClusterId
+                                hoveredFocusId = nil
+                                PopoverPanel.shared.showEmptyScheduleTooltip(
+                                    cursorOffset: cursorCoord,
+                                    allDayEvents: allDayEvents,
+                                    isHorizontal: isHorizontal,
+                                    barPosition: settings.barPosition,
+                                    settings: settings
+                                )
+                            }
+                        } else if hoveredActiveId != nil {
                             hoveredActiveId = nil
                             hoveredFocusId = nil
                             PopoverPanel.shared.hide(delayed: true)
@@ -424,6 +441,8 @@ public struct TimelineBarView: View {
             return event.startDate <= cursorTime.addingTimeInterval(30) && event.endDate >= cursorTime.addingTimeInterval(-30)
         }
 
+        let allDayEvents = allEvents.filter { $0.isAllDay }
+
         if !matchedEvents.isEmpty {
             // 중첩 일정 중 소요 시간이 가장 짧은 일정을 포커스 타깃으로 선정
             let focused = matchedEvents.min(by: {
@@ -433,9 +452,14 @@ public struct TimelineBarView: View {
             let startOffset = calculateTimeOffset(time: max(dayStart, focused.startDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
             let endOffset = calculateTimeOffset(time: min(dayStart.addingTimeInterval(totalSec), focused.endDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
             let length = max(4.0, round(endOffset - startOffset))
-            let activeId = matchedEvents.map(\.id).sorted().joined(separator: "+")
 
-            return (matchedEvents, activeId, startOffset, length, focused.id)
+            // [종일 일정 겹침 스택 연계]
+            // - 배경: 시간 일정 블록 호버 시 당일 유효한 종일 일정을 함께 전달해야 함
+            // - 해결: 타임라인 바의 물리적 앵커 좌표는 시간 일정 기준으로 고정하고, 팝오버 목록에만 종일 일정을 병합
+            let combinedEvents = matchedEvents + allDayEvents
+            let activeId = combinedEvents.map(\.id).sorted().joined(separator: "+")
+
+            return (combinedEvents, activeId, startOffset, length, focused.id)
         }
 
         // 2. 얇은 일정 인접 호버 허용 오차 보정 (±4px)
@@ -444,7 +468,9 @@ public struct TimelineBarView: View {
             let end = calculateTimeOffset(time: min(dayStart.addingTimeInterval(totalSec), event.endDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
             if coord >= (start - 4) && coord <= (end + 4) {
                 let length = max(4.0, round(end - start))
-                return ([event], event.id, start, length, event.id)
+                let combinedEvents = [event] + allDayEvents
+                let activeId = combinedEvents.map(\.id).sorted().joined(separator: "+")
+                return (combinedEvents, activeId, start, length, event.id)
             }
         }
 

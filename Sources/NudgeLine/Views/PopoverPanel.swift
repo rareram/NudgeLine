@@ -270,13 +270,21 @@ extension PopoverPanel {
 
     public func showEmptyScheduleTooltip(
         cursorOffset: CGFloat,
+        allDayEvents: [CalendarEvent] = [],
         isHorizontal: Bool,
         barPosition: BarPosition,
         settings: AppSettings = .shared
     ) {
         guard let screen = currentTargetScreen() else { return }
 
-        let targetWidth: CGFloat = settings.language.isKorean ? 155.0 : 195.0
+        // [동적 너비 자동 피팅]
+        // - 배경: 고정 최소 폭(155px) 적용 시 짧은 일정명에서 좌우 여백이 과도하게 벌어지는 불균형 해소
+        // - 해결: 10pt 시스템 폰트 실제 측정 폭에 아이콘/간격 및 균일 패딩(좌우 각 7px)을 합산하여 1px 단위로 동적 피팅
+        let text = EmptyScheduleTooltipView.tooltipText(for: allDayEvents, settings: settings)
+        let font = NSFont.systemFont(ofSize: 10, weight: .medium)
+        let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
+        let targetWidth = min(280.0, ceil(textWidth + 30.0))
+
         let finalFrame = calculateTooltipFrame(
             offset: cursorOffset,
             targetWidth: targetWidth,
@@ -287,10 +295,12 @@ extension PopoverPanel {
             screen: screen
         )
 
+        let clusterId = allDayEvents.isEmpty ? "__EMPTY_SCHEDULE_TOOLTIP__" : ("__ALL_DAY_TOOLTIP__" + allDayEvents.map(\.id).sorted().joined(separator: "_"))
+
         presentTooltip(
-            content: AnyView(EmptyScheduleTooltipView(settings: settings)),
+            content: AnyView(EmptyScheduleTooltipView(allDayEvents: allDayEvents, settings: settings)),
             frame: finalFrame,
-            clusterId: "__EMPTY_SCHEDULE_TOOLTIP__",
+            clusterId: clusterId,
             isDetailMode: false
         )
     }
@@ -471,8 +481,9 @@ private struct CurrentTimeTooltipView: View {
     }
 }
 
-// MARK: - 7. 빈 일정 툴팁 뷰 (EmptyScheduleTooltipView)
+// MARK: - 7. 빈 일정 및 종일 일정 안내 툴팁 뷰 (EmptyScheduleTooltipView)
 private struct EmptyScheduleTooltipView: View {
+    let allDayEvents: [CalendarEvent]
     let settings: AppSettings
 
     @Environment(\.colorScheme) private var colorScheme
@@ -480,18 +491,29 @@ private struct EmptyScheduleTooltipView: View {
         settings.eventCardTheme.isDark(for: colorScheme)
     }
 
+    static func tooltipText(for allDayEvents: [CalendarEvent], settings: AppSettings) -> String {
+        guard !allDayEvents.isEmpty else {
+            return L10n.tr(.noEventsToday, lang: settings.language)
+        }
+        let title = allDayEvents[0].title(lang: settings.language)
+        return allDayEvents.count == 1
+            ? L10n.tr(.allDayNotice(title), lang: settings.language)
+            : L10n.tr(.allDayNoticeWithCount(title, allDayEvents.count - 1), lang: settings.language)
+    }
+
     var body: some View {
+        let text = Self.tooltipText(for: allDayEvents, settings: settings)
         HStack(spacing: 4.5) {
-            Image(systemName: "calendar")
+            Image(systemName: allDayEvents.isEmpty ? "calendar" : "calendar.badge.clock")
                 .font(.system(size: 9.5, weight: .semibold))
                 .foregroundStyle(isDarkTheme ? Color.white.opacity(0.7) : Color.black.opacity(0.6))
 
-            Text(L10n.tr(.noEventsToday, lang: settings.language))
+            Text(text)
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundStyle(isDarkTheme ? Color.white.opacity(0.9) : Color.black.opacity(0.85))
                 .lineLimit(1)
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 7)
         .padding(.vertical, 3)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(

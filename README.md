@@ -113,6 +113,8 @@ brew install rareram/tap/nudgeline
 ### 5. Event Popovers
 - **Action Card**: Full summary with meeting join buttons, unverified link notice badge, Apple Calendar shortcut, and a 0.22s hover bridge.
 - **Simple Tooltip**: Compact pill bubble that disappears 0.04s after cursor leaves.
+- **All-day Event Overlap**: Seamlessly integrates whole-day schedules into multi-event popovers alongside timed meetings with an "All Day" badge.
+- **Empty Track Guidance**: Hovering over empty schedule gaps or days with only all-day events displays a subtle 24px glassmorphism capsule tooltip with dynamic width.
 
 ### 6. Shortcuts & Siri Automation
 - **AppIntents Integration**: Native support for macOS Shortcuts app and Siri voice triggers:
@@ -188,22 +190,30 @@ NudgeLine/
 │       │   └── NudgeLineShortcuts.swift  # AppIntents for Shortcuts & Siri automation
 │       └── Views/
 │           ├── OverlayPanel.swift        # Edge floating NSPanel with mouse passthrough
-│           ├── PopoverPanel.swift        # Floating popover panel with .common runloop timer
+│           ├── PopoverPanel.swift        # Floating popover panel with .common runloop timer & empty tooltip
 │           ├── TimelineBarView.swift     # Main timeline rendering & gesture coordinator
 │           ├── HangingPetIndicatorView.swift # Mascot renderer & orbit physics
 │           ├── HoverRenderers.swift      # Popover renderer protocol
-│           ├── EventPopoverView.swift    # Action card popover
+│           ├── EventPopoverView.swift    # Action card popover (timed & all-day multi-stack)
 │           ├── SimpleInfoPopoverView.swift # Simple tooltip bubble
 │           ├── CustomPetEditorSheet.swift# Custom pet drag-and-drop modal
-│           ├── SettingsView.swift        # 4-tab preferences window
+│           ├── SettingsView.swift        # Preferences tab container
+│           ├── SettingsWindowController.swift # Dedicated settings window lifecycle manager
+│           ├── Settings/                 # Modular settings tabs
+│           │   ├── TimelineTab.swift
+│           │   ├── AppearanceTab.swift
+│           │   ├── ScheduleTab.swift
+│           │   └── GeneralTab.swift
 │           ├── Effects/                  # 16-frame 1.0s micro event alert effects
 │           │   ├── EventTriggerEffectView.swift
 │           │   ├── CherryBlossomEffectAsset.swift
 │           │   ├── ThunderEffectAsset.swift
 │           │   ├── AutumnLeavesEffectAsset.swift
 │           │   └── WinterSnowEffectAsset.swift
-│           └── Pets/                     # Built-in 16-frame Base64 pet assets
+│           └── Pets/                     # Built-in 16-frame Base64 pet assets & interaction
 │               ├── PetProtocol.swift
+│               ├── InteractivePetView.swift
+│               ├── InteractiveCustomPetView.swift
 │               ├── CatPetAsset.swift
 │               ├── JindoDogPetAsset.swift
 │               └── WhiteTigerPetAsset.swift
@@ -211,6 +221,7 @@ NudgeLine/
 │   └── NudgeLineTests/                   # Swift Testing unit test suite
 └── scripts/
     ├── build_app.sh                      # Local Dev & Release bundle packager
+    ├── create_dmg.sh                     # Release DMG packaging script
     ├── run_tests.sh                      # Local unit test runner
     ├── generate_dev_icon.swift           # DEV icon badging script
     ├── generate_app_icon.sh              # Production icon generator script

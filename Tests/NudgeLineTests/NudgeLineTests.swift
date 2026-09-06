@@ -11,6 +11,12 @@ struct LocalizationTests {
         #expect(L10n.tr(.noEventsToday, lang: .ko) == "오늘 예정된 일정이 없습니다.")
         #expect(L10n.tr(.noEventsToday, lang: .en) == "No events scheduled for today.")
 
+        // 종일 일정 안내 키
+        #expect(L10n.tr(.allDayNotice("전사 휴무"), lang: .ko) == "하루 종일: 전사 휴무")
+        #expect(L10n.tr(.allDayNotice("Company Holiday"), lang: .en) == "All Day: Company Holiday")
+        #expect(L10n.tr(.allDayNoticeWithCount("전사 휴무", 2), lang: .ko) == "하루 종일: 전사 휴무 외 2건")
+        #expect(L10n.tr(.allDayNoticeWithCount("Company Holiday", 2), lang: .en) == "All Day: Company Holiday +2")
+
         // 시스템 설정 열기 키
         #expect(L10n.tr(.openSystemPrivacy, lang: .ko) == "시스템 설정 열기")
         #expect(L10n.tr(.openSystemPrivacy, lang: .en) == "Open System Settings")
@@ -80,5 +86,23 @@ struct CalendarEventModelTests {
         #expect(event.endDate == end)
         #expect(event.isAllDay == false)
         #expect(event.calendarTitle == "업무")
+    }
+
+    @Test("종일 일정 모델 및 시간 범위 포맷 검증")
+    func testAllDayEventModel() {
+        let today = Date()
+        let allDayEvent = CalendarEvent(
+            id: "all-day-1",
+            rawTitle: "삼일절",
+            startDate: today,
+            endDate: today,
+            isAllDay: true,
+            calendarTitle: "대한민국 공휴일",
+            defaultColor: .red
+        )
+
+        #expect(allDayEvent.isAllDay == true)
+        #expect(allDayEvent.formattedTimeRange(lang: .ko) == "하루 종일")
+        #expect(allDayEvent.formattedTimeRange(lang: .en) == "All Day")
     }
 }

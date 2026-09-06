@@ -113,6 +113,8 @@ brew install rareram/tap/nudgeline
 ### 5. 팝오버 카드
 - **상세 액션 카드**: 일정 상세 내용, 화상회의 원클릭 입장 버튼, 미검증 링크 주의 안내 배지, Apple 캘린더 바로가기 (0.22초 호버 브릿지)
 - **심플 툴팁**: 제목과 시간만 간결하게 보여주는 말풍선 (마우스 벗어나면 0.04초 만에 즉시 닫힘)
+- **종일 일정 통합 스택**: 시간 지정 일정과 함께 오늘 등록된 종일 일정을 '하루 종일' 배지로 멀티 팝오버에 함께 표시하여 당일 중요 행사 누락 방지
+- **빈 바 호버 안내 툴팁**: 일정이 없는 구간이나 종일 일정만 있는 날에 마우스를 올리면 은은한 24px 글래스모피즘 캡슐 툴팁으로 상태를 동적 폭에 맞추어 깔끔하게 안내
 
 ### 6. 단축어(Shortcuts) 및 Siri 자동화 연동
 - **AppIntents 지원**: macOS 단축어 앱 및 Siri 음성 명령 연동
@@ -160,6 +162,73 @@ NudgeLine의 다국어 사전(L10n), 환경설정 기본값(AppSettings), 캘린
 # 또는 Swift Package Manager 직접 실행 (Xcode 환경)
 swift test
 ```
+
+---
+
+## 프로젝트 구조
+
+```
+NudgeLine/
+├── Package.swift                         # SPM 매니페스트 (macOS 15+)
+├── docs/
+│   └── images/                           # README 스크린샷 및 아이콘 에셋
+├── Resources/
+│   ├── Info.plist                        # LSUIElement 및 캘린더 접근 권한 설명
+│   └── AppIcon.icns                      # 앱 아이콘
+├── Sources/
+│   └── NudgeLine/
+│       ├── AppDelegate.swift             # 앱 수명주기 및 화면 변경 옵저버
+│       ├── main.swift                    # 진입점 및 단일 인스턴스 중복 실행 방지
+│       ├── Models/
+│       │   ├── AppSettings.swift         # UserDefaults 기반 환경설정 영속화
+│       │   └── CalendarEvent.swift       # 이벤트 모델, 회의 링크 파서, 안전한 인덱싱
+│       ├── Services/
+│       │   ├── CalendarService.swift     # EventKit 백그라운드 캘린더 조회 서비스
+│       │   ├── CustomPetService.swift    # 스레드 안전한 사용자 설정 펫 파일 매니저
+│       │   ├── LaunchAtLoginHelper.swift # SMAppService 로그인 시 자동 실행 래퍼
+│       │   ├── Localization.swift        # 한국어/영어 다국어 L10n 사전
+│       │   └── NudgeLineShortcuts.swift  # 단축어 및 Siri 자동화를 위한 AppIntents
+│       └── Views/
+│           ├── OverlayPanel.swift        # 마우스 패스스루 지원 화면 테두리 플로팅 NSPanel
+│           ├── PopoverPanel.swift        # .common 런루프 타이머 기반 팝오버 패널 및 빈 바 툴팁
+│           ├── TimelineBarView.swift     # 메인 타임라인 렌더링 및 제스처 코디네이터
+│           ├── HangingPetIndicatorView.swift # 마스코트 렌더러 및 궤도 물리 엔진
+│           ├── HoverRenderers.swift      # 팝오버 렌더러 프로토콜
+│           ├── EventPopoverView.swift    # 액션 카드 팝오버 (시간 지정 및 종일 일정 멀티 스택)
+│           ├── SimpleInfoPopoverView.swift # 심플 툴팁 말풍선
+│           ├── CustomPetEditorSheet.swift# 사용자 설정 펫 드래그 앤 드롭 모달
+│           ├── SettingsView.swift        # 환경설정 탭 컨테이너
+│           ├── SettingsWindowController.swift # 전용 환경설정 윈도우 수명주기 관리자
+│           ├── Settings/                 # 모듈형 환경설정 탭
+│           │   ├── TimelineTab.swift
+│           │   ├── AppearanceTab.swift
+│           │   ├── ScheduleTab.swift
+│           │   └── GeneralTab.swift
+│           ├── Effects/                  # 16프레임 1.0초 마이크로 이벤트 시작 알림 효과
+│           │   ├── EventTriggerEffectView.swift
+│           │   ├── CherryBlossomEffectAsset.swift
+│           │   ├── ThunderEffectAsset.swift
+│           │   ├── AutumnLeavesEffectAsset.swift
+│           │   └── WinterSnowEffectAsset.swift
+│           └── Pets/                     # 내장 16프레임 Base64 펫 에셋 및 상호작용
+│               ├── PetProtocol.swift
+│               ├── InteractivePetView.swift
+│               ├── InteractiveCustomPetView.swift
+│               ├── CatPetAsset.swift
+│               ├── JindoDogPetAsset.swift
+│               └── WhiteTigerPetAsset.swift
+├── Tests/
+│   └── NudgeLineTests/                   # Swift Testing 단위 테스트 스위트
+└── scripts/
+    ├── build_app.sh                      # 로컬 개발용(Dev) 및 정식 배포용 번들 빌드 스크립트
+    ├── create_dmg.sh                     # 배포용 DMG 패키징 스크립트
+    ├── run_tests.sh                      # 로컬 단위 테스트 러너
+    ├── generate_dev_icon.swift           # DEV 아이콘 뱃징 스크립트
+    ├── generate_app_icon.sh              # 정식 앱 아이콘 생성 스크립트
+    ├── generate_custom_pet.py            # Swift 모델용 CLI 스프라이트 생성기
+    └── check_security.sh                 # 정적 시크릿 스캔 스크립트
+```
+
 
 ---
 

@@ -78,6 +78,8 @@ public struct L10n {
         case openSystemPrivacy
         case noCalendars
         case noEventsToday
+        case allDayNotice(String)
+        case allDayNoticeWithCount(String, Int)
         case manageAccountsButton
         case openCalendarApp
         case resetDefault
@@ -223,6 +225,8 @@ extension L10n.Key {
         case .openSystemPrivacy: return "시스템 설정 열기"
         case .noCalendars: return "등록된 캘린더가 없습니다."
         case .noEventsToday: return "오늘 예정된 일정이 없습니다."
+        case .allDayNotice(let title): return "하루 종일: \(title)"
+        case .allDayNoticeWithCount(let title, let others): return "하루 종일: \(title) 외 \(others)건"
         case .manageAccountsButton: return "시스템 계정 관리..."
         case .openCalendarApp: return "캘린더 앱 열기"
         case .resetDefault: return "기본값"
@@ -357,6 +361,8 @@ extension L10n.Key {
         case .openSystemPrivacy: return "Open System Settings"
         case .noCalendars: return "No calendars found."
         case .noEventsToday: return "No events scheduled for today."
+        case .allDayNotice(let title): return "All Day: \(title)"
+        case .allDayNoticeWithCount(let title, let others): return "All Day: \(title) +\(others)"
         case .manageAccountsButton: return "Manage System Accounts..."
         case .openCalendarApp: return "Open Calendar App"
         case .resetDefault: return "Default"
