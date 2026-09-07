@@ -277,9 +277,7 @@ extension PopoverPanel {
     ) {
         guard let screen = currentTargetScreen() else { return }
 
-        // [동적 너비 자동 피팅]
-        // - 배경: 고정 최소 폭(155px) 적용 시 짧은 일정명에서 좌우 여백이 과도하게 벌어지는 불균형 해소
-        // - 해결: 10pt 시스템 폰트 실제 측정 폭에 아이콘/간격 및 균일 패딩(좌우 각 7px)을 합산하여 1px 단위로 동적 피팅
+        // 텍스트 길이에 맞춰 툴팁 너비를 자연스럽게 조절합니다.
         let text = EmptyScheduleTooltipView.tooltipText(for: allDayEvents, settings: settings)
         let font = NSFont.systemFont(ofSize: 10, weight: .medium)
         let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
@@ -328,14 +326,11 @@ extension PopoverPanel {
             content: AnyView(PermissionNoticeTooltipView(settings: settings)),
             frame: finalFrame,
             clusterId: "__PERMISSION_NOTICE__",
-            isDetailMode: true // 시스템 설정 열기 버튼 클릭을 위한 마우스 브릿지(0.20초 유지) 활성화
+            isDetailMode: true // 시스템 설정 열기 버튼을 클릭할 수 있도록 마우스 브릿지를 유지합니다.
         )
     }
 
-    /// [툴팁 공통 프레젠테이션 엔진]
-    /// - 배경: 시간 툴팁, 빈 일정 안내, 권한 미승인 팝오버 등 소형 캡슐 뷰의 윈도우 호스팅 및 애니메이션 보일러플레이트 중복
-    /// - 해결: 단일 프레젠테이션 진입점으로 통합하여 FirstMouseHostingView 교체, 알파 페이드 및 위치 애니메이션 일원화
-    /// - 효과: 중복 코드 90여 줄 감축(DRY), 윈도우 전환 타이밍 무결성 보장 및 툴팁 확장성 극대화
+    // 여러 소형 툴팁(현재 시각, 빈 일정 안내, 권한 알림 등)을 공통 페이드 애니메이션으로 표시합니다.
     private func presentTooltip(
         content: AnyView,
         frame: NSRect,

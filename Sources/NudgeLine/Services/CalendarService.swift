@@ -163,7 +163,7 @@ extension CalendarService {
 
 // MARK: - 5. 시스템 알림 및 백그라운드 동기화 옵저버 (Combine Observers)
 extension CalendarService {
-    // 시스템 캘린더 변경 알림, 절전/복귀 전원 이벤트 및 주기적 갱신 타이머 등록
+    // 캘린더 데이터 변경 및 절전/복귀 이벤트를 감시합니다.
     private func setupEventStoreObserver() {
         // 1. 시스템 캘린더 DB 변경 감지
         NotificationCenter.default.publisher(for: .EKEventStoreChanged, object: nil)
@@ -185,7 +185,7 @@ extension CalendarService {
             }
             .store(in: &cancellables)
 
-        // 3. 백그라운드 5분(300초) 주기 보조 갱신 (실시간 변경은 EKEventStoreChangedNotification으로 즉시 0초 반영됨)
+        // 3. 5분마다 정기적으로 일정을 보조 갱신합니다.
         Timer.publish(every: 300, on: .main, in: .default)
             .autoconnect()
             .sink { [weak self] _ in
@@ -194,7 +194,7 @@ extension CalendarService {
             }
             .store(in: &cancellables)
 
-        // 4. 자정(00:00) 경과 시 당일 기준일 리셋 및 최신 일정 갱신
+        // 4. 날짜가 바뀌면(자정) 오늘 기준 일정을 다시 불러옵니다.
         NotificationCenter.default.publisher(for: .NSCalendarDayChanged, object: nil)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -204,7 +204,7 @@ extension CalendarService {
             }
             .store(in: &cancellables)
 
-        // 5. 전원 절전(Sleep/화면보호기) 진입 시 백그라운드 쿼리 일시정지
+        // 5. 화면이 꺼지거나 절전 모드로 들어가면 팝오버를 닫고 갱신을 멈춥니다.
         let wsCenter = NSWorkspace.shared.notificationCenter
         Publishers.Merge(
             wsCenter.publisher(for: NSWorkspace.willSleepNotification),
@@ -217,7 +217,7 @@ extension CalendarService {
         }
         .store(in: &cancellables)
 
-        // 6. 전원 복귀(Wake/화면 켜짐/잠금 해제) 시 즉시 1회 강제 동기화 (디바운스로 중복 방지)
+        // 6. 절전 모드에서 깨어나면 즉시 캘린더 일정을 새로고침합니다.
         Publishers.Merge(
             wsCenter.publisher(for: NSWorkspace.didWakeNotification),
             wsCenter.publisher(for: NSWorkspace.screensDidWakeNotification)

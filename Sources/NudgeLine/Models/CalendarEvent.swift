@@ -514,7 +514,7 @@ public extension String {
 // MARK: - 7. macOS 캘린더 앱 연동 실행기
 public enum CalendarAppLauncher {
     public static func open(event: CalendarEvent? = nil) {
-        // 날짜 지정 시 AppleScript로 해당 날짜 화면 이동
+        // 일정이 전달된 경우 캘린더 앱에서 해당 날짜로 이동을 시도합니다.
         if let event = event {
             let cal = Calendar.current
             let y = cal.component(.year, from: event.startDate)
@@ -536,7 +536,7 @@ public enum CalendarAppLauncher {
             }
         }
 
-        // 기본 번들 ID 기반 캘린더 앱 실행
+        // 특정 날짜 이동이 필요 없거나 스크립트 실행 실패 시 캘린더 앱을 바로 엽니다.
         if let appUrl = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal") {
             NSWorkspace.shared.openApplication(at: appUrl, configuration: NSWorkspace.OpenConfiguration())
         } else {

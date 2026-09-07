@@ -38,6 +38,18 @@ struct LocalizationTests {
         #expect(SettingsTab.schedule.title(lang: .en) == "Time & Calendars")
         #expect(SettingsTab.general.title(lang: .ko) == "일반")
         #expect(SettingsTab.general.title(lang: .en) == "General")
+
+        // 업데이트 확인, 재시작, 새로 고침 및 새 버전 알림 키
+        #expect(L10n.tr(.checkForUpdates, lang: .ko) == "업데이트 확인...")
+        #expect(L10n.tr(.checkForUpdates, lang: .en) == "Check for Updates...")
+        #expect(L10n.tr(.restart, lang: .ko) == "재시작")
+        #expect(L10n.tr(.restart, lang: .en) == "Restart")
+        #expect(L10n.tr(.refresh, lang: .ko) == "새로 고침")
+        #expect(L10n.tr(.refresh, lang: .en) == "Refresh")
+        #expect(L10n.tr(.newVersionAvailableMenu("0.4"), lang: .ko) == "새 버전 업데이트 가능 (v0.4) →")
+        #expect(L10n.tr(.newVersionAvailableMenu("0.4"), lang: .en) == "Update Available (v0.4) →")
+        #expect(L10n.tr(.githubRepo, lang: .ko) == "GitHub 저장소 ↗")
+        #expect(L10n.tr(.githubRepo, lang: .en) == "GitHub Repository ↗")
     }
 }
 
@@ -104,5 +116,27 @@ struct CalendarEventModelTests {
         #expect(allDayEvent.isAllDay == true)
         #expect(allDayEvent.formattedTimeRange(lang: .ko) == "하루 종일")
         #expect(allDayEvent.formattedTimeRange(lang: .en) == "All Day")
+    }
+}
+
+@Suite("Version Comparison Tests")
+struct VersionComparisonTests {
+    @Test("최신 버전 판별 로직 검증")
+    func testIsNewerVersion() {
+        // 더 높은 마이너 버전
+        #expect(UpdateService.isNewerVersion(latest: "0.4", current: "0.3", currentBuild: "275") == true)
+        #expect(AppDelegate.isNewerVersion(latest: "0.4", current: "0.3", currentBuild: "275") == true)
+        // 동일 버전 동일 빌드
+        #expect(UpdateService.isNewerVersion(latest: "0.3", current: "0.3", currentBuild: "275") == false)
+        #expect(AppDelegate.isNewerVersion(latest: "0.3", current: "0.3", currentBuild: "275") == false)
+        // 동일 메이저/마이너지만 더 높은 패치/빌드
+        #expect(UpdateService.isNewerVersion(latest: "0.3.276", current: "0.3", currentBuild: "275") == true)
+        #expect(AppDelegate.isNewerVersion(latest: "0.3.276", current: "0.3", currentBuild: "275") == true)
+        // 이전 버전
+        #expect(UpdateService.isNewerVersion(latest: "0.2.9", current: "0.3", currentBuild: "275") == false)
+        #expect(AppDelegate.isNewerVersion(latest: "0.2.9", current: "0.3", currentBuild: "275") == false)
+        // 더 높은 메이저 버전
+        #expect(UpdateService.isNewerVersion(latest: "1.0.0", current: "0.3", currentBuild: "275") == true)
+        #expect(AppDelegate.isNewerVersion(latest: "1.0.0", current: "0.3", currentBuild: "275") == true)
     }
 }

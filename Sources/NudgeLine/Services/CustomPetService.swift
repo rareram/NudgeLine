@@ -83,7 +83,7 @@ extension CustomPetService {
 
 // MARK: - 4. 펫 목록 및 프레임 인메모리 캐싱
 extension CustomPetService {
-    // 디스크에 저장된 모든 커스텀 펫 메타데이터 및 이미지 프레임 프리로드
+    // 저장된 커스텀 펫 정보를 불러오고 프레임 이미지를 메모리에 미리 올려둡니다.
     public func loadAllPets() {
         let dir = petsDirectoryURL
         guard let petDirs = try? fileManager.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else {
@@ -99,9 +99,16 @@ extension CustomPetService {
             }
         }
 
-        self.customPets = loaded.sorted { $0.createdAt < $1.createdAt }
+        let sorted = loaded.sorted { $0.createdAt < $1.createdAt }
+        if Thread.isMainThread {
+            self.customPets = sorted
+        } else {
+            DispatchQueue.main.async {
+                self.customPets = sorted
+            }
+        }
 
-        // 렌더링 루프 디스크 I/O 방지를 위한 인메모리 캐싱
+        // 애니메이션 재생 중 디스크 읽기 지연을 방지하기 위해 백그라운드에서 프레임을 캐싱합니다.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             for pet in loaded {

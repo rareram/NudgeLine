@@ -7,6 +7,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var overlayPanels: [OverlayPanel] = []
     private var statusItem: NSStatusItem?
     private var cancellables = Set<AnyCancellable>()
+    private var availableUpdate: UpdateService.ReleaseInfo? = nil
 
     private let settings = AppSettings.shared
     private let calendarService = CalendarService.shared
@@ -28,14 +29,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             calendarService.requestAccess()
         }
 
-        // [신규 설치 온보딩 안내] 최초 1회 실행 감지 시 네이티브 설정창 자동 오픈
+        // 백그라운드에서 최신 릴리스 존재 여부를 조용히 확인합니다.
+        checkLatestReleaseSilently()
+
+        // 앱을 처음 실행했을 때 사용자가 설정을 인지할 수 있도록 설정창을 한 번 열어줍니다.
         checkFirstLaunchAndOpenSettings()
     }
 
-    /// [신규 설치 온보딩] 최초 1회 실행 시 네이티브 설정창 자동 오픈
-    /// - 배경: 신규 설치 직후 빈 타임라인만 노출되어 사용자가 앱의 존재 및 설정 진입 방법을 인지하기 어려움
-    /// - 해결: UserDefaults 영속 플래그(`hasLaunchedBefore`)를 확인하여 최초 실행 시 0.35초 지연 후 설정창 1회 자동 호출
-    /// - 효과: 초기 사용자 설정 온보딩을 직관적으로 유도하며, 향후 앱 업데이트(brew upgrade) 시 불필요한 재오픈 방지
     private func checkFirstLaunchAndOpenSettings() {
         let hasLaunchedBeforeKey = "hasLaunchedBefore"
         guard !UserDefaults.standard.bool(forKey: hasLaunchedBeforeKey) else { return }
@@ -50,7 +50,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 // MARK: - 2. 메뉴바 상태 아이템 구성 (Status Item & Menu)
 extension AppDelegate {
     private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if statusItem == nil {
+            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        }
         guard let button = statusItem?.button else { return }
 
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
@@ -67,8 +69,18 @@ extension AppDelegate {
         let prefsItem = NSMenuItem(title: L10n.tr(.settings, lang: settings.language), action: #selector(openSettings), keyEquivalent: ",")
         menu.addItem(prefsItem)
 
-        let updateItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshCalendars), keyEquivalent: "r")
-        menu.addItem(updateItem)
+        menu.addItem(NSMenuItem.separator())
+
+        // 새 버전 발견 시에만 업데이트 항목을 동적으로 표시
+        if let update = availableUpdate {
+            let updateTitle = L10n.tr(.newVersionAvailableMenu(update.version), lang: settings.language)
+            let updateItem = NSMenuItem(title: updateTitle, action: #selector(openReleasePage), keyEquivalent: "")
+            menu.addItem(updateItem)
+            menu.addItem(NSMenuItem.separator())
+        }
+
+        let restartItem = NSMenuItem(title: L10n.tr(.restart, lang: settings.language), action: #selector(restartApp), keyEquivalent: "")
+        menu.addItem(restartItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -126,22 +138,70 @@ extension AppDelegate {
                 self?.setupStatusItem()
             }
             .store(in: &cancellables)
+
+        // 절전 모드 복귀 시 백그라운드 릴리스 검사
+        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.checkLatestReleaseSilently()
+            }
+            .store(in: &cancellables)
+
+        // 24시간(86400초) 주기 백그라운드 릴리스 검사
+        Timer.publish(every: 86400, on: .main, in: .default)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.checkLatestReleaseSilently()
+            }
+            .store(in: &cancellables)
     }
 }
 
 // MARK: - 5. 메뉴바 및 단축키 액션 핸들러 (Actions)
 extension AppDelegate {
-    @objc public func refreshCalendars() {
-        calendarService.loadCalendars()
-        calendarService.fetchEvents(settings: settings)
-    }
-
     // 환경설정 단일 윈도우 인스턴스 오픈
     @objc public func openSettings() {
         SettingsWindowController.shared.showSettings()
     }
 
+    // 새 버전 릴리스 웹페이지 오픈
+    @objc public func openReleasePage() {
+        if let url = availableUpdate?.url {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    // 앱을 종료하고 0.3초 뒤 새 프로세스로 다시 실행합니다.
+    @objc public func restartApp() {
+        let bundleURL = Bundle.main.bundleURL
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        task.arguments = ["-c", "sleep 0.3 && open \"$1\"", "--", bundleURL.path]
+        try? task.run()
+        NSApplication.shared.terminate(nil)
+    }
+
     @objc public func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+}
+
+// MARK: - 6. 백그라운드 릴리스 업데이트 검사
+extension AppDelegate {
+    private func checkLatestReleaseSilently() {
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
+        let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "60"
+
+        UpdateService.shared.fetchLatestRelease { [weak self] result in
+            guard let self = self, case .success(let release) = result else { return }
+            if UpdateService.isNewerVersion(latest: release.version, current: appVersion, currentBuild: buildNumber) {
+                self.availableUpdate = release
+                self.setupStatusItem()
+            }
+        }
+    }
+
+    public static func isNewerVersion(latest: String, current: String, currentBuild: String) -> Bool {
+        UpdateService.isNewerVersion(latest: latest, current: current, currentBuild: currentBuild)
     }
 }

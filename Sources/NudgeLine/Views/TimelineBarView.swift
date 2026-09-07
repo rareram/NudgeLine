@@ -145,9 +145,7 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else if !calendarService.isAuthorized() {
-                        // [권한 미승인 상태 안내]
-                        // - 배경: 캘린더 접근 권한이 없어 일정을 불러올 수 없는 상태
-                        // - 해결: 타임라인 바 호버 시 원클릭 시스템 설정 딥링크 버튼이 포함된 팝오버 표출
+                        // 캘린더 접근 권한이 없으면 설정 안내 팝오버를 띄웁니다.
                         if hoveredActiveId != "__PERMISSION_NOTICE__" {
                             hoveredActiveId = "__PERMISSION_NOTICE__"
                             hoveredFocusId = nil
@@ -159,9 +157,7 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else if calendarService.events.isEmpty {
-                        // [오늘 예정된 일정 부재 안내]
-                        // - 배경: 권한은 승인되었으나 당일 남은 캘린더 일정이 0개인 상태
-                        // - 해결: 빈 바 호버 시 24px 글래스모피즘 안내 캡슐 툴팁 표출
+                        // 오늘 등록된 일정이 없으면 빈 상태 툴팁을 띄웁니다.
                         if hoveredActiveId != "__EMPTY_SCHEDULE_TOOLTIP__" {
                             hoveredActiveId = "__EMPTY_SCHEDULE_TOOLTIP__"
                             hoveredFocusId = nil
@@ -194,9 +190,7 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else {
-                        // [빈 배경 영역 및 종일 일정 툴팁 분기]
-                        // - 배경: 커서가 시간 일정 블록 외부에 있거나 당일 시간 일정이 전무한 상태
-                        // - 해결: 종일 일정이 존재하면 해당 캡슐 툴팁을 표출하고, 전혀 없으면 팝오버를 지연 소멸
+                        // 마우스가 일정 블록 바깥에 있을 때는 종일 일정이 있는 경우에만 툴팁을 표시합니다.
                         let allDayEvents = calendarService.events.filter { $0.isAllDay }
                         if !allDayEvents.isEmpty {
                             let allDayClusterId = "__ALL_DAY_TOOLTIP__" + allDayEvents.map(\.id).sorted().joined(separator: "_")
@@ -234,11 +228,6 @@ public struct TimelineBarView: View {
                     openSettingsWindow()
                 }
 
-                Button(L10n.tr(.refresh, lang: settings.language)) {
-                    calendarService.loadCalendars()
-                    calendarService.fetchEvents(settings: settings)
-                }
-
                 Divider()
 
                 Button(L10n.tr(.quit, lang: settings.language)) {
@@ -264,7 +253,7 @@ public struct TimelineBarView: View {
                 updateSegments()
             }
 
-            // 호버 중이거나 15초 단위 경과 시에만 currentTime State 갱신 (Idle 상태 렌더링 93% 절감)
+            // 마우스 호버 중이 아닐 때는 15초마다 시간을 갱신해 유휴 상태의 렌더링 부하를 줄입니다.
             let isHovered = isBarHovered || panelState.isPetProximityHovered
             let currentSec = Int(currentTime.timeIntervalSince1970)
             let inputSec = Int(input.timeIntervalSince1970)
@@ -272,7 +261,7 @@ public struct TimelineBarView: View {
                 currentTime = input
             }
 
-            // 정각 및 일정 접점 감지는 1초 단위로 정밀 검증 (상태 미변경 시 0 렌더링)
+            // 정각 알림과 일정 시작 알림은 1초 단위로 정확히 확인합니다.
             checkEventContactEffect(at: input)
             checkPreEventAlert(at: input)
         }

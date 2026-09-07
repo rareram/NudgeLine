@@ -44,6 +44,14 @@ public struct L10n {
         case settings
         case settingsWindowTitle
         case quit
+        case checkForUpdates
+        case restart
+        case checkingForUpdates
+        case upToDate
+        case newVersionAvailable(String)
+        case newVersionAvailableMenu(String)
+        case checkUpdateFailed
+        case viewRelease
 
         // 환경설정 4대 핵심 탭
         case tabTimeline
@@ -70,6 +78,7 @@ public struct L10n {
         case enableSegmentGlowLabel
         case dimPastEventsLabel
         case creditsOriginal
+        case githubRepo
 
         // 캘린더 권한 및 연동
         case permissionNeeded
@@ -190,10 +199,18 @@ public struct L10n {
 extension L10n.Key {
     var ko: String {
         switch self {
-        case .refresh: return "새로고침"
+        case .refresh: return "새로 고침"
         case .settings: return "설정..."
         case .settingsWindowTitle: return "NudgeLine 설정"
         case .quit: return "NudgeLine 종료"
+        case .checkForUpdates: return "업데이트 확인..."
+        case .restart: return "재시작"
+        case .checkingForUpdates: return "업데이트 확인 중..."
+        case .upToDate: return "현재 최신 버전을 사용 중입니다."
+        case .newVersionAvailable(let v): return "새로운 버전(\(v))을 사용할 수 있습니다."
+        case .newVersionAvailableMenu(let v): return "새 버전 업데이트 가능 (v\(v)) →"
+        case .checkUpdateFailed: return "업데이트 확인 실패"
+        case .viewRelease: return "릴리스 보기"
 
         case .tabTimeline: return "타임라인"
         case .tabAppearance: return "표시 및 효과"
@@ -213,6 +230,7 @@ extension L10n.Key {
         case .enableSegmentGlowLabel: return "블록 네온 효과"
         case .dimPastEventsLabel: return "지난 일정 흐리게"
         case .creditsOriginal: return "원작: Andreas Katzian & ARTMIXTURE (2014-2015)"
+        case .githubRepo: return "GitHub 저장소 ↗"
 
         case .launchAtLogin: return "로그인할 때 자동 실행"
         case .hideOnScreenShareLabel: return "화상회의 · 녹화 · 가상화면에 표시 안 함"
@@ -330,6 +348,14 @@ extension L10n.Key {
         case .settings: return "Settings..."
         case .settingsWindowTitle: return "NudgeLine Settings"
         case .quit: return "Quit NudgeLine"
+        case .checkForUpdates: return "Check for Updates..."
+        case .restart: return "Restart"
+        case .checkingForUpdates: return "Checking for updates..."
+        case .upToDate: return "You are using the latest version."
+        case .newVersionAvailable(let v): return "A new version (\(v)) is available."
+        case .newVersionAvailableMenu(let v): return "Update Available (v\(v)) →"
+        case .checkUpdateFailed: return "Failed to check for updates"
+        case .viewRelease: return "View Release"
 
         case .tabTimeline: return "Timeline"
         case .tabAppearance: return "Appearance"
@@ -349,6 +375,7 @@ extension L10n.Key {
         case .enableSegmentGlowLabel: return "Block Neon Glow"
         case .dimPastEventsLabel: return "Dim past events"
         case .creditsOriginal: return "Inspired by PixelScheduler (2014-2015) by Andreas Katzian & ARTMIXTURE"
+        case .githubRepo: return "GitHub Repository ↗"
 
         case .launchAtLogin: return "Launch at Login"
         case .hideOnScreenShareLabel: return "Exclude from Meetings, Capture & Virtual Display"

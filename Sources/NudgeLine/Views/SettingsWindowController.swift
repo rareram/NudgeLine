@@ -120,8 +120,12 @@ public final class SettingsWindowController: NSWindowController {
 
 // MARK: - 3. 공개 표시 인터페이스 (Public Interface)
 extension SettingsWindowController {
-    public func showSettings() {
+    public func showSettings(tab: SettingsTab? = nil) {
         guard let window = self.window else { return }
+        if let targetTab = tab {
+            tabManager.selectedTab = targetTab
+            window.toolbar?.selectedItemIdentifier = NSToolbarItem.Identifier(targetTab.rawValue)
+        }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }

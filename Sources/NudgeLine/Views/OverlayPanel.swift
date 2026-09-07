@@ -117,9 +117,9 @@ extension OverlayPanel {
     }
 }
 
-// MARK: - 4. 이벤트 주도형 무간섭 마우스 센서 (Mouse Proximity & Hit Testing)
+// MARK: - 4. 마우스 감지 및 클릭 통과 처리 (Mouse Proximity & Hit Testing)
 extension OverlayPanel {
-    // 이벤트 주도형(Event-Driven) 무간섭 마우스 좌표 감시 (마우스 정지 시 0 Wakeup, 100% App Nap)
+    // 마우스가 이동할 때만 좌표를 감지하여 불필요한 연산을 줄입니다.
     private func startMouseTracking() {
         if let monitor = globalMouseMonitor {
             NSEvent.removeMonitor(monitor)
@@ -145,9 +145,9 @@ extension OverlayPanel {
         checkMouseProximityAndHit()
     }
 
-    // 마우스 좌표 분석을 통한 무간섭 패스스루 및 펫 근접 제어
+    // 마우스 위치에 따라 타임라인 상호작용 또는 배경 클릭 통과를 결정합니다.
     private func checkMouseProximityAndHit() {
-        // 전체화면/슬라이드쇼 은폐 중에는 100% 클릭 관통 강제 유지
+        // 전체화면 상태일 때는 마우스 이벤트를 완전히 통과시킵니다.
         if isOccludedByFullScreen {
             if !self.ignoresMouseEvents {
                 self.ignoresMouseEvents = true
@@ -160,7 +160,7 @@ extension OverlayPanel {
         lastMouseLoc = mouseLoc
         let panelRect = self.frame
 
-        // 1. 물리 타임라인 바 영역 진입 여부 판정 (설정된 바/호버 두께와 1:1 일치)
+        // 1. 마우스가 실제 타임라인 바 영역 안에 있는지 확인
         let effectiveThickness = settings.expandOnHover ? max(settings.barWidth, settings.hoverWidth) : settings.barWidth
         let hitMargin: CGFloat = effectiveThickness
         let isInsideBar: Bool
@@ -177,7 +177,7 @@ extension OverlayPanel {
             isInsideBar = barRect.contains(mouseLoc)
         }
 
-        // 바 외부 영역은 WindowServer 레벨에서 ignoresMouseEvents를 true로 토글하여 클릭 관통 보장
+        // 바 바깥 영역에서는 마우스 이벤트를 무시하여 뒤쪽 창이 클릭되도록 합니다.
         if isInsideBar {
             if self.ignoresMouseEvents {
                 self.ignoresMouseEvents = false
@@ -188,7 +188,7 @@ extension OverlayPanel {
             }
         }
 
-        // 2. 펫 마스코트 근접 감지 (숨김 애니메이션 트리거)
+        // 2. 펫 캐릭터 주변에 마우스가 오면 숨김 애니메이션을 동작시킵니다.
         guard settings.isPetEnabled else {
             if panelState.isPetProximityHovered {
                 panelState.isPetProximityHovered = false
@@ -499,7 +499,7 @@ private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Con
         return true
     }
 
-    // 마우스 우클릭 시 네이티브 컨텍스트 메뉴 표시
+    // 마우스 우클릭 시 네이티브 컨텍스트 메뉴 표시 (Option 키 조합 시 재시작 옵션 노출)
     override func menu(for event: NSEvent) -> NSMenu? {
         guard isHitInBar(windowPoint: event.locationInWindow) else { return nil }
 
@@ -511,12 +511,17 @@ private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Con
         settingsItem.isEnabled = true
         menu.addItem(settingsItem)
 
-        let refreshItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshCalendars(_:)), keyEquivalent: "r")
-        refreshItem.target = self
-        refreshItem.isEnabled = true
-        menu.addItem(refreshItem)
-
         menu.addItem(NSMenuItem.separator())
+
+        // Option(⌥) 키 조합 시 고급 탈출구로 '재시작' 옵션 노출
+        if event.modifierFlags.contains(.option) {
+            let restartItem = NSMenuItem(title: L10n.tr(.restart, lang: settings.language), action: #selector(restartApp(_:)), keyEquivalent: "")
+            restartItem.target = self
+            restartItem.isEnabled = true
+            menu.addItem(restartItem)
+
+            menu.addItem(NSMenuItem.separator())
+        }
 
         let quitItem = NSMenuItem(title: L10n.tr(.quit, lang: settings.language), action: #selector(quitApp(_:)), keyEquivalent: "q")
         quitItem.target = self
@@ -546,9 +551,8 @@ private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Con
         (NSApp.delegate as? AppDelegate)?.openSettings()
     }
 
-    @objc private func refreshCalendars(_ sender: Any?) {
-        CalendarService.shared.loadCalendars()
-        CalendarService.shared.fetchEvents(settings: settings)
+    @objc private func restartApp(_ sender: Any?) {
+        (NSApp.delegate as? AppDelegate)?.restartApp()
     }
 
     @objc private func quitApp(_ sender: Any?) {
