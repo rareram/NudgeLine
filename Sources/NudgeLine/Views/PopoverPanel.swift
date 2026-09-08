@@ -455,15 +455,18 @@ private struct CurrentTimeTooltipView: View {
         )
         .background(
             Capsule()
-                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.2))
+                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.75))
         )
         .overlay(
             Capsule()
                 .stroke(
                     LinearGradient(
-                        colors: [
-                            Color.white.opacity(isDarkTheme ? 0.35 : 0.6),
-                            Color.white.opacity(isDarkTheme ? 0.10 : 0.2)
+                        colors: isDarkTheme ? [
+                            Color.white.opacity(0.35),
+                            Color.white.opacity(0.10)
+                        ] : [
+                            Color.black.opacity(0.18),
+                            Color.black.opacity(0.08)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -471,7 +474,7 @@ private struct CurrentTimeTooltipView: View {
                     lineWidth: 0.8
                 )
         )
-        .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
         .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 }
@@ -521,15 +524,18 @@ private struct EmptyScheduleTooltipView: View {
         )
         .background(
             Capsule()
-                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.2))
+                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.75))
         )
         .overlay(
             Capsule()
                 .stroke(
                     LinearGradient(
-                        colors: [
-                            Color.white.opacity(isDarkTheme ? 0.35 : 0.6),
-                            Color.white.opacity(isDarkTheme ? 0.10 : 0.2)
+                        colors: isDarkTheme ? [
+                            Color.white.opacity(0.35),
+                            Color.white.opacity(0.10)
+                        ] : [
+                            Color.black.opacity(0.18),
+                            Color.black.opacity(0.08)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -537,7 +543,7 @@ private struct EmptyScheduleTooltipView: View {
                     lineWidth: 0.8
                 )
         )
-        .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
         .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 }
@@ -589,15 +595,18 @@ private struct PermissionNoticeTooltipView: View {
         )
         .background(
             Capsule()
-                .fill(isDarkTheme ? Color.black.opacity(0.88) : Color.white.opacity(0.25))
+                .fill(isDarkTheme ? Color.black.opacity(0.88) : Color.white.opacity(0.80))
         )
         .overlay(
             Capsule()
                 .stroke(
                     LinearGradient(
-                        colors: [
+                        colors: isDarkTheme ? [
                             Color.orange.opacity(0.55),
-                            Color.white.opacity(isDarkTheme ? 0.2 : 0.4)
+                            Color.white.opacity(0.20)
+                        ] : [
+                            Color.orange.opacity(0.65),
+                            Color.black.opacity(0.14)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -605,7 +614,7 @@ private struct PermissionNoticeTooltipView: View {
                     lineWidth: 0.8
                 )
         )
-        .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
         .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 }

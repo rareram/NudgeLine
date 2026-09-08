@@ -55,16 +55,19 @@ public struct SimpleInfoPopoverView: View {
         )
         .background(
             bubbleShape
-                .fill(isDarkTheme ? Color.black.opacity(settings.cardOpacity) : Color.white.opacity(max(0.1, settings.cardOpacity * 0.25)))
+                .fill(isDarkTheme ? Color.black.opacity(settings.cardOpacity) : Color.white.opacity(max(0.65, settings.cardOpacity)))
                 .allowsHitTesting(false)
         )
         .overlay(
             bubbleShape
                 .stroke(
                     LinearGradient(
-                        colors: [
-                            Color.white.opacity(isDarkTheme ? 0.35 : 0.6),
-                            Color.white.opacity(isDarkTheme ? 0.10 : 0.2)
+                        colors: isDarkTheme ? [
+                            Color.white.opacity(0.35),
+                            Color.white.opacity(0.10)
+                        ] : [
+                            Color.black.opacity(0.16),
+                            Color.black.opacity(0.08)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -73,7 +76,7 @@ public struct SimpleInfoPopoverView: View {
                 )
                 .allowsHitTesting(false)
         )
-        .shadow(color: .black.opacity(0.28), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(isDarkTheme ? 0.28 : 0.18), radius: 8, x: 0, y: 4)
         .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 

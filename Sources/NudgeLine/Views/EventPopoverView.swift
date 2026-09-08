@@ -29,7 +29,7 @@ public struct EventPopoverView: View {
         if isDarkTheme {
             return Color.black.opacity(opacity)
         } else {
-            return Color.white.opacity(max(0.1, opacity * 0.25))
+            return Color.white.opacity(max(0.65, opacity))
         }
     }
 
@@ -104,9 +104,12 @@ public struct EventPopoverView: View {
             bubbleShape
                 .stroke(
                     LinearGradient(
-                        colors: [
-                            Color.white.opacity(isDarkTheme ? 0.35 : 0.6),
-                            Color.white.opacity(isDarkTheme ? 0.10 : 0.2)
+                        colors: isDarkTheme ? [
+                            Color.white.opacity(0.35),
+                            Color.white.opacity(0.10)
+                        ] : [
+                            Color.black.opacity(0.16),
+                            Color.black.opacity(0.08)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -115,7 +118,7 @@ public struct EventPopoverView: View {
                 )
                 .allowsHitTesting(false)
         )
-        .shadow(color: .black.opacity(0.28), radius: 10, x: 0, y: 5)
+        .shadow(color: .black.opacity(isDarkTheme ? 0.28 : 0.18), radius: 10, x: 0, y: 5)
         .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 

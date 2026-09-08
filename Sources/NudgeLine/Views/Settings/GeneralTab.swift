@@ -6,6 +6,11 @@ struct GeneralTab: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject private var launchHelper = LaunchAtLoginHelper.shared
     @State private var updateStatus: UpdateCheckStatus = .idle
+    @State private var logoClickCount: Int = 0
+    @State private var lastLogoClickTime: Date = .distantPast
+    @State private var showPawPrints: Bool = false
+    @State private var logoBounce: Bool = false
+    @State private var pawPrints: [PawPrintItem] = []
 
     var body: some View {
         VStack(spacing: 12) {
@@ -16,6 +21,12 @@ struct GeneralTab: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 56, height: 56)
+                        .scaleEffect(logoBounce ? 1.2 : 1.0)
+                        .rotationEffect(.degrees(logoBounce ? 12 : 0))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            handleLogoClick()
+                        }
                 }
 
                 Text(settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine")
@@ -105,6 +116,24 @@ struct GeneralTab: View {
             .padding(.top, 6)
             .padding(.bottom, 8)
         }
+        .background {
+            if showPawPrints {
+                GeometryReader { geo in
+                    ForEach(pawPrints) { item in
+                        Image(systemName: "pawprint.fill")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: item.size, height: item.size)
+                            .foregroundStyle(Color.primary)
+                            .opacity(item.opacity)
+                            .rotationEffect(item.angle)
+                            .position(x: geo.size.width * item.xRatio, y: geo.size.height * item.yRatio)
+                    }
+                }
+                .allowsHitTesting(false)
+                .transition(.opacity)
+            }
+        }
     }
 }
 
@@ -180,5 +209,83 @@ extension GeneralTab {
                 self.updateStatus = .failed
             }
         }
+    }
+}
+
+private struct PawPrintItem: Identifiable {
+    let id: Int
+    let xRatio: CGFloat
+    let yRatio: CGFloat
+    let size: CGFloat
+    let angle: Angle
+    let opacity: Double
+}
+
+extension GeneralTab {
+    private func handleLogoClick() {
+        let now = Date()
+        if now.timeIntervalSince(lastLogoClickTime) > 1.5 {
+            logoClickCount = 1
+        } else {
+            logoClickCount += 1
+        }
+        lastLogoClickTime = now
+
+        if logoClickCount >= 7 {
+            logoClickCount = 0
+            pawPrints = generatePawPrints()
+
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                logoBounce = true
+            }
+            withAnimation(.easeIn(duration: 0.5)) {
+                showPawPrints = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    logoBounce = false
+                }
+            }
+        }
+    }
+
+    private func generatePawPrints() -> [PawPrintItem] {
+        var prints: [PawPrintItem] = []
+
+        let spots: [(x: CGFloat, y: CGFloat, angle: Double)] = [
+            (0.16, 0.20, -35),
+            (0.28, 0.14, -10),
+            (0.82, 0.18, 45),
+            (0.70, 0.28, 65),
+            (0.38, 0.40, -75),
+            (0.54, 0.48, 20),
+            (0.68, 0.56, -45),
+            (0.15, 0.62, 85),
+            (0.25, 0.76, 35),
+            (0.85, 0.68, -115),
+            (0.72, 0.84, -85),
+            (0.44, 0.82, -15),
+            (0.32, 0.08, -50),
+            (0.66, 0.10, 30)
+        ]
+
+        for (index, spot) in spots.enumerated() {
+            let randomX = spot.x + CGFloat.random(in: -0.04...0.04)
+            let randomY = spot.y + CGFloat.random(in: -0.04...0.04)
+            let size = CGFloat.random(in: 50...100)
+            let opacity = Double.random(in: 0.20...0.35)
+            let angle = Angle.degrees(spot.angle + Double.random(in: -30...30))
+
+            prints.append(PawPrintItem(
+                id: index,
+                xRatio: min(max(randomX, 0.06), 0.94),
+                yRatio: min(max(randomY, 0.06), 0.94),
+                size: size,
+                angle: angle,
+                opacity: opacity
+            ))
+        }
+
+        return prints
     }
 }

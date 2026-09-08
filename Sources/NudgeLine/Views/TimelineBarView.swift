@@ -21,6 +21,11 @@ public struct TimelineBarView: View {
     @State private var pulsingSegmentId: String? = nil
     @State private var lastTriggeredPreAlertEventKey: String? = nil
 
+    @Environment(\.colorScheme) private var colorScheme
+    private var isDark: Bool {
+        settings.eventCardTheme.isDark(for: colorScheme)
+    }
+
     private static let clockPublisher = Timer.publish(every: 1, on: .main, in: .default).autoconnect()
 
     public init(
@@ -52,7 +57,12 @@ public struct TimelineBarView: View {
 
             ZStack(alignment: alignmentForPosition) {
                 // 1. 타임라인 배경 트랙
-                backgroundTrack(thickness: settings.barWidth, length: totalLength, isHorizontal: isHorizontal)
+                backgroundTrack(
+                    thickness: settings.barWidth,
+                    length: totalLength,
+                    isHorizontal: isHorizontal,
+                    isDark: isDark
+                )
 
                 // 2. 일정 세그먼트 렌더링
                 ForEach(segments) { segment in
@@ -67,7 +77,8 @@ public struct TimelineBarView: View {
                         length: segLength,
                         isHorizontal: isHorizontal,
                         currentTime: currentTime,
-                        isPulsing: pulsingSegmentId == segment.id
+                        isPulsing: pulsingSegmentId == segment.id,
+                        isDark: isDark
                     )
                     .offset(
                         x: isHorizontal ? segOffset : 0,
@@ -88,7 +99,8 @@ public struct TimelineBarView: View {
                         activeEffectId: activeEffectId,
                         onEffectComplete: {
                             activeEffectType = nil
-                        }
+                        },
+                        isDark: isDark
                     )
                     .offset(
                         x: isHorizontal ? pos : 0,
@@ -467,36 +479,41 @@ public struct TimelineBarView: View {
     }
 
     @ViewBuilder
-    private func backgroundTrack(thickness: CGFloat, length: CGFloat, isHorizontal: Bool) -> some View {
-        let hasBorder = thickness > 2
+    private func backgroundTrack(thickness: CGFloat, length: CGFloat, isHorizontal: Bool, isDark: Bool) -> some View {
+        let borderStrokeColor = isDark ? Color.white.opacity(0.15) : Color.black.opacity(0.15)
+
         Group {
             switch settings.barStyleMode {
             case .adaptive:
                 Rectangle()
-                    .fill(Color(NSColor.windowBackgroundColor).opacity(settings.trackOpacity))
+                    .fill(
+                        isDark
+                            ? Color(NSColor.windowBackgroundColor).opacity(settings.trackOpacity)
+                            : Color.black.opacity(max(0.06, settings.trackOpacity * 0.35))
+                    )
                     .overlay(
-                        hasBorder ? Rectangle().stroke(Color.primary.opacity(0.15), lineWidth: 0.5) : nil
+                        Rectangle().stroke(borderStrokeColor, lineWidth: 0.5)
                     )
 
             case .dark:
                 Rectangle()
                     .fill(Color.black.opacity(settings.trackOpacity))
                     .overlay(
-                        hasBorder ? Rectangle().stroke(Color.white.opacity(0.15), lineWidth: 0.5) : nil
+                        Rectangle().stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
 
             case .light:
                 Rectangle()
-                    .fill(Color.white.opacity(settings.trackOpacity))
+                    .fill(Color.black.opacity(max(0.06, settings.trackOpacity * 0.35)))
                     .overlay(
-                        hasBorder ? Rectangle().stroke(Color.black.opacity(0.15), lineWidth: 0.5) : nil
+                        Rectangle().stroke(Color.black.opacity(0.15), lineWidth: 0.5)
                     )
 
             case .custom:
                 Rectangle()
                     .fill(settings.effectiveTrackColor().opacity(settings.trackOpacity))
                     .overlay(
-                        hasBorder ? Rectangle().stroke(Color.white.opacity(0.15), lineWidth: 0.5) : nil
+                        Rectangle().stroke(borderStrokeColor, lineWidth: 0.5)
                     )
             }
         }
@@ -530,6 +547,7 @@ private struct SegmentBlockView: View {
     let isHorizontal: Bool
     let currentTime: Date
     let isPulsing: Bool
+    let isDark: Bool
 
     var body: some View {
         let isHovered = hoveredFocusId != nil && segment.events.contains(where: { $0.id == hoveredFocusId })
@@ -538,8 +556,8 @@ private struct SegmentBlockView: View {
         let isUltraThin = thickness <= 2
         let colors = segment.events.map { $0.effectiveColor(settings: settings) }
         let primaryColor = colors.first ?? .blue
-        let segmentOpacity: Double = (isPast && !isHovered) ? 0.35 : 1.0
-        let segmentSaturation: Double = (isPast && !isHovered) ? 0.35 : 1.0
+        let segmentOpacity: Double = (isPast && !isHovered) ? (isDark ? 0.35 : 0.55) : 1.0
+        let segmentSaturation: Double = (isPast && !isHovered) ? (isDark ? 0.35 : 0.60) : 1.0
 
         Group {
             if segment.isOverlap {
@@ -558,16 +576,16 @@ private struct SegmentBlockView: View {
             ZStack {
                 if isHovered && settings.enableSegmentRim {
                     Rectangle()
-                        .stroke(Color.white.opacity(0.95), lineWidth: 0.8)
+                        .stroke(isDark ? Color.white.opacity(0.95) : Color.black.opacity(0.45), lineWidth: 0.8)
                 } else if !isUltraThin {
                     Rectangle()
-                        .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
+                        .stroke(isDark ? Color.white.opacity(0.18) : Color.black.opacity(0.15), lineWidth: 0.5)
                 }
 
                 // 일정 시작 전 알림 브리딩 펄스 글로우 오버레이
                 if isPulsing {
                     Rectangle()
-                        .fill(Color.white.opacity(0.35))
+                        .fill(isDark ? Color.white.opacity(0.35) : Color.black.opacity(0.20))
                 }
 
                 // 세그먼트 구분선
@@ -641,6 +659,7 @@ private struct CurrentTimeIndicatorView: View {
     let activeEffectType: EventTriggerEffectType?
     let activeEffectId: UUID
     let onEffectComplete: @MainActor () -> Void
+    let isDark: Bool
 
     var body: some View {
         ZStack(alignment: alignmentForPosition) {
@@ -704,6 +723,8 @@ private struct CurrentTimeIndicatorView: View {
         let isRight = settings.barPosition == .right
         let hasRim = settings.enableIndicatorRim
         let hasGlow = settings.enableIndicatorGlow
+        let rimColor = isDark ? Color.white.opacity(0.95) : Color.black.opacity(0.55)
+        let ringRimColor = isDark ? Color.white.opacity(0.9) : Color.black.opacity(0.55)
 
         Group {
             switch settings.currentTimeIndicatorStyle {
@@ -712,7 +733,7 @@ private struct CurrentTimeIndicatorView: View {
                 TriangleTickShape(position: settings.barPosition, thickness: thickness)
                     .fill(accentColor)
                     .overlay(
-                        hasRim ? TriangleTickShape(position: settings.barPosition, thickness: thickness).stroke(Color.white.opacity(0.95), lineWidth: 0.8) : nil
+                        hasRim ? TriangleTickShape(position: settings.barPosition, thickness: thickness).stroke(rimColor, lineWidth: 0.8) : nil
                     )
                     .shadow(color: hasGlow ? accentColor.opacity(0.9) : .clear, radius: 4)
                     .frame(
@@ -729,7 +750,7 @@ private struct CurrentTimeIndicatorView: View {
                 RoundDomeShape(position: settings.barPosition, thickness: thickness)
                     .fill(accentColor)
                     .overlay(
-                        hasRim ? RoundDomeShape(position: settings.barPosition, thickness: thickness).stroke(Color.white.opacity(0.95), lineWidth: 0.8) : nil
+                        hasRim ? RoundDomeShape(position: settings.barPosition, thickness: thickness).stroke(rimColor, lineWidth: 0.8) : nil
                     )
                     .shadow(color: hasGlow ? accentColor.opacity(0.9) : .clear, radius: 4)
                     .frame(
@@ -746,7 +767,7 @@ private struct CurrentTimeIndicatorView: View {
                 Rectangle()
                     .fill(accentColor)
                     .overlay(
-                        hasRim ? Rectangle().stroke(Color.white.opacity(0.95), lineWidth: 0.8) : nil
+                        hasRim ? Rectangle().stroke(rimColor, lineWidth: 0.8) : nil
                     )
                     .shadow(color: hasGlow ? accentColor.opacity(0.9) : .clear, radius: 4)
                     .frame(
@@ -763,7 +784,7 @@ private struct CurrentTimeIndicatorView: View {
                 Circle()
                     .stroke(accentColor, lineWidth: 2.0)
                     .overlay(
-                        hasRim ? Circle().stroke(Color.white.opacity(0.9), lineWidth: 0.6) : nil
+                        hasRim ? Circle().stroke(ringRimColor, lineWidth: 0.6) : nil
                     )
                     .frame(width: 9, height: 9)
                     .shadow(color: hasGlow ? accentColor.opacity(0.95) : .clear, radius: 4)
