@@ -30,6 +30,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 백그라운드에서 최신 릴리스 존재 여부를 조용히 확인합니다.
+        UpdateService.shared.checkDiskBundleUpdate(force: true)
         checkLatestReleaseSilently()
 
         // 앱을 처음 실행했을 때 사용자가 설정을 인지할 수 있도록 설정창을 한 번 열어줍니다.
@@ -62,7 +63,11 @@ extension AppDelegate {
         } else {
             button.title = "NudgeLine"
         }
-        button.toolTip = settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine"
+        if case .pendingRestart(let version) = UpdateService.shared.updateState {
+            button.toolTip = (settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine") + " - \(L10n.tr(.newVersionReadyNotice(version), lang: settings.language))"
+        } else {
+            button.toolTip = settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine"
+        }
 
         let menu = NSMenu()
 
@@ -71,8 +76,19 @@ extension AppDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        // 새 버전 발견 시에만 업데이트 항목을 동적으로 표시
-        if let update = availableUpdate {
+        // 1) 로컬 디스크에 새 버전이 설치되어 재시작 대기 중인 경우 최상단 승격
+        if case .pendingRestart(let version) = UpdateService.shared.updateState {
+            let restartTitle = L10n.tr(.restartToApplyUpdate(version), lang: settings.language)
+            let restartUpdateItem = NSMenuItem(title: restartTitle, action: #selector(restartApp), keyEquivalent: "r")
+            menu.addItem(restartUpdateItem)
+            menu.addItem(NSMenuItem.separator())
+        } else if case .remoteAvailable(let version, _) = UpdateService.shared.updateState {
+            // 2) 원격 GitHub 릴리스에 새 버전이 발견된 경우
+            let updateTitle = L10n.tr(.newVersionAvailableMenu(version), lang: settings.language)
+            let updateItem = NSMenuItem(title: updateTitle, action: #selector(openReleasePage), keyEquivalent: "")
+            menu.addItem(updateItem)
+            menu.addItem(NSMenuItem.separator())
+        } else if let update = availableUpdate {
             let updateTitle = L10n.tr(.newVersionAvailableMenu(update.version), lang: settings.language)
             let updateItem = NSMenuItem(title: updateTitle, action: #selector(openReleasePage), keyEquivalent: "")
             menu.addItem(updateItem)
@@ -139,10 +155,19 @@ extension AppDelegate {
             }
             .store(in: &cancellables)
 
-        // 절전 모드 복귀 시 백그라운드 릴리스 검사
+        // 업데이트 상태 변경 시 메뉴바 상태 항목 실시간 갱신
+        UpdateService.shared.$updateState
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.setupStatusItem()
+            }
+            .store(in: &cancellables)
+
+        // 절전 모드 복귀 시 로컬 디스크 번들 확인 및 백그라운드 릴리스 검사
         NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                UpdateService.shared.checkDiskBundleUpdate(force: true)
                 self?.checkLatestReleaseSilently()
             }
             .store(in: &cancellables)
@@ -166,19 +191,18 @@ extension AppDelegate {
 
     // 새 버전 릴리스 웹페이지 오픈
     @objc public func openReleasePage() {
-        if let url = availableUpdate?.url {
+        if case .remoteAvailable(_, let url) = UpdateService.shared.updateState {
             NSWorkspace.shared.open(url)
+        } else if let url = availableUpdate?.url {
+            NSWorkspace.shared.open(url)
+        } else {
+            NSWorkspace.shared.open(UpdateService.releasesURL)
         }
     }
 
     // 앱을 종료하고 0.3초 뒤 새 프로세스로 다시 실행합니다.
     @objc public func restartApp() {
-        let bundleURL = Bundle.main.bundleURL
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/sh")
-        task.arguments = ["-c", "sleep 0.3 && open \"$1\"", "--", bundleURL.path]
-        try? task.run()
-        NSApplication.shared.terminate(nil)
+        UpdateService.shared.restartApp()
     }
 
     @objc public func quitApp() {

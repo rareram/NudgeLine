@@ -52,6 +52,9 @@ public struct L10n {
         case newVersionAvailableMenu(String)
         case checkUpdateFailed
         case viewRelease
+        case restartToApplyUpdate(String)
+        case newVersionReadyNotice(String)
+        case restartNow
 
         // 환경설정 4대 핵심 탭
         case tabTimeline
@@ -87,8 +90,16 @@ public struct L10n {
         case openSystemPrivacy
         case noCalendars
         case noEventsToday
+        case noEventsShort
         case allDayNotice(String)
         case allDayNoticeWithCount(String, Int)
+        case noTimedEventsWithAllDayCard(String)
+        case noTimedEventsWithAllDayCountCard(String, Int)
+        case outOfRangeSingleCard(String, String)
+        case outOfRangeMultipleCard(Int, String, String)
+        case outOfRangeSimple(Int, String)
+        case allDayWithOutOfRangeCard(String, Int, String)
+        case allDayWithOutOfRangeSimple(String, Int)
         case manageAccountsButton
         case openCalendarApp
         case resetDefault
@@ -211,6 +222,9 @@ extension L10n.Key {
         case .newVersionAvailableMenu(let v): return "새 버전 업데이트 가능 (v\(v)) →"
         case .checkUpdateFailed: return "업데이트 확인 실패"
         case .viewRelease: return "릴리스 보기"
+        case .restartToApplyUpdate(let v): return "업데이트 적용을 위해 재시작 (v\(v))"
+        case .newVersionReadyNotice(let v): return "새 버전 v\(v) 설치됨"
+        case .restartNow: return "지금 재시작"
 
         case .tabTimeline: return "타임라인"
         case .tabAppearance: return "표시 및 효과"
@@ -243,8 +257,16 @@ extension L10n.Key {
         case .openSystemPrivacy: return "시스템 설정 열기"
         case .noCalendars: return "등록된 캘린더가 없습니다."
         case .noEventsToday: return "오늘 예정된 일정이 없습니다."
+        case .noEventsShort: return "일정 없음"
         case .allDayNotice(let title): return "하루 종일: \(title)"
         case .allDayNoticeWithCount(let title, let others): return "하루 종일: \(title) 외 \(others)건"
+        case .noTimedEventsWithAllDayCard(let title): return "시간 일정 없음 · 종일: \(title)"
+        case .noTimedEventsWithAllDayCountCard(let title, let others): return "시간 일정 없음 · 종일: \(title) 외 \(others)건"
+        case .outOfRangeSingleCard(let time, let title): return "표시 범위 외 1건 (\(time) \(title))"
+        case .outOfRangeMultipleCard(let count, let time, let title): return "표시 범위 외 \(count)건 (\(time) \(title) 외)"
+        case .outOfRangeSimple(let count, let time): return "범위 외 \(count)건 (\(time))"
+        case .allDayWithOutOfRangeCard(let title, let count, let time): return "종일: \(title) · 범위 외 \(count)건 (\(time))"
+        case .allDayWithOutOfRangeSimple(let title, let count): return "종일: \(title) · 외 \(count)건"
         case .manageAccountsButton: return "시스템 계정 관리..."
         case .openCalendarApp: return "캘린더 앱 열기"
         case .resetDefault: return "기본값"
@@ -356,6 +378,9 @@ extension L10n.Key {
         case .newVersionAvailableMenu(let v): return "Update Available (v\(v)) →"
         case .checkUpdateFailed: return "Failed to check for updates"
         case .viewRelease: return "View Release"
+        case .restartToApplyUpdate(let v): return "Restart to Apply Update (v\(v))"
+        case .newVersionReadyNotice(let v): return "New version v\(v) ready"
+        case .restartNow: return "Restart Now"
 
         case .tabTimeline: return "Timeline"
         case .tabAppearance: return "Appearance"
@@ -388,8 +413,16 @@ extension L10n.Key {
         case .openSystemPrivacy: return "Open System Settings"
         case .noCalendars: return "No calendars found."
         case .noEventsToday: return "No events scheduled for today."
+        case .noEventsShort: return "No events"
         case .allDayNotice(let title): return "All Day: \(title)"
         case .allDayNoticeWithCount(let title, let others): return "All Day: \(title) +\(others)"
+        case .noTimedEventsWithAllDayCard(let title): return "No timed events · All-Day: \(title)"
+        case .noTimedEventsWithAllDayCountCard(let title, let others): return "No timed events · All-Day: \(title) +\(others)"
+        case .outOfRangeSingleCard(let time, let title): return "1 event outside range (\(time) \(title))"
+        case .outOfRangeMultipleCard(let count, let time, let title): return "\(count) events outside range (\(time) \(title)...)"
+        case .outOfRangeSimple(let count, let time): return "Outside range: \(count) (\(time))"
+        case .allDayWithOutOfRangeCard(let title, let count, let time): return "All-Day: \(title) · \(count) outside range (\(time))"
+        case .allDayWithOutOfRangeSimple(let title, let count): return "All-Day: \(title) · +\(count) more"
         case .manageAccountsButton: return "Manage System Accounts..."
         case .openCalendarApp: return "Open Calendar App"
         case .resetDefault: return "Default"

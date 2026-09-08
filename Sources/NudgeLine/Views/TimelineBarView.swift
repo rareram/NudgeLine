@@ -141,6 +141,7 @@ public struct TimelineBarView: View {
                     }
 
                     isBarHovered = true
+                    UpdateService.shared.checkDiskBundleUpdate()
                     let cursorCoord = isHorizontal ? location.x : location.y
 
                     // 현재 시각 인디케이터 인접 감지 (12px 이내)
@@ -169,13 +170,27 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else if calendarService.events.isEmpty {
-                        // 오늘 등록된 일정이 없으면 빈 상태 툴팁을 띄웁니다.
-                        if hoveredActiveId != "__EMPTY_SCHEDULE_TOOLTIP__" {
+                        // 오늘 등록된 일정이 없을 때: 재시작 대기 중이면 업데이트 안내, 아니면 빈 상태 툴팁을 띄웁니다.
+                        if case .pendingRestart(let version) = UpdateService.shared.updateState {
+                            if hoveredActiveId != "__UPDATE_NOTICE__" {
+                                hoveredActiveId = "__UPDATE_NOTICE__"
+                                hoveredFocusId = nil
+                                PopoverPanel.shared.showUpdateNotice(
+                                    cursorOffset: cursorCoord,
+                                    version: version,
+                                    isHorizontal: isHorizontal,
+                                    barPosition: settings.barPosition,
+                                    settings: settings
+                                )
+                            }
+                        } else if hoveredActiveId != "__EMPTY_SCHEDULE_TOOLTIP__" {
                             hoveredActiveId = "__EMPTY_SCHEDULE_TOOLTIP__"
                             hoveredFocusId = nil
                             PopoverPanel.shared.showEmptyScheduleTooltip(
                                 cursorOffset: cursorCoord,
                                 allDayEvents: [],
+                                outOfRangeEvents: [],
+                                hasTimedEventsInRange: false,
                                 isHorizontal: isHorizontal,
                                 barPosition: settings.barPosition,
                                 settings: settings
@@ -202,16 +217,39 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else {
-                        // 마우스가 일정 블록 바깥에 있을 때는 종일 일정이 있는 경우에만 툴팁을 표시합니다.
+                        // 마우스가 일정 블록 바깥에 있을 때는 종일 일정, 범위 외 일정, 또는 업데이트 대기 툴팁을 표시합니다.
                         let allDayEvents = calendarService.events.filter { $0.isAllDay }
-                        if !allDayEvents.isEmpty {
-                            let allDayClusterId = "__ALL_DAY_TOOLTIP__" + allDayEvents.map(\.id).sorted().joined(separator: "_")
-                            if hoveredActiveId != allDayClusterId {
-                                hoveredActiveId = allDayClusterId
+                        let timedEvents = calendarService.events.filter { !$0.isAllDay }
+                        let hasTimedEventsInRange = timedEvents.contains { $0.endDate > dayStart && $0.startDate < dayEnd }
+                        let outOfRangeEvents = timedEvents.filter { $0.endDate <= dayStart || $0.startDate >= dayEnd }
+
+                        // 종일 일정이 있거나, 바에 시간 블록이 전혀 없는데 범위 밖 일정이 있는 경우 툴팁 노출
+                        if !allDayEvents.isEmpty || (!hasTimedEventsInRange && !outOfRangeEvents.isEmpty) {
+                            let clusterId = "__SCHEDULE_STATUS_TOOLTIP__" +
+                                allDayEvents.map(\.id).sorted().joined(separator: "_") +
+                                outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
+                                "_\(hasTimedEventsInRange)_\(settings.eventHoverStyle.rawValue)"
+
+                            if hoveredActiveId != clusterId {
+                                hoveredActiveId = clusterId
                                 hoveredFocusId = nil
                                 PopoverPanel.shared.showEmptyScheduleTooltip(
                                     cursorOffset: cursorCoord,
                                     allDayEvents: allDayEvents,
+                                    outOfRangeEvents: outOfRangeEvents,
+                                    hasTimedEventsInRange: hasTimedEventsInRange,
+                                    isHorizontal: isHorizontal,
+                                    barPosition: settings.barPosition,
+                                    settings: settings
+                                )
+                            }
+                        } else if case .pendingRestart(let version) = UpdateService.shared.updateState {
+                            if hoveredActiveId != "__UPDATE_NOTICE__" {
+                                hoveredActiveId = "__UPDATE_NOTICE__"
+                                hoveredFocusId = nil
+                                PopoverPanel.shared.showUpdateNotice(
+                                    cursorOffset: cursorCoord,
+                                    version: version,
                                     isHorizontal: isHorizontal,
                                     barPosition: settings.barPosition,
                                     settings: settings

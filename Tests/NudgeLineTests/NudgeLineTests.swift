@@ -50,6 +50,16 @@ struct LocalizationTests {
         #expect(L10n.tr(.newVersionAvailableMenu("0.4"), lang: .en) == "Update Available (v0.4) →")
         #expect(L10n.tr(.githubRepo, lang: .ko) == "GitHub 저장소 ↗")
         #expect(L10n.tr(.githubRepo, lang: .en) == "GitHub Repository ↗")
+
+        // 빈 상태 및 범위 외 일정 안내 키
+        #expect(L10n.tr(.noEventsShort, lang: .ko) == "일정 없음")
+        #expect(L10n.tr(.noEventsShort, lang: .en) == "No events")
+        #expect(L10n.tr(.noTimedEventsWithAllDayCard("연차"), lang: .ko) == "시간 일정 없음 · 종일: 연차")
+        #expect(L10n.tr(.noTimedEventsWithAllDayCard("Vacation"), lang: .en) == "No timed events · All-Day: Vacation")
+        #expect(L10n.tr(.outOfRangeSingleCard("21:00", "회의"), lang: .ko) == "표시 범위 외 1건 (21:00 회의)")
+        #expect(L10n.tr(.outOfRangeSingleCard("21:00", "Meeting"), lang: .en) == "1 event outside range (21:00 Meeting)")
+        #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .ko) == "범위 외 2건 (21:00)")
+        #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .en) == "Outside range: 2 (21:00)")
     }
 }
 
@@ -139,4 +149,21 @@ struct VersionComparisonTests {
         #expect(UpdateService.isNewerVersion(latest: "1.0.0", current: "0.3", currentBuild: "275") == true)
         #expect(AppDelegate.isNewerVersion(latest: "1.0.0", current: "0.3", currentBuild: "275") == true)
     }
+
+    @Test("로컬 디스크 번들 교체(빌드/버전 상승) 판별 검증")
+    func testIsDiskNewer() {
+        // 동일 버전에서 디스크 빌드 번호가 더 높은 경우 (brew upgrade 일반 시나리오)
+        #expect(UpdateService.isDiskNewer(diskVersion: "0.3", diskBuild: "285", currentVersion: "0.3", currentBuild: "284") == true)
+        // 동일 버전 동일 빌드
+        #expect(UpdateService.isDiskNewer(diskVersion: "0.3", diskBuild: "284", currentVersion: "0.3", currentBuild: "284") == false)
+        // 디스크가 이전 빌드인 경우
+        #expect(UpdateService.isDiskNewer(diskVersion: "0.3", diskBuild: "283", currentVersion: "0.3", currentBuild: "284") == false)
+        // 디스크의 마이너 버전이 상승한 경우
+        #expect(UpdateService.isDiskNewer(diskVersion: "0.4", diskBuild: "1", currentVersion: "0.3", currentBuild: "284") == true)
+        // 디스크의 메이저 버전이 상승한 경우
+        #expect(UpdateService.isDiskNewer(diskVersion: "1.0", diskBuild: "1", currentVersion: "0.3", currentBuild: "284") == true)
+        // 디스크 버전이 이미 3단 시맨틱 태그(0.3.285)로 들어온 경우
+        #expect(UpdateService.isDiskNewer(diskVersion: "0.3.285", diskBuild: "", currentVersion: "0.3", currentBuild: "284") == true)
+    }
 }
+

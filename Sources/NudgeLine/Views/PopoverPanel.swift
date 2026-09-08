@@ -271,6 +271,8 @@ extension PopoverPanel {
     public func showEmptyScheduleTooltip(
         cursorOffset: CGFloat,
         allDayEvents: [CalendarEvent] = [],
+        outOfRangeEvents: [CalendarEvent] = [],
+        hasTimedEventsInRange: Bool = false,
         isHorizontal: Bool,
         barPosition: BarPosition,
         settings: AppSettings = .shared
@@ -278,10 +280,15 @@ extension PopoverPanel {
         guard let screen = currentTargetScreen() else { return }
 
         // 텍스트 길이에 맞춰 툴팁 너비를 자연스럽게 조절합니다.
-        let text = EmptyScheduleTooltipView.tooltipText(for: allDayEvents, settings: settings)
+        let text = EmptyScheduleTooltipView.tooltipText(
+            for: allDayEvents,
+            outOfRangeEvents: outOfRangeEvents,
+            hasTimedEventsInRange: hasTimedEventsInRange,
+            settings: settings
+        )
         let font = NSFont.systemFont(ofSize: 10, weight: .medium)
         let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
-        let targetWidth = min(280.0, ceil(textWidth + 30.0))
+        let targetWidth = min(340.0, max(80.0, ceil(textWidth + 30.0)))
 
         let finalFrame = calculateTooltipFrame(
             offset: cursorOffset,
@@ -293,10 +300,18 @@ extension PopoverPanel {
             screen: screen
         )
 
-        let clusterId = allDayEvents.isEmpty ? "__EMPTY_SCHEDULE_TOOLTIP__" : ("__ALL_DAY_TOOLTIP__" + allDayEvents.map(\.id).sorted().joined(separator: "_"))
+        let clusterId = "__SCHEDULE_STATUS_TOOLTIP__" +
+            allDayEvents.map(\.id).sorted().joined(separator: "_") +
+            outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
+            "_\(hasTimedEventsInRange)_\(settings.eventHoverStyle.rawValue)"
 
         presentTooltip(
-            content: AnyView(EmptyScheduleTooltipView(allDayEvents: allDayEvents, settings: settings)),
+            content: AnyView(EmptyScheduleTooltipView(
+                allDayEvents: allDayEvents,
+                outOfRangeEvents: outOfRangeEvents,
+                hasTimedEventsInRange: hasTimedEventsInRange,
+                settings: settings
+            )),
             frame: finalFrame,
             clusterId: clusterId,
             isDetailMode: false
@@ -327,6 +342,34 @@ extension PopoverPanel {
             frame: finalFrame,
             clusterId: "__PERMISSION_NOTICE__",
             isDetailMode: true // 시스템 설정 열기 버튼을 클릭할 수 있도록 마우스 브릿지를 유지합니다.
+        )
+    }
+
+    public func showUpdateNotice(
+        cursorOffset: CGFloat,
+        version: String,
+        isHorizontal: Bool,
+        barPosition: BarPosition,
+        settings: AppSettings = .shared
+    ) {
+        guard let screen = currentTargetScreen() else { return }
+
+        let targetWidth: CGFloat = settings.language.isKorean ? 240.0 : 270.0
+        let finalFrame = calculateTooltipFrame(
+            offset: cursorOffset,
+            targetWidth: targetWidth,
+            targetHeight: 28.0,
+            isHorizontal: isHorizontal,
+            barPosition: barPosition,
+            settings: settings,
+            screen: screen
+        )
+
+        presentTooltip(
+            content: AnyView(UpdateNoticeTooltipView(version: version, settings: settings)),
+            frame: finalFrame,
+            clusterId: "__UPDATE_NOTICE__",
+            isDetailMode: true // 지금 재시작 버튼 클릭을 위해 마우스 브릿지를 활성화합니다.
         )
     }
 
@@ -482,6 +525,8 @@ private struct CurrentTimeTooltipView: View {
 // MARK: - 7. 빈 일정 및 종일 일정 안내 툴팁 뷰 (EmptyScheduleTooltipView)
 private struct EmptyScheduleTooltipView: View {
     let allDayEvents: [CalendarEvent]
+    let outOfRangeEvents: [CalendarEvent]
+    let hasTimedEventsInRange: Bool
     let settings: AppSettings
 
     @Environment(\.colorScheme) private var colorScheme
@@ -489,20 +534,96 @@ private struct EmptyScheduleTooltipView: View {
         settings.eventCardTheme.isDark(for: colorScheme)
     }
 
-    static func tooltipText(for allDayEvents: [CalendarEvent], settings: AppSettings) -> String {
-        guard !allDayEvents.isEmpty else {
-            return L10n.tr(.noEventsToday, lang: settings.language)
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    static func tooltipText(
+        for allDayEvents: [CalendarEvent],
+        outOfRangeEvents: [CalendarEvent] = [],
+        hasTimedEventsInRange: Bool = false,
+        settings: AppSettings
+    ) -> String {
+        let isCard = (settings.eventHoverStyle == .card)
+
+        // 1. 종일 일정과 범위 외 일정이 모두 있는 경우
+        if !allDayEvents.isEmpty && !outOfRangeEvents.isEmpty {
+            let allDayTitle = allDayEvents[0].title(lang: settings.language)
+            let firstOut = outOfRangeEvents[0]
+            let timeStr = timeFormatter.string(from: firstOut.startDate)
+            if isCard {
+                return L10n.tr(.allDayWithOutOfRangeCard(allDayTitle, outOfRangeEvents.count, timeStr), lang: settings.language)
+            } else {
+                return L10n.tr(.allDayWithOutOfRangeSimple(allDayTitle, outOfRangeEvents.count), lang: settings.language)
+            }
         }
-        let title = allDayEvents[0].title(lang: settings.language)
-        return allDayEvents.count == 1
-            ? L10n.tr(.allDayNotice(title), lang: settings.language)
-            : L10n.tr(.allDayNoticeWithCount(title, allDayEvents.count - 1), lang: settings.language)
+
+        // 2. 종일 일정만 있는 경우
+        if !allDayEvents.isEmpty {
+            let title = allDayEvents[0].title(lang: settings.language)
+            let otherCount = allDayEvents.count - 1
+
+            if hasTimedEventsInRange {
+                // 바에 이미 시간 블록들이 있는 빈 공간 호버 시에는 순수 종일 일정 제목만 표출
+                return otherCount == 0
+                    ? L10n.tr(.allDayNotice(title), lang: settings.language)
+                    : L10n.tr(.allDayNoticeWithCount(title, otherCount), lang: settings.language)
+            } else {
+                // 바에 시간 블록이 전혀 없을 때 (카드 스타일 정보 밀도 분기 적용)
+                if isCard {
+                    return otherCount == 0
+                        ? L10n.tr(.noTimedEventsWithAllDayCard(title), lang: settings.language)
+                        : L10n.tr(.noTimedEventsWithAllDayCountCard(title, otherCount), lang: settings.language)
+                } else {
+                    return otherCount == 0
+                        ? L10n.tr(.allDayNotice(title), lang: settings.language)
+                        : L10n.tr(.allDayNoticeWithCount(title, otherCount), lang: settings.language)
+                }
+            }
+        }
+
+        // 3. 표시 범위 밖 시간 일정만 있는 경우 (바가 비어있는 상태)
+        if !outOfRangeEvents.isEmpty {
+            let firstOut = outOfRangeEvents[0]
+            let timeStr = timeFormatter.string(from: firstOut.startDate)
+            let title = firstOut.title(lang: settings.language)
+            let count = outOfRangeEvents.count
+            if isCard {
+                return count == 1
+                    ? L10n.tr(.outOfRangeSingleCard(timeStr, title), lang: settings.language)
+                    : L10n.tr(.outOfRangeMultipleCard(count, timeStr, title), lang: settings.language)
+            } else {
+                return L10n.tr(.outOfRangeSimple(count, timeStr), lang: settings.language)
+            }
+        }
+
+        // 4. 하루 24시간 전체 0건인 경우
+        return isCard
+            ? L10n.tr(.noEventsToday, lang: settings.language)
+            : L10n.tr(.noEventsShort, lang: settings.language)
     }
 
     var body: some View {
-        let text = Self.tooltipText(for: allDayEvents, settings: settings)
+        let text = Self.tooltipText(
+            for: allDayEvents,
+            outOfRangeEvents: outOfRangeEvents,
+            hasTimedEventsInRange: hasTimedEventsInRange,
+            settings: settings
+        )
+        let iconName: String = {
+            if !allDayEvents.isEmpty {
+                return "calendar.badge.clock"
+            } else if !outOfRangeEvents.isEmpty {
+                return "clock.badge.exclamationmark"
+            } else {
+                return "calendar"
+            }
+        }()
+
         HStack(spacing: 4.5) {
-            Image(systemName: allDayEvents.isEmpty ? "calendar" : "calendar.badge.clock")
+            Image(systemName: iconName)
                 .font(.system(size: 9.5, weight: .semibold))
                 .foregroundStyle(isDarkTheme ? Color.white.opacity(0.7) : Color.black.opacity(0.6))
 
@@ -618,3 +739,83 @@ private struct PermissionNoticeTooltipView: View {
         .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 }
+
+// MARK: - 8. 새 버전 업데이트 안내 미니 툴팁 (UpdateNoticeTooltipView)
+public struct UpdateNoticeTooltipView: View {
+    public let version: String
+    @ObservedObject public var settings: AppSettings
+
+    public init(version: String, settings: AppSettings = .shared) {
+        self.version = version
+        self.settings = settings
+    }
+
+    @Environment(\.colorScheme) private var colorScheme
+    private var isDarkTheme: Bool {
+        settings.eventCardTheme.isDark(for: colorScheme)
+    }
+
+    public var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+
+            Text(L10n.tr(.newVersionReadyNotice(version), lang: settings.language))
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.92) : Color.black.opacity(0.85))
+                .lineLimit(1)
+
+            Spacer(minLength: 2)
+
+            Button(action: {
+                PopoverPanel.shared.hide(delayed: false)
+                UpdateService.shared.applyOrRestart()
+            }) {
+                Text(L10n.tr(.restartNow, lang: settings.language))
+                    .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.accentColor)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            VisualEffectBlur(
+                material: isDarkTheme ? .hudWindow : .popover,
+                blendingMode: .behindWindow,
+                state: .active
+            )
+            .clipShape(Capsule())
+        )
+        .background(
+            Capsule()
+                .fill(isDarkTheme ? Color.black.opacity(0.88) : Color.white.opacity(0.80))
+        )
+        .overlay(
+            Capsule()
+                .stroke(
+                    LinearGradient(
+                        colors: isDarkTheme ? [
+                            Color.accentColor.opacity(0.55),
+                            Color.white.opacity(0.20)
+                        ] : [
+                            Color.accentColor.opacity(0.65),
+                            Color.black.opacity(0.14)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.8
+                )
+        )
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
+        .preferredColorScheme(isDarkTheme ? .dark : .light)
+    }
+}
+
