@@ -46,7 +46,7 @@ public struct SimpleInfoPopoverView: View {
         .fixedSize(horizontal: true, vertical: false)
         .background(
             VisualEffectBlur(
-                material: isDarkTheme ? .hudWindow : .popover,
+                material: .popover,
                 blendingMode: .behindWindow,
                 state: .active
             )
@@ -55,7 +55,7 @@ public struct SimpleInfoPopoverView: View {
         )
         .background(
             bubbleShape
-                .fill(isDarkTheme ? Color.black.opacity(settings.cardOpacity) : Color.white.opacity(max(0.65, settings.cardOpacity)))
+                .fill(isDarkTheme ? Color.black.opacity(settings.cardOpacity) : Color.white.opacity(max(0.60, settings.cardOpacity)))
                 .allowsHitTesting(false)
         )
         .overlay(
@@ -77,20 +77,22 @@ public struct SimpleInfoPopoverView: View {
                 .allowsHitTesting(false)
         )
         .shadow(color: .black.opacity(isDarkTheme ? 0.28 : 0.18), radius: 8, x: 0, y: 4)
-        .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 
     @ViewBuilder
     private func singleEventRow(event: CalendarEvent) -> some View {
         let textPrimary = isDarkTheme ? Color.white : Color.black.opacity(0.9)
         let textSecondary = isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.65)
-        let calColor = settings.customColor(for: event.calendarIdentifier) ?? event.defaultColor
+        let rawCalColor = settings.customColor(for: event.calendarIdentifier) ?? event.defaultColor
 
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 5) {
                 Circle()
-                    .fill(calColor)
+                    .fill(rawCalColor)
                     .frame(width: 7, height: 7)
+                    .overlay(
+                        Circle().stroke(Color.black.opacity(isDarkTheme ? 0.25 : 0.15), lineWidth: 0.5)
+                    )
 
                 Text(event.title(lang: settings.language))
                     .font(.system(size: 11, weight: .bold))

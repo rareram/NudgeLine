@@ -77,6 +77,29 @@ public final class PopoverPanel: NSPanel {
                 self?.collectionBehavior = hide ? [.canJoinAllSpaces, .transient] : [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
             }
             .store(in: &cancellables)
+
+        AppSettings.shared.$eventCardTheme
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updatePanelAppearance(settings: AppSettings.shared)
+            }
+            .store(in: &cancellables)
+
+        updatePanelAppearance(settings: AppSettings.shared)
+    }
+
+    private func updatePanelAppearance(settings: AppSettings) {
+        let targetAppearance: NSAppearance?
+        switch settings.eventCardTheme {
+        case .adaptive:
+            targetAppearance = nil
+        case .dark:
+            targetAppearance = NSAppearance(named: .darkAqua)
+        case .light:
+            targetAppearance = NSAppearance(named: .aqua)
+        }
+        self.appearance = targetAppearance
+        self.hostingView?.appearance = targetAppearance
     }
 
     public func setMouseInside(_ inside: Bool) {
@@ -114,6 +137,7 @@ extension PopoverPanel {
         hideTimer = nil
 
         guard let screen = currentTargetScreen(), !events.isEmpty else { return }
+        updatePanelAppearance(settings: settings)
 
         let renderer = settings.eventHoverStyle.renderer()
         self.isDetailMode = renderer.allowsTransitBridge
@@ -137,6 +161,7 @@ extension PopoverPanel {
             hosting.rootView = anyView
         } else {
             let hosting = FirstMouseHostingView(rootView: anyView)
+            hosting.appearance = self.appearance
             self.contentView = hosting
             self.hostingView = hosting
         }
@@ -264,7 +289,8 @@ extension PopoverPanel {
             content: AnyView(CurrentTimeTooltipView(currentTime: currentTime, settings: settings)),
             frame: finalFrame,
             clusterId: "__CURRENT_TIME_TOOLTIP__",
-            isDetailMode: false
+            isDetailMode: false,
+            settings: settings
         )
     }
 
@@ -314,7 +340,8 @@ extension PopoverPanel {
             )),
             frame: finalFrame,
             clusterId: clusterId,
-            isDetailMode: false
+            isDetailMode: false,
+            settings: settings
         )
     }
 
@@ -341,7 +368,8 @@ extension PopoverPanel {
             content: AnyView(PermissionNoticeTooltipView(settings: settings)),
             frame: finalFrame,
             clusterId: "__PERMISSION_NOTICE__",
-            isDetailMode: true // 시스템 설정 열기 버튼을 클릭할 수 있도록 마우스 브릿지를 유지합니다.
+            isDetailMode: true, // 시스템 설정 열기 버튼을 클릭할 수 있도록 마우스 브릿지를 유지합니다.
+            settings: settings
         )
     }
 
@@ -369,7 +397,8 @@ extension PopoverPanel {
             content: AnyView(UpdateNoticeTooltipView(version: version, settings: settings)),
             frame: finalFrame,
             clusterId: "__UPDATE_NOTICE__",
-            isDetailMode: true // 지금 재시작 버튼 클릭을 위해 마우스 브릿지를 활성화합니다.
+            isDetailMode: true, // 지금 재시작 버튼 클릭을 위해 마우스 브릿지를 활성화합니다.
+            settings: settings
         )
     }
 
@@ -378,18 +407,21 @@ extension PopoverPanel {
         content: AnyView,
         frame: NSRect,
         clusterId: String,
-        isDetailMode: Bool
+        isDetailMode: Bool,
+        settings: AppSettings = .shared
     ) {
         showGeneration += 1
         hasEnteredPopover = false
         hideTimer?.invalidate()
         hideTimer = nil
         self.isDetailMode = isDetailMode
+        updatePanelAppearance(settings: settings)
 
         if let hosting = hostingView {
             hosting.rootView = content
         } else {
             let hosting = FirstMouseHostingView(rootView: content)
+            hosting.appearance = self.appearance
             self.contentView = hosting
             self.hostingView = hosting
         }
@@ -490,7 +522,7 @@ private struct CurrentTimeTooltipView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             VisualEffectBlur(
-                material: isDarkTheme ? .hudWindow : .popover,
+                material: .popover,
                 blendingMode: .behindWindow,
                 state: .active
             )
@@ -518,7 +550,6 @@ private struct CurrentTimeTooltipView: View {
                 )
         )
         .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
-        .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 }
 
@@ -637,7 +668,7 @@ private struct EmptyScheduleTooltipView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             VisualEffectBlur(
-                material: isDarkTheme ? .hudWindow : .popover,
+                material: .popover,
                 blendingMode: .behindWindow,
                 state: .active
             )
@@ -665,7 +696,6 @@ private struct EmptyScheduleTooltipView: View {
                 )
         )
         .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
-        .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 }
 
@@ -708,7 +738,7 @@ private struct PermissionNoticeTooltipView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             VisualEffectBlur(
-                material: isDarkTheme ? .hudWindow : .popover,
+                material: .popover,
                 blendingMode: .behindWindow,
                 state: .active
             )
@@ -736,7 +766,6 @@ private struct PermissionNoticeTooltipView: View {
                 )
         )
         .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
-        .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 }
 
@@ -787,7 +816,7 @@ public struct UpdateNoticeTooltipView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             VisualEffectBlur(
-                material: isDarkTheme ? .hudWindow : .popover,
+                material: .popover,
                 blendingMode: .behindWindow,
                 state: .active
             )
@@ -815,7 +844,6 @@ public struct UpdateNoticeTooltipView: View {
                 )
         )
         .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
-        .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 }
 

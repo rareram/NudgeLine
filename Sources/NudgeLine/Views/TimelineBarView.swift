@@ -23,7 +23,7 @@ public struct TimelineBarView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     private var isDark: Bool {
-        settings.eventCardTheme.isDark(for: colorScheme)
+        colorScheme == .dark
     }
 
     private static let clockPublisher = Timer.publish(every: 1, on: .main, in: .default).autoconnect()
@@ -518,33 +518,31 @@ public struct TimelineBarView: View {
 
     @ViewBuilder
     private func backgroundTrack(thickness: CGFloat, length: CGFloat, isHorizontal: Bool, isDark: Bool) -> some View {
-        let borderStrokeColor = isDark ? Color.white.opacity(0.15) : Color.black.opacity(0.15)
+        let lightTrackColor = Color(red: 0.14, green: 0.15, blue: 0.18).opacity(max(0.16, settings.trackOpacity))
+        let darkTrackColor = Color.black.opacity(settings.trackOpacity)
+        let borderStrokeColor = isDark ? Color.white.opacity(0.15) : Color.black.opacity(0.20)
 
         Group {
             switch settings.barStyleMode {
             case .adaptive:
                 Rectangle()
-                    .fill(
-                        isDark
-                            ? Color(NSColor.windowBackgroundColor).opacity(settings.trackOpacity)
-                            : Color.black.opacity(max(0.06, settings.trackOpacity * 0.35))
-                    )
+                    .fill(isDark ? darkTrackColor : lightTrackColor)
                     .overlay(
                         Rectangle().stroke(borderStrokeColor, lineWidth: 0.5)
                     )
 
             case .dark:
                 Rectangle()
-                    .fill(Color.black.opacity(settings.trackOpacity))
+                    .fill(darkTrackColor)
                     .overlay(
                         Rectangle().stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
 
             case .light:
                 Rectangle()
-                    .fill(Color.black.opacity(max(0.06, settings.trackOpacity * 0.35)))
+                    .fill(lightTrackColor)
                     .overlay(
-                        Rectangle().stroke(Color.black.opacity(0.15), lineWidth: 0.5)
+                        Rectangle().stroke(Color.black.opacity(0.20), lineWidth: 0.5)
                     )
 
             case .custom:
@@ -614,30 +612,30 @@ private struct SegmentBlockView: View {
             ZStack {
                 if isHovered && settings.enableSegmentRim {
                     Rectangle()
-                        .stroke(isDark ? Color.white.opacity(0.95) : Color.black.opacity(0.45), lineWidth: 0.8)
+                        .stroke(Color.white.opacity(0.95), lineWidth: 0.8)
                 } else if !isUltraThin {
                     Rectangle()
-                        .stroke(isDark ? Color.white.opacity(0.18) : Color.black.opacity(0.15), lineWidth: 0.5)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
                 }
 
                 // 일정 시작 전 알림 브리딩 펄스 글로우 오버레이
                 if isPulsing {
                     Rectangle()
-                        .fill(isDark ? Color.white.opacity(0.35) : Color.black.opacity(0.20))
+                        .fill(Color.white.opacity(0.35))
                 }
 
                 // 세그먼트 구분선
                 if isHorizontal {
                     HStack {
-                        Rectangle().fill(Color.black.opacity(0.75)).frame(width: 1)
+                        Rectangle().fill(Color.white.opacity(0.40)).frame(width: 1)
                         Spacer()
-                        Rectangle().fill(Color.black.opacity(0.75)).frame(width: 1)
+                        Rectangle().fill(Color.white.opacity(0.40)).frame(width: 1)
                     }
                 } else {
                     VStack {
-                        Rectangle().fill(Color.black.opacity(0.75)).frame(height: 1)
+                        Rectangle().fill(Color.white.opacity(0.40)).frame(height: 1)
                         Spacer()
-                        Rectangle().fill(Color.black.opacity(0.75)).frame(height: 1)
+                        Rectangle().fill(Color.white.opacity(0.40)).frame(height: 1)
                     }
                 }
             }
@@ -761,8 +759,8 @@ private struct CurrentTimeIndicatorView: View {
         let isRight = settings.barPosition == .right
         let hasRim = settings.enableIndicatorRim
         let hasGlow = settings.enableIndicatorGlow
-        let rimColor = isDark ? Color.white.opacity(0.95) : Color.black.opacity(0.55)
-        let ringRimColor = isDark ? Color.white.opacity(0.9) : Color.black.opacity(0.55)
+        let rimColor = Color.white.opacity(0.95)
+        let ringRimColor = Color.white.opacity(0.9)
 
         Group {
             switch settings.currentTimeIndicatorStyle {

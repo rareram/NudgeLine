@@ -7,15 +7,18 @@ public struct VisualEffectBlur: NSViewRepresentable {
     public var material: NSVisualEffectView.Material
     public var blendingMode: NSVisualEffectView.BlendingMode
     public var state: NSVisualEffectView.State
+    public var appearance: NSAppearance?
 
     public init(
         material: NSVisualEffectView.Material = .popover,
         blendingMode: NSVisualEffectView.BlendingMode = .behindWindow,
-        state: NSVisualEffectView.State = .active
+        state: NSVisualEffectView.State = .active,
+        appearance: NSAppearance? = nil
     ) {
         self.material = material
         self.blendingMode = blendingMode
         self.state = state
+        self.appearance = appearance
     }
 
     public func makeNSView(context: Context) -> NSVisualEffectView {
@@ -23,6 +26,7 @@ public struct VisualEffectBlur: NSViewRepresentable {
         view.material = material
         view.blendingMode = blendingMode
         view.state = state
+        view.appearance = appearance
         view.autoresizingMask = [.width, .height]
         return view
     }
@@ -31,6 +35,7 @@ public struct VisualEffectBlur: NSViewRepresentable {
         nsView.material = material
         nsView.blendingMode = blendingMode
         nsView.state = state
+        nsView.appearance = appearance
     }
 }
 

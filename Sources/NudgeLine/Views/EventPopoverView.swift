@@ -29,7 +29,7 @@ public struct EventPopoverView: View {
         if isDarkTheme {
             return Color.black.opacity(opacity)
         } else {
-            return Color.white.opacity(max(0.65, opacity))
+            return Color.white.opacity(max(0.60, opacity))
         }
     }
 
@@ -73,7 +73,7 @@ public struct EventPopoverView: View {
         .background(
             // 1단계: 하드웨어 가속 프로스티드 글래스 블러
             VisualEffectBlur(
-                material: isDarkTheme ? .hudWindow : .popover,
+                material: .popover,
                 blendingMode: .behindWindow,
                 state: .active
             )
@@ -119,7 +119,6 @@ public struct EventPopoverView: View {
                 .allowsHitTesting(false)
         )
         .shadow(color: .black.opacity(isDarkTheme ? 0.28 : 0.18), radius: 10, x: 0, y: 5)
-        .preferredColorScheme(isDarkTheme ? .dark : .light)
     }
 
     // MARK: - 개별 일정 카드 뷰
@@ -128,14 +127,17 @@ public struct EventPopoverView: View {
         let textPrimary = isDarkTheme ? Color.white : Color.black.opacity(0.9)
         let textSecondary = isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.65)
         let textMuted = isDarkTheme ? Color.white.opacity(0.55) : Color.black.opacity(0.45)
-        let calColor = settings.customColor(for: event.calendarIdentifier) ?? event.defaultColor
+        let rawCalColor = settings.customColor(for: event.calendarIdentifier) ?? event.defaultColor
 
         VStack(alignment: .leading, spacing: 6) {
             // 헤더: 캘린더 색상 인디케이터 + 계정/캘린더 이름
             HStack(spacing: 5) {
                 Circle()
-                    .fill(calColor)
+                    .fill(rawCalColor)
                     .frame(width: 8, height: 8)
+                    .overlay(
+                        Circle().stroke(Color.black.opacity(isDarkTheme ? 0.25 : 0.15), lineWidth: 0.5)
+                    )
 
                 Text("\(event.sourceTitle(lang: settings.language)) • \(event.calendarTitle)")
                     .font(.system(size: 9.5, weight: .semibold))
@@ -196,6 +198,7 @@ public struct EventPopoverView: View {
 
             // 화상회의 원클릭 바로가기 버튼 또는 미검증 안내 배지
             if let meeting = event.meetingInfo {
+                let buttonColor = meeting.platform.brandColor.adjustedForContrast(isDark: isDarkTheme)
                 if meeting.platform == .unverified {
                     // 미검증 외부 링크: 피싱 방어를 위해 클릭을 차단하고 캘린더 앱 직접 확인 안내 배지로 표출
                     HStack(spacing: 5) {
@@ -206,12 +209,12 @@ public struct EventPopoverView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 5)
-                    .background(meeting.platform.brandColor.opacity(isDarkTheme ? 0.22 : 0.15))
-                    .foregroundStyle(meeting.platform.brandColor)
+                    .background(buttonColor.opacity(isDarkTheme ? 0.24 : 0.14))
+                    .foregroundStyle(buttonColor)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(meeting.platform.brandColor.opacity(0.3), lineWidth: 0.5)
+                            .stroke(buttonColor.opacity(isDarkTheme ? 0.45 : 0.30), lineWidth: 0.5)
                     )
                     .padding(.top, 3)
                 } else {
@@ -230,12 +233,12 @@ public struct EventPopoverView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
-                        .background(meeting.platform.brandColor.opacity(isDarkTheme ? 0.22 : 0.15))
-                        .foregroundStyle(meeting.platform.brandColor)
+                        .background(buttonColor.opacity(isDarkTheme ? 0.24 : 0.14))
+                        .foregroundStyle(buttonColor)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .stroke(meeting.platform.brandColor.opacity(0.3), lineWidth: 0.5)
+                                .stroke(buttonColor.opacity(isDarkTheme ? 0.45 : 0.30), lineWidth: 0.5)
                         )
                     }
                     .buttonStyle(.plain)
@@ -252,7 +255,7 @@ public struct EventPopoverView: View {
             }) {
                 Label(L10n.tr(.openInCalendarApp, lang: settings.language), systemImage: "calendar")
                     .font(.system(size: 10))
-                    .foregroundStyle(isDarkTheme ? Color.white.opacity(0.7) : Color.blue)
+                    .foregroundStyle(isDarkTheme ? Color.white.opacity(0.7) : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
             }
             .buttonStyle(.plain)
             .padding(.top, 2)

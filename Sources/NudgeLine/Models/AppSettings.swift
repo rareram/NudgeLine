@@ -43,9 +43,12 @@ public enum EventCardTheme: String, Codable, CaseIterable, Identifiable, Sendabl
 
     public func isDark(for colorScheme: ColorScheme) -> Bool {
         switch self {
-        case .adaptive: return colorScheme == .dark
-        case .dark: return true
-        case .light: return false
+        case .adaptive:
+            return colorScheme == .dark
+        case .dark:
+            return true
+        case .light:
+            return false
         }
     }
 }
@@ -577,5 +580,21 @@ public extension Color {
         let g = Int(round(components.greenComponent * 255.0))
         let b = Int(round(components.blueComponent * 255.0))
         return String(format: "#%02X%02X%02X", r, g, b)
+    }
+
+    // ponytail: 다크 모드에서는 밝게(명도 상향/채도 최적화), 라이트 모드에서는 짙게(명도 톤다운) 자동 보정
+    func adjustedForContrast(isDark: Bool, factor: CGFloat = 0.72) -> Color {
+        guard let nsColor = NSColor(self).usingColorSpace(.sRGB) else { return self }
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        nsColor.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        if isDark {
+            // 다크 모드: 검은 배경 위에서 텍스트/아이콘이 묻히지 않도록 명도를 0.92 이상으로 끌어올리고 채도를 발광 틴트로 최적화
+            let darkB = max(0.92, min(1.0, b * 1.35))
+            let darkS = max(0.35, min(0.65, s * 0.80))
+            return Color(nsColor: NSColor(hue: h, saturation: darkS, brightness: darkB, alpha: a))
+        } else {
+            // 라이트 모드: 흰 배경 위에서 날아가지 않도록 명도를 톤다운하고 채도 보존
+            return Color(nsColor: NSColor(hue: h, saturation: min(1.0, s * 1.15), brightness: b * factor, alpha: a))
+        }
     }
 }

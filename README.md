@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <strong>A subtle macOS screen-edge timeline bar for today's calendar events</strong><br>
-  <em>Built with Swift 6 and SwiftUI for macOS 15+ (Sequoia)</em>
+  <strong>A screen-edge timeline bar for today's calendar events on macOS</strong><br>
+  <em>macOS 15+ (Sequoia) / Swift 6, SwiftUI</em>
 </p>
 
 <p align="center">
@@ -30,32 +30,30 @@
 
 ## Overview
 
-NudgeLine shows your daily schedule as a subtle ambient bar along the edge of your screen (Left, Right, or Bottom).
+NudgeLine displays your daily schedule as a thin bar along the edge of your screen (Left, Right, or Bottom).
 
 <p align="center">
   <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="Hide - Tail Wag" alt="Hide - Tail Wag" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="Hide - Head Peek" alt="Hide - Head Peek" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="Disappear - Pop" alt="Disappear - Pop" style="margin: 0 18px;" /><br>
-  <em><strong>Zero-Interference Ambient Design & Mascot Evasion</strong>: Pet hides behind the bezel or vanishes upon cursor proximity (6 hide motions supported: Pop, Swirl, Squish, Smoke, etc.).</em>
+  <em>Mascots hide behind the bezel or disappear upon cursor proximity (6 motions supported).</em>
 </p>
 
-Instead of intrusive full-screen popups, NudgeLine keeps you effortlessly aware of today's schedule along your screen edge:
+Key Features:
 
-- **Mouse Passthrough**: 100% click & scroll passthrough outside physical bar thickness (preserves background app focus).
-- **Clean Visuals**: Dark gradient track, 1px event boundaries, and 4 geometric indicators.
-- **Overlapping Events**: Seamless color breathing transition between concurrent events.
-- **Mascot Companions**: 3 built-in animated pets with 6 hide motions, plus custom sprite importer.
-- **Smart Meeting Links**: Auto-detects 10 major meeting platforms (Google Meet, Zoom, MS Teams, Webex, Naver Whale ON, Discord, Lark, Jitsi, Whereby, Amazon Chime) with 1-click launch and unverified link safety notice badges.
-- **Smart Privacy**: Automatically conceals timeline bar and popovers during screen share/recording, and avoids interference in full-screen spaces.
-- **Native & Low Power**: Zero third-party dependencies, built entirely on SwiftUI, AppKit, and EventKit.
+- **Mouse Passthrough**: Clicks and scrolls pass through outside the bar area.
+- **Timeline Bar**: Background track, event boundary lines, and 4 indicator styles.
+- **Overlapping Events**: Alternating color transitions for concurrent events.
+- **Mascots**: 3 built-in animated pets with 6 hide motions, and custom pet support.
+- **Meeting Links**: 1-click launch for 10 meeting platforms (Google Meet, Zoom, MS Teams, Webex, etc.) and unverified link notices.
+- **Privacy**: Option to hide the bar during screen sharing/recording or in full-screen spaces.
+- **Native Implementation**: Built with SwiftUI, AppKit, and EventKit with no external dependencies.
 
 ---
 
 ## Installation
 
 ### 1. via Homebrew (Recommended)
-
-Install and update seamlessly with a single command:
 
 ```bash
 brew install rareram/tap/nudgeline
@@ -67,8 +65,8 @@ brew install rareram/tap/nudgeline
 
 1. Download `NudgeLine.dmg` from [GitHub Releases](https://github.com/rareram/NudgeLine/releases) and move `NudgeLine.app` to `/Applications`.
 2. **Gatekeeper Notice (First launch only)**:
-   - Since this is an unsigned open-source app, macOS may prompt a security warning on first open.
-   - **To open**: Right-click (Control + Click) `NudgeLine.app` > select **Open**, or run:
+   - Since this is an unsigned open-source app, macOS may prompt a security confirmation on first open.
+   - Right-click (Control + Click) `NudgeLine.app` > select **Open**, or run:
      ```bash
      xattr -cr /Applications/NudgeLine.app
      ```
@@ -81,51 +79,48 @@ brew install rareram/tap/nudgeline
 - **Position**: Left, Right, or Bottom screen edge.
 - **Multi-Monitor**: Show on the primary display or across all connected screens.
 - **Thickness**: Adjustable from 1px to 10px, with optional expansion on hover.
-- **Overlaps**: Seamless breathing cross-fade between concurrent events.
-- **Past Event Dimming**: Completed events automatically dim (35% opacity and saturation) to cleanly distinguish past from remaining events, instantly restoring to 100% full vibrance upon mouse hover.
+- **Overlaps**: Alternating transitions between concurrent events.
+- **Past Event Dimming**: Completed events dim to 35% opacity and saturation, restoring to original colors on hover.
 
 ### 2. Time Indicators
 - **Styles**: Triangle Tick, Round Dome, Protruding Block, and Point Ring.
-- **Visual Effects**: Custom indicator color, rim highlight, and neon glow toggles.
-- **Focus Lift**: Automatically prioritizes the shortest event when hovering over overlapping meetings.
+- **Visual Effects**: Indicator color customization, rim highlight, and neon glow toggles.
+- **Shortest Event Focus**: Prioritizes the shortest event when hovering over overlapping meetings.
 
-### 3. Event Alerts & Pre-Event Notifications
-- **Pre-Event Alert (Breathing Pulse)**: Gentle 3.0-second ambient breathing pulse (expands bar to 8px with a 14px neon aura) 5, 10, 15, or 20 minutes before an upcoming meeting starts, providing silent awareness without popups or sound.
-- **Event Start Effects (4 Themes, 1.0s 16-Frame)**:
-  - `Cherry Blossom`: Pink flower petals bursting outward with gentle 3D tumbling.
-  - `Neon Thunder`: Vivid neon cyan and white lightning arcs discharging into the screen.
-  - `Maple Leaf`: Vibrant crimson, orange, and golden starfish maple leaves swirling in the autumn breeze.
-  - `Snow Flurry`: 6-fold dendritic snowflakes and radiant cyan ice crystals in a winter blizzard flurry.
-- **On the Hour Notification**: Optional hourly alert triggered precisely at `00m 00s` on every hour.
-- **Smart Triggering**: Discharges seamlessly when an upcoming calendar event starts, with a 3-minute cooldown state machine.
+### 3. Event Alerts & Effects
+- **Pre-Event Alert**: 3-second bar pulse animation 5, 10, 15, or 20 minutes before a meeting starts.
+- **Event Start Effects**: Visual alert effects (Cherry Blossom, Neon Thunder, Maple Leaf, Snow Flurry).
+- **On the Hour Notification**: Optional visual alert triggered at :00 every hour.
+- **Trigger Control**: Triggers once when an event starts (3-minute cooldown).
 
 ### 4. Mascot Indicators & Custom Pets
-- **Built-in Pets**: Calico Cat, White Jindo Dog, and White Tiger (16-frame loop).
+- **Built-in Pets**: Calico Cat, White Jindo Dog, and White Tiger.
 - **6 Hide Motions**:
-  - `tailPeek`: Rotates -85° behind the bezel; tail stays visible.
-  - `headPeek`: Rotates +85° behind the bezel; head peeks out.
-  - `pop`: Shrinks and disappears with a pop.
-  - `vortex`: Fast 720° spin vortex disappearance.
-  - `squish`: Squishes horizontally like jelly.
-  - `smoke`: Expands with blur and disappears.
-- **Custom Pets**: Import PNG frame sequences, adjust FPS, tune left/right hide offsets with live preview.
+  - `tailPeek`: Hides behind the bezel with tail visible.
+  - `headPeek`: Hides body with head peeking out.
+  - `pop`: Shrinks and disappears.
+  - `vortex`: Rotates and disappears.
+  - `squish`: Squishes and disappears.
+  - `smoke`: Blurs and disappears.
+- **Custom Pets**: Import PNG frame sequences, adjust FPS, configure hide offsets with live preview.
 
 ### 5. Event Popovers
-- **Action Card**: Full summary with meeting join buttons, unverified link notice badge, Apple Calendar shortcut, and a 0.22s hover bridge.
-- **Simple Tooltip**: Compact pill bubble that disappears 0.04s after cursor leaves.
-- **All-day Event Overlap**: Seamlessly integrates whole-day schedules into multi-event popovers alongside timed meetings with an "All Day" badge.
-- **Empty Track Guidance**: Hovering over empty schedule gaps or days with only all-day events displays a subtle 24px glassmorphism capsule tooltip with dynamic width.
+- **Action Card**: Schedule details, meeting join button, unverified link notice, and Apple Calendar shortcut.
+- **Simple Tooltip**: Compact tooltip showing title and time.
+- **Card Themes**: Supports System Adaptive, Dark, and Light themes with contrast adjustment for buttons and links on light backgrounds.
+- **All-day Events**: Displays all-day events alongside timed schedules in popovers.
+- **Empty Track Guidance**: Displays a status tooltip when hovering over empty timeline gaps.
 
-### 6. Shortcuts & Siri Automation
-- **AppIntents Integration**: Native support for macOS Shortcuts app and Siri voice triggers:
-  - `Refresh Schedule` / `NudgeLine 새로고침`: Instantly refetch today's calendar events.
-  - `Toggle Pet` / `NudgeLine 펫 토글`: Toggle pet companion visibility on the timeline bar.
+### 6. Shortcuts & Siri
+- **AppIntents Integration**:
+  - `Refresh Schedule` / `NudgeLine 새로고침`: Refetch today's calendar events.
+  - `Toggle Pet` / `NudgeLine 펫 토글`: Toggle pet visibility on the timeline bar.
 
-### 7. Settings Window (4 Tabs)
-- **Timeline**: Position, thickness, hover expand, block border and neon highlights, past event dimming toggle, background style (Auto, Dark, Light, Custom), and track opacity.
-- **Appearance**: Event card style/theme/opacity, time indicator shape/color, pre-event alert (toggle, minute picker, preview), event start effect (toggle, 4 seasonal themes picker, preview), on the hour notification checkbox, pet selection (Default White Tiger, Calico Cat, Jindo Dog), hide motion, and custom pet manager.
-- **Schedule**: 24-hour mode, work hours (start/end), visible calendars with color pickers, and 1-click System Settings privacy deep link.
-- **General**: Language (System, Korean, English), launch at login (`SMAppService`), multi-display toggle, exclude from meetings/capture, hide in full screen, and app info.
+### 7. Settings Window
+- **Timeline**: Position, thickness, hover expand, border and neon highlights, past event dimming, background style (Auto, Dark, Light, Custom), and opacity.
+- **Appearance**: Card style/theme/opacity, indicator shape/color, pre-event alert, event start effects, hourly alert, pet selection and hide motions, custom pet manager.
+- **Schedule**: 24-hour mode, work hours, visible calendars with color pickers, System Settings deep link.
+- **General**: Language (System, Korean, English), launch at login (`SMAppService`), multi-display, hide on screen share, hide in full screen, app info.
 
 ---
 
