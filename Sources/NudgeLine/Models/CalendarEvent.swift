@@ -207,6 +207,50 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
         return max(1, Int(diff / 60))
     }
 
+    // 시스템 자동 생성 노이즈(Google Meet, Teams, Zoom 등)를 제외한 사용자 순수 메모
+    public var displayNotes: String? {
+        guard let raw = notes, !raw.isEmpty else { return nil }
+        let lines = raw.components(separatedBy: .newlines)
+        var filtered: [String] = []
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty { continue }
+
+            // 1. Google Meet 시스템 마커 및 구분선
+            if trimmed.contains("-::~") || trimmed.contains("::~-") { continue }
+            if trimmed.contains("Do not edit this section") { continue }
+            if trimmed.contains("This event has a video call") { continue }
+
+            // 2. Microsoft Teams 시스템 마커 및 구분선
+            if trimmed.hasPrefix("_____") || trimmed.contains("________________") { continue }
+            if trimmed.contains("Microsoft Teams") && (trimmed.contains("Need help") || trimmed.contains("Meeting ID")) { continue }
+            if trimmed.contains("Join the meeting now") { continue }
+
+            // 3. Zoom 시스템 마커
+            if trimmed.contains("Join Zoom Meeting") || trimmed.contains("One tap mobile") || trimmed.contains("Dial by your location") { continue }
+
+            // 4. 공통 화상회의 회의 ID 및 패스코드 라인
+            let lower = trimmed.lowercased()
+            if lower.hasPrefix("meeting id:") || lower.hasPrefix("passcode:") || lower.hasPrefix("find a local number:") { continue }
+
+            // 5. 화상회의 직접 접속 링크 라인 (이미 별도 버튼으로 표출됨)
+            if trimmed.contains("meet.google.com") ||
+               trimmed.contains("teams.microsoft.com") ||
+               trimmed.contains("zoom.us") ||
+               trimmed.contains("facetime.apple.com") ||
+               trimmed.contains("webex.com") {
+                continue
+            }
+
+            filtered.append(trimmed)
+        }
+
+        if filtered.isEmpty { return nil }
+        let result = filtered.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        return result.isEmpty ? nil : result
+    }
+
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine(startDate)
@@ -259,31 +303,45 @@ extension CalendarEvent {
         static let googleRedirect = try? NSRegularExpression(pattern: #"https?://(?:www\.)?google\.[a-z]{2,}(?:\.[a-z]{2,})?/url\?[^\s"'<>]+"#, options: [.caseInsensitive])
     }
 
+    // ponytail: URL 끝단 특수문자 정제 및 프로토콜 스킴 유효성 검증 단일 헬퍼
+    private static func sanitizeUrl(
+        _ raw: String,
+        allowedSchemes: Set<String> = ["http", "https", "zoommtg", "msteams", "facetime", "facetime-audio"]
+    ) -> URL? {
+        var trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trailingPunctuation = CharacterSet(charactersIn: ".,;:)>]}'\"`")
+        while let last = trimmed.unicodeScalars.last, trailingPunctuation.contains(last) {
+            trimmed.removeLast()
+        }
+        guard let validUrl = URL(string: trimmed),
+              let scheme = validUrl.scheme?.lowercased(),
+              allowedSchemes.contains(scheme) else {
+            return nil
+        }
+        return validUrl
+    }
+
     // 래핑된 엔터프라이즈 URL(Outlook SafeLinks / Google Redirect)의 타깃 URL 디코딩
     private static func unwrapRedirectUrl(from candidate: String) -> String? {
         guard let comps = URLComponents(string: candidate),
               let host = comps.host?.lowercased() else { return nil }
 
-        // 1) Outlook SafeLinks (safelinks.protection.outlook.com)
+        let queryKey: String?
         if host == "safelinks.protection.outlook.com" || host.hasSuffix(".safelinks.protection.outlook.com") {
-            if let target = comps.queryItems?.first(where: { $0.name.lowercased() == "url" })?.value,
-               let decoded = target.removingPercentEncoding,
-               decoded.hasPrefix("http://") || decoded.hasPrefix("https://") {
-                return decoded
-            }
+            queryKey = "url"
+        } else if (host == "google.com" || host.hasSuffix(".google.com")), comps.path == "/url" {
+            queryKey = "q"
+        } else {
+            queryKey = nil
         }
 
-        // 2) Google Redirect (google.<tld>/url?q=...)
-        if (host == "google.com" || host.hasSuffix(".google.com")),
-           comps.path == "/url" {
-            if let target = comps.queryItems?.first(where: { $0.name == "q" })?.value,
-               let decoded = target.removingPercentEncoding,
-               decoded.hasPrefix("http://") || decoded.hasPrefix("https://") {
-                return decoded
-            }
+        guard let key = queryKey,
+              let target = comps.queryItems?.first(where: { $0.name.lowercased() == key })?.value,
+              let decoded = target.removingPercentEncoding,
+              decoded.hasPrefix("http://") || decoded.hasPrefix("https://") else {
+            return nil
         }
-
-        return nil
+        return decoded
     }
 
     // 본문/위치/URL 내 화상회의 링크 정규식 추출
@@ -315,21 +373,6 @@ extension CalendarEvent {
         } else if let googleMatch = firstMatch(in: sanitized, regex: MeetingRegex.googleRedirect),
                   let unwrapped = unwrapRedirectUrl(from: googleMatch) {
             workingText = "\(unwrapped)\n" + workingText
-        }
-
-        // URL 끝단 특수문자 정제
-        func sanitizeUrl(_ raw: String) -> URL? {
-            var trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            let trailingPunctuation = CharacterSet(charactersIn: ".,;:)>]}'\"`")
-            while let last = trimmed.unicodeScalars.last, trailingPunctuation.contains(last) {
-                trimmed.removeLast()
-            }
-            if let validUrl = URL(string: trimmed),
-               let scheme = validUrl.scheme?.lowercased(),
-               (scheme == "http" || scheme == "https" || scheme == "zoommtg" || scheme == "msteams" || scheme == "facetime" || scheme == "facetime-audio") {
-                return validUrl
-            }
-            return nil
         }
 
         // 도메인 위조 피싱 방어: URL host 일치 검사 (서브도메인 위조 차단 및 상위 부모 도메인 무단 매칭 배제)
@@ -572,14 +615,7 @@ extension CalendarEvent {
 
         for m in matches {
             let rawMatch = nsString.substring(with: m.range)
-            var trimmed = rawMatch.trimmingCharacters(in: .whitespacesAndNewlines)
-            let trailingPunctuation = CharacterSet(charactersIn: ".,;:)>]}'\"`")
-            while let last = trimmed.unicodeScalars.last, trailingPunctuation.contains(last) {
-                trimmed.removeLast()
-            }
-            guard let candidateUrl = URL(string: trimmed),
-                  let scheme = candidateUrl.scheme?.lowercased(),
-                  (scheme == "http" || scheme == "https") else {
+            guard let candidateUrl = sanitizeUrl(rawMatch, allowedSchemes: ["http", "https"]) else {
                 continue
             }
 

@@ -33,6 +33,10 @@ public struct EventPopoverView: View {
         }
     }
 
+    private var textMuted: Color {
+        isDarkTheme ? Color.white.opacity(0.55) : Color.black.opacity(0.45)
+    }
+
     public var body: some View {
         let isMulti = events.count > 1
         let direction = bubbleDirection
@@ -126,7 +130,6 @@ public struct EventPopoverView: View {
     private func singleEventCard(event: CalendarEvent) -> some View {
         let textPrimary = isDarkTheme ? Color.white : Color.black.opacity(0.9)
         let textSecondary = isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.65)
-        let textMuted = isDarkTheme ? Color.white.opacity(0.55) : Color.black.opacity(0.45)
         let rawCalColor = settings.customColor(for: event.calendarIdentifier) ?? event.defaultColor
 
         VStack(alignment: .leading, spacing: 6) {
@@ -183,6 +186,21 @@ public struct EventPopoverView: View {
                 }
             }
 
+            // 본문 메모 미리보기 (시간 직후 배치 & 시스템 보일러플레이트 제외된 사용자 순수 메모 존재 시에만 표출)
+            if let cleanNotes = event.displayNotes {
+                HStack(alignment: .top, spacing: 4) {
+                    Image(systemName: "note.text")
+                        .font(.caption2)
+                        .foregroundStyle(textMuted)
+                        .padding(.top, 1)
+
+                    Text(cleanNotes)
+                        .font(.caption2)
+                        .foregroundStyle(textSecondary)
+                        .lineLimit(2)
+                }
+            }
+
             // 위치 정보
             if let loc = event.location, !loc.isEmpty {
                 if loc.contains("://") {
@@ -197,75 +215,15 @@ public struct EventPopoverView: View {
                             .foregroundStyle(textSecondary)
                             .lineLimit(1)
                     }
-                } else {
+                } else if let mapUrl = settings.effectivePreferredMapService.url(for: loc) {
                     // 물리적 주소/위치: 설정된 지도 서비스로 검색 연동
-                    Button(action: {
-                        if let url = settings.effectivePreferredMapService.url(for: loc) {
-                            NSWorkspace.shared.open(url)
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                                PopoverPanel.shared.hide(delayed: false)
-                            }
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "mappin.and.ellipse")
-                                .font(.caption2)
-                                .foregroundStyle(isDarkTheme ? Color.accentColor : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
-
-                            Text(loc)
-                                .font(.caption2)
-                                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.88) : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
-                                .lineLimit(1)
-                                .underline(true, color: (isDarkTheme ? Color.white.opacity(0.35) : Color.blue.opacity(0.35)))
-                        }
-                    }
-                    .buttonStyle(.plain)
+                    actionLinkButton(icon: "mappin.and.ellipse", text: loc, url: mapUrl)
                 }
             }
 
             // 관련 웹 링크 (웨비나, 세미나, 문서 등)
             if let webLink = event.webLink {
-                Button(action: {
-                    NSWorkspace.shared.open(webLink.url)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                        PopoverPanel.shared.hide(delayed: false)
-                    }
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "link")
-                            .font(.caption2)
-                            .foregroundStyle(isDarkTheme ? Color.accentColor : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
-
-                        Text(webLink.displayHost)
-                            .font(.caption2)
-                            .foregroundStyle(isDarkTheme ? Color.white.opacity(0.88) : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
-                            .lineLimit(1)
-                            .underline(true, color: (isDarkTheme ? Color.white.opacity(0.35) : Color.blue.opacity(0.35)))
-
-                        Image(systemName: "arrow.up.forward")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(textMuted)
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-
-            // 본문 메모 미리보기
-            if let notes = event.notes, !notes.isEmpty {
-                let cleanNotes = notes.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
-                if !cleanNotes.isEmpty {
-                    HStack(alignment: .top, spacing: 4) {
-                        Image(systemName: "note.text")
-                            .font(.caption2)
-                            .foregroundStyle(textMuted)
-                            .padding(.top, 1)
-
-                        Text(cleanNotes)
-                            .font(.caption2)
-                            .foregroundStyle(textSecondary)
-                            .lineLimit(2)
-                    }
-                }
+                actionLinkButton(icon: "link", text: webLink.displayHost, url: webLink.url, isExternal: true)
             }
 
             // 화상회의 원클릭 바로가기 버튼 또는 미검증 안내 배지 / 취소·거절 상태 표시
@@ -351,5 +309,35 @@ public struct EventPopoverView: View {
             .padding(.top, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // ponytail: 위치 및 웹 링크 공통 액션 버튼 렌더러 (중복 제거 및 일관성 유지)
+    @ViewBuilder
+    private func actionLinkButton(icon: String, text: String, url: URL, isExternal: Bool = false) -> some View {
+        Button(action: {
+            NSWorkspace.shared.open(url)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                PopoverPanel.shared.hide(delayed: false)
+            }
+        }) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                    .foregroundStyle(isDarkTheme ? Color.accentColor : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+
+                Text(text)
+                    .font(.caption2)
+                    .foregroundStyle(isDarkTheme ? Color.white.opacity(0.88) : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+                    .lineLimit(1)
+                    .underline(true, color: (isDarkTheme ? Color.white.opacity(0.35) : Color.blue.opacity(0.35)))
+
+                if isExternal {
+                    Image(systemName: "arrow.up.forward")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(textMuted)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }

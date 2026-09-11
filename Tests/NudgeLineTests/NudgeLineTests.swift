@@ -413,6 +413,70 @@ struct WebLinkExtractionTests {
     }
 }
 
+// MARK: - 본문 메모 정제 및 보일러플레이트 필터링 검증
+@Suite("Notes Sanitization and Display Tests")
+struct NotesSanitizationTests {
+    @Test("Google Meet 자동 생성 시스템 보일러플레이트만 있는 경우 메모 숨김(nil) 검증")
+    func testGoogleMeetBoilerplateFiltering() {
+        let rawNotes = """
+        -::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:::~-
+        Do not edit this section of the description.
+        This event has a video call.
+        Join: https://meet.google.com/abc-defg-hij
+        -::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:::~-
+        """
+        let event = CalendarEvent(
+            id: "meet-boilerplate-1",
+            rawTitle: "스프린트 기획 회의",
+            notes: rawNotes
+        )
+        // 사용자가 작성한 메모가 없으므로 nil을 반환하여 카드에서 완전 숨김 처리됨
+        #expect(event.displayNotes == nil)
+    }
+
+    @Test("실제 사용자 메모와 Google Meet 보일러플레이트 공존 시 실제 메모만 보존 검증")
+    func testUserNotesPreservedWithBoilerplate() {
+        let rawNotes = """
+        Q4 로드맵 우선순위 산정 및 신규 피처 논의
+        준비물: 기획안 문서
+
+        -::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:::~-
+        Do not edit this section of the description.
+        This event has a video call.
+        Join: https://meet.google.com/abc-defg-hij
+        -::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:::~-
+        """
+        let event = CalendarEvent(
+            id: "user-notes-1",
+            rawTitle: "스프린트 기획 회의",
+            notes: rawNotes
+        )
+        #expect(event.displayNotes != nil)
+        #expect(event.displayNotes?.contains("Q4 로드맵 우선순위 산정") == true)
+        #expect(event.displayNotes?.contains("준비물: 기획안 문서") == true)
+        #expect(event.displayNotes?.contains("-::~") == false)
+        #expect(event.displayNotes?.contains("Do not edit") == false)
+    }
+
+    @Test("MS Teams 시스템 구분선 및 안내 문구 필터링 검증")
+    func testTeamsBoilerplateFiltering() {
+        let rawNotes = """
+        ________________________________________________________________________________
+        Microsoft Teams Need help?
+        Join the meeting now: https://teams.microsoft.com/l/meetup-join/12345
+        Meeting ID: 293 847 192 012
+        Passcode: aBcD12
+        ________________________________________________________________________________
+        """
+        let event = CalendarEvent(
+            id: "teams-boilerplate-1",
+            rawTitle: "팀 주간 싱크",
+            notes: rawNotes
+        )
+        #expect(event.displayNotes == nil)
+    }
+}
+
 
 
 
