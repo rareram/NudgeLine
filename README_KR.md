@@ -20,12 +20,6 @@
   <img src="https://img.shields.io/badge/License-MIT-lightgrey.svg" alt="License" />
 </p>
 
-<p align="center">
-  <a href="docs/images/settings_timeline_kr.png"><img src="docs/images/settings_timeline_kr.png" width="32%" style="vertical-align: top;" alt="타임라인 설정" /></a>
-  <a href="docs/images/settings_indicator_kr.png"><img src="docs/images/settings_indicator_kr.png" width="32%" style="vertical-align: top;" alt="인디케이터 설정" /></a>
-  <a href="docs/images/custom_pet_editor_kr.png"><img src="docs/images/custom_pet_editor_kr.png" width="32%" style="vertical-align: top;" alt="사용자 설정 펫 편집기" /></a>
-</p>
-
 ---
 
 ## 소개

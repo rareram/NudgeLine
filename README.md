@@ -27,7 +27,7 @@
 NudgeLine displays your daily schedule as a thin bar along the edge of your screen (Left, Right, or Bottom).
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/a3380d76-9313-4f39-83aa-e25fc015ea8e" width="85%" autoplay muted loop playsinline controls></video><br>
+  <video src="https://github.com/user-attachments/assets/a3380d76-9313-4f39-83aa-e25fc015ea8e" width="85%" controls></video><br>
   <em>Use the fullscreen icon in the player bottom-right for the sharpest view of the timeline bar and mascot interactions.</em>
 </p>
 

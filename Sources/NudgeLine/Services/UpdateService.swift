@@ -207,6 +207,26 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
     }
 
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        let uniqueId = UUID().uuidString
+        let tempZipURL = URL(fileURLWithPath: "/tmp/nudgeline_pkg_\(uniqueId).zip")
+        let extractDir = URL(fileURLWithPath: "/tmp/nudgeline_extract_\(uniqueId)")
+
+        // Apple URLSessionDownloadDelegate 규격상 콜백 메서드가 반환되는 즉시 시스템이 location의 임시 파일을 삭제하므로,
+        // 비동기 큐 전환 전 동기 스코프에서 즉시 안전한 임시 경로로 이동(moveItem)하여 보존합니다.
+        do {
+            if FileManager.default.fileExists(atPath: tempZipURL.path) {
+                try FileManager.default.removeItem(at: tempZipURL)
+            }
+            try FileManager.default.moveItem(at: location, to: tempZipURL)
+        } catch {
+            DispatchQueue.main.async { [weak self] in
+                self?.progressWindow?.close()
+                self?.progressWindow = nil
+                self?.handleUpdateFailure(error: error)
+            }
+            return
+        }
+
         DispatchQueue.main.async { [weak self] in
             self?.statusLabel?.stringValue = L10n.tr(.installingAndRestarting)
             self?.progressIndicator?.isIndeterminate = true
@@ -214,21 +234,12 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
             self?.percentLabel?.stringValue = ""
         }
 
-        let uniqueId = UUID().uuidString
-        let tempZipURL = URL(fileURLWithPath: "/tmp/nudgeline_pkg_\(uniqueId).zip")
-        let extractDir = URL(fileURLWithPath: "/tmp/nudgeline_extract_\(uniqueId)")
-
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             do {
-                if FileManager.default.fileExists(atPath: tempZipURL.path) {
-                    try FileManager.default.removeItem(at: tempZipURL)
-                }
                 if FileManager.default.fileExists(atPath: extractDir.path) {
                     try FileManager.default.removeItem(at: extractDir)
                 }
-
-                try FileManager.default.copyItem(at: location, to: tempZipURL)
                 try FileManager.default.createDirectory(at: extractDir, withIntermediateDirectories: true)
 
                 // macOS ditto를 사용하여 권한과 코드 서명을 100% 무손실 보존하며 압축 해제
@@ -285,6 +296,8 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
                     }
                 }
             } catch {
+                try? FileManager.default.removeItem(at: tempZipURL)
+                try? FileManager.default.removeItem(at: extractDir)
                 DispatchQueue.main.async {
                     self.progressWindow?.close()
                     self.progressWindow = nil
