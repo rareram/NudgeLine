@@ -511,6 +511,11 @@ private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Con
         settingsItem.isEnabled = true
         menu.addItem(settingsItem)
 
+        let refreshItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshAction(_:)), keyEquivalent: "r")
+        refreshItem.target = self
+        refreshItem.isEnabled = true
+        menu.addItem(refreshItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // Option(⌥) 키 조합 시 고급 탈출구로 '재시작' 옵션 노출
@@ -549,6 +554,10 @@ private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Con
 
     @objc private func openSettings(_ sender: Any?) {
         (NSApp.delegate as? AppDelegate)?.openSettings()
+    }
+
+    @objc private func refreshAction(_ sender: Any?) {
+        (NSApp.delegate as? AppDelegate)?.refreshAction()
     }
 
     @objc private func restartApp(_ sender: Any?) {

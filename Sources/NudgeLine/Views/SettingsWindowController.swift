@@ -61,7 +61,18 @@ public final class SettingsWindowController: NSWindowController {
         window.title = L10n.tr(.settingsWindowTitle, lang: settings.language)
         window.toolbarStyle = .preference
         window.isReleasedWhenClosed = false
-        window.center()
+
+        // 1회 실측으로 실제 콘텐츠 크기 설정 (마법수 배제 및 화면 상단 솟구침 방지)
+        hostingController.view.layoutSubtreeIfNeeded()
+        window.setContentSize(hostingController.view.fittingSize)
+
+        // 저장된 위치가 없으면(첫 실행/신규 설치) 화면 정중앙에 배치
+        if !window.setFrameUsingName("SettingsWindow") {
+            window.center()
+        }
+
+        // 앱 재실행/업데이트 시 마지막 윈도우 위치 자동 기억
+        window.setFrameAutosaveName("SettingsWindow")
 
         super.init(window: window)
 
@@ -126,6 +137,7 @@ extension SettingsWindowController {
             tabManager.selectedTab = targetTab
             window.toolbar?.selectedItemIdentifier = NSToolbarItem.Identifier(targetTab.rawValue)
         }
+        resizeWindow()
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }

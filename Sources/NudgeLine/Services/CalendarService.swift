@@ -42,11 +42,12 @@ public final class CalendarService: ObservableObject {
 
 // MARK: - 3. 캘린더 접근 권한(TCC) 관리
 extension CalendarService {
-    // 캘린더 TCC 권한 상태 갱신 (권한 획득 시 데이터 자동 로드)
+    // 캘린더 TCC 권한 상태 갱신 (권한 획득 시 데이터 자동 로드 및 원격 동기화)
     public func checkAuthorizationStatus() {
         let status = EKEventStore.authorizationStatus(for: .event)
         self.authorizationStatus = status
         if isAuthorized(status: status) {
+            refreshSources()
             loadCalendars()
             fetchEvents()
         }
@@ -79,6 +80,15 @@ extension CalendarService {
 
 // MARK: - 4. 캘린더 목록 및 일정 비동기 조회 (Data Fetching)
 extension CalendarService {
+    // 원격 캘린더 계정(iCloud, Google, Exchange 등) 동기화 요청 (백그라운드 비동기)
+    public func refreshSources() {
+        guard isAuthorized() else { return }
+        fetchSerialQueue.async { [weak self] in
+            guard let self = self else { return }
+            self.eventStore.refreshSourcesIfNecessary()
+        }
+    }
+
     // 등록된 모든 캘린더 목록 및 소스 계정별 그룹 로드
     public func loadCalendars() {
         guard isAuthorized() else { return }
@@ -133,6 +143,7 @@ extension CalendarService {
 
         // 메인 스레드 가시성 스냅샷으로 데이터 레이스 차단
         let visibilitySnapshot = settings.calendarVisibility
+        let showDeclined = settings.showDeclinedEvents
 
         fetchSerialQueue.async { [weak self] in
             guard let self = self else { return }
@@ -148,10 +159,11 @@ extension CalendarService {
             let rawEvents = self.eventStore.events(matching: predicate)
 
             let filtered = rawEvents.compactMap { ekEvent -> CalendarEvent? in
-                if ekEvent.status == .canceled {
+                let event = CalendarEvent(from: ekEvent)
+                if !showDeclined && event.isCanceledOrDeclined {
                     return nil
                 }
-                return CalendarEvent(from: ekEvent)
+                return event
             }.sorted { $0.startDate < $1.startDate }
 
             DispatchQueue.main.async {
@@ -185,6 +197,16 @@ extension CalendarService {
             }
             .store(in: &cancellables)
 
+        // 2-1. 거절/취소 일정 표시 설정 변경 시 갱신
+        AppSettings.shared.$showDeclinedEvents
+            .map { _ in () }
+            .debounce(for: .milliseconds(150), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self = self, !self.isSleeping else { return }
+                self.fetchEvents()
+            }
+            .store(in: &cancellables)
+
         // 3. 5분마다 정기적으로 일정을 보조 갱신합니다.
         Timer.publish(every: 300, on: .main, in: .default)
             .autoconnect()
@@ -199,6 +221,7 @@ extension CalendarService {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self = self, !self.isSleeping else { return }
+                self.refreshSources()
                 self.loadCalendars()
                 self.fetchEvents()
             }
@@ -226,6 +249,7 @@ extension CalendarService {
         .sink { [weak self] _ in
             guard let self = self else { return }
             self.isSleeping = false
+            self.refreshSources()
             self.loadCalendars()
             self.fetchEvents()
         }

@@ -59,8 +59,13 @@ public final class UpdateService: ObservableObject, @unchecked Sendable {
 
         if Self.isDiskNewer(diskVersion: diskVersion, diskBuild: diskBuild, currentVersion: currentVersion, currentBuild: currentBuild) {
             let displayVersion = diskBuild.isEmpty ? diskVersion : (diskVersion.contains(".") && diskVersion.split(separator: ".").count == 2 ? "\(diskVersion).\(diskBuild)" : diskVersion)
-            DispatchQueue.main.async { [weak self] in
-                self?.updateState = .pendingRestart(version: displayVersion)
+            let newState = UpdateState.pendingRestart(version: displayVersion)
+            if Thread.isMainThread {
+                self.updateState = newState
+            } else {
+                DispatchQueue.main.async { [weak self] in
+                    self?.updateState = newState
+                }
             }
             return true
         }

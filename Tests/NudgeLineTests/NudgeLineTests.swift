@@ -167,3 +167,128 @@ struct VersionComparisonTests {
     }
 }
 
+@Suite("Meeting Integration and Inactive Event Tests")
+struct MeetingIntegrationAndInactiveEventTests {
+    @Test("SafeLinks 및 Google Redirect 언래핑과 피싱 방어 검증")
+    func testSafeLinksAndRedirectUnwrapping() {
+        // 1. SafeLinks로 감싸진 정상 Microsoft Teams 링크
+        let safeTeamsUrl = URL(string: "https://nam01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fteams.microsoft.com%2Fl%2Fmeetup-join%2F19%253ameeting_xyz%40thread.v2%2F0%3Fcontext%3Dabc&data=test")!
+        let teamsEvent = CalendarEvent(
+            id: "safe-teams-1",
+            rawTitle: "팀 주간 회의",
+            url: safeTeamsUrl
+        )
+        #expect(teamsEvent.meetingInfo != nil)
+        #expect(teamsEvent.meetingInfo?.platform == .teams)
+        #expect(teamsEvent.meetingInfo?.url.host == "teams.microsoft.com")
+
+        // 2. SafeLinks로 감싸진 악성 피싱 도메인 (피싱 방어 화이트리스트 차단 검증)
+        let phishingUrl = URL(string: "https://nam01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fevil-phishing-site.com%2Flogin-teams&data=fake")!
+        let phishingEvent = CalendarEvent(
+            id: "phishing-1",
+            rawTitle: "긴급 계정 확인",
+            url: phishingUrl
+        )
+        #expect(phishingEvent.meetingInfo != nil)
+        #expect(phishingEvent.meetingInfo?.platform == .unverified) // 클릭 차단 배지
+
+        // 3. Google Redirect로 감싸진 Zoom 회의 링크
+        let googleZoomUrl = URL(string: "https://www.google.com/url?q=https%3A%2F%2Fzoom.us%2Fj%2F123456789%3Fpwd%3Dmysecretpwd&source=calendar")!
+        let zoomEvent = CalendarEvent(
+            id: "google-zoom-1",
+            rawTitle: "외부 파트너 미팅",
+            url: googleZoomUrl
+        )
+        #expect(zoomEvent.meetingInfo != nil)
+        #expect(zoomEvent.meetingInfo?.platform == .zoom)
+        #expect(zoomEvent.meetingInfo?.url.host == "zoom.us")
+    }
+
+    @Test("거절 및 취소 일정 모델 플래그 검증")
+    func testDeclinedAndCanceledModel() {
+        let normalEvent = CalendarEvent(id: "ev-1", rawTitle: "정상 일정", isDeclined: false, isCanceled: false)
+        let declinedEvent = CalendarEvent(id: "ev-2", rawTitle: "거절 일정", isDeclined: true, isCanceled: false)
+        let canceledEvent = CalendarEvent(id: "ev-3", rawTitle: "취소 일정", isDeclined: false, isCanceled: true)
+
+        #expect(normalEvent.isCanceledOrDeclined == false)
+        #expect(declinedEvent.isCanceledOrDeclined == true)
+        #expect(canceledEvent.isCanceledOrDeclined == true)
+    }
+
+    @Test("타임라인 세그먼트 isInactive 판별 검증")
+    func testTimelineSegmentInactive() {
+        let cluster = EventCluster(id: "c-1", start: Date(), end: Date().addingTimeInterval(3600), events: [])
+        let declinedEv = CalendarEvent(id: "d-1", isDeclined: true)
+        let activeEv = CalendarEvent(id: "a-1", isDeclined: false, isCanceled: false)
+
+        let inactiveSegment = TimelineSegment(id: "seg-1", start: Date(), end: Date().addingTimeInterval(1800), events: [declinedEv], cluster: cluster)
+        #expect(inactiveSegment.isInactive == true)
+
+        let activeSegment = TimelineSegment(id: "seg-2", start: Date(), end: Date().addingTimeInterval(1800), events: [declinedEv, activeEv], cluster: cluster)
+        #expect(activeSegment.isInactive == false)
+    }
+
+    @Test("MeetingAppLauncher 네이티브 URL 스킴 변환 검증")
+    func testMeetingAppLauncherSchemes() {
+        // Teams
+        let teamsInfo = MeetingInfo(platform: .teams, url: URL(string: "https://teams.microsoft.com/l/meetup-join/123")!)
+        let nativeTeams = MeetingAppLauncher.nativeSchemeUrl(for: teamsInfo)
+        #expect(nativeTeams?.scheme == "msteams")
+
+        // Zoom
+        let zoomInfo = MeetingInfo(platform: .zoom, url: URL(string: "https://zoom.us/j/987654321?pwd=abc")!)
+        let nativeZoom = MeetingAppLauncher.nativeSchemeUrl(for: zoomInfo)
+        #expect(nativeZoom?.scheme == "zoommtg")
+        #expect(nativeZoom?.absoluteString.contains("join?confno=987654321") == true)
+
+        // Webex
+        let webexInfo = MeetingInfo(platform: .webex, url: URL(string: "https://company.webex.com/meet/room")!)
+        let nativeWebex = MeetingAppLauncher.nativeSchemeUrl(for: webexInfo)
+        #expect(nativeWebex?.scheme == "webex")
+
+        // Discord
+        let discordInfo = MeetingInfo(platform: .discord, url: URL(string: "https://discord.gg/invite123")!)
+        let nativeDiscord = MeetingAppLauncher.nativeSchemeUrl(for: discordInfo)
+        #expect(nativeDiscord?.scheme == "discord")
+    }
+
+    @Test("PreferredMapService 지도 검색 URL 생성 및 순서 검증")
+    func testPreferredMapServiceURLs() {
+        // 0. 케이스 순서 검증: Apple, Google, 네이버, 카카오
+        #expect(PreferredMapService.allCases == [.apple, .google, .naver, .kakao])
+
+        let location = "서울특별시 강남구 테헤란로 152"
+
+        // 1. Apple 지도 (maps:// 스킴)
+        let appleUrl = PreferredMapService.apple.url(for: location)
+        #expect(appleUrl != nil)
+        #expect(appleUrl?.scheme == "maps")
+        #expect(appleUrl?.query?.contains("q=") == true)
+
+        // 2. 네이버 지도
+        let naverUrl = PreferredMapService.naver.url(for: location)
+        #expect(naverUrl != nil)
+        #expect(naverUrl?.host == "map.naver.com")
+        #expect(naverUrl?.absoluteString.contains("/v5/search/") == true)
+
+        // 3. 카카오맵
+        let kakaoUrl = PreferredMapService.kakao.url(for: location)
+        #expect(kakaoUrl != nil)
+        #expect(kakaoUrl?.host == "map.kakao.com")
+        #expect(kakaoUrl?.absoluteString.contains("/link/search/") == true)
+
+        // 4. Google 지도
+        let googleUrl = PreferredMapService.google.url(for: location)
+        #expect(googleUrl != nil)
+        #expect(googleUrl?.host == "www.google.com")
+        #expect(googleUrl?.path == "/maps/search")
+        #expect(googleUrl?.query?.contains("api=1") == true)
+
+        // 5. 빈 문자열 처리
+        #expect(PreferredMapService.apple.url(for: "") == nil)
+        #expect(PreferredMapService.naver.url(for: "   ") == nil)
+    }
+}
+
+
+

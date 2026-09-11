@@ -223,8 +223,20 @@ public struct TimelineBarView: View {
                         let hasTimedEventsInRange = timedEvents.contains { $0.endDate > dayStart && $0.startDate < dayEnd }
                         let outOfRangeEvents = timedEvents.filter { $0.endDate <= dayStart || $0.startDate >= dayEnd }
 
-                        // 종일 일정이 있거나, 바에 시간 블록이 전혀 없는데 범위 밖 일정이 있는 경우 툴팁 노출
-                        if !allDayEvents.isEmpty || (!hasTimedEventsInRange && !outOfRangeEvents.isEmpty) {
+                        // 디스크에 새 버전이 설치되어 재시작 대기 중인 경우 업데이트 안내를 최우선 노출
+                        if case .pendingRestart(let version) = UpdateService.shared.updateState {
+                            if hoveredActiveId != "__UPDATE_NOTICE__" {
+                                hoveredActiveId = "__UPDATE_NOTICE__"
+                                hoveredFocusId = nil
+                                PopoverPanel.shared.showUpdateNotice(
+                                    cursorOffset: cursorCoord,
+                                    version: version,
+                                    isHorizontal: isHorizontal,
+                                    barPosition: settings.barPosition,
+                                    settings: settings
+                                )
+                            }
+                        } else if !allDayEvents.isEmpty || (!hasTimedEventsInRange && !outOfRangeEvents.isEmpty) {
                             let clusterId = "__SCHEDULE_STATUS_TOOLTIP__" +
                                 allDayEvents.map(\.id).sorted().joined(separator: "_") +
                                 outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
@@ -238,18 +250,6 @@ public struct TimelineBarView: View {
                                     allDayEvents: allDayEvents,
                                     outOfRangeEvents: outOfRangeEvents,
                                     hasTimedEventsInRange: hasTimedEventsInRange,
-                                    isHorizontal: isHorizontal,
-                                    barPosition: settings.barPosition,
-                                    settings: settings
-                                )
-                            }
-                        } else if case .pendingRestart(let version) = UpdateService.shared.updateState {
-                            if hoveredActiveId != "__UPDATE_NOTICE__" {
-                                hoveredActiveId = "__UPDATE_NOTICE__"
-                                hoveredFocusId = nil
-                                PopoverPanel.shared.showUpdateNotice(
-                                    cursorOffset: cursorCoord,
-                                    version: version,
                                     isHorizontal: isHorizontal,
                                     barPosition: settings.barPosition,
                                     settings: settings
@@ -276,6 +276,12 @@ public struct TimelineBarView: View {
             .contextMenu {
                 Button(L10n.tr(.settings, lang: settings.language)) {
                     openSettingsWindow()
+                }
+
+                Button(L10n.tr(.refresh, lang: settings.language)) {
+                    calendarService.refreshSources()
+                    calendarService.loadCalendars()
+                    calendarService.fetchEvents(settings: settings)
                 }
 
                 Divider()
@@ -590,10 +596,22 @@ private struct SegmentBlockView: View {
         let isPast = settings.dimPastEvents && segment.end <= currentTime && !isPulsing
         let thickness = isPulsing ? max(settings.barWidth, 8) : (isHovered && settings.expandOnHover ? settings.hoverWidth : settings.barWidth)
         let isUltraThin = thickness <= 2
-        let colors = segment.events.map { $0.effectiveColor(settings: settings) }
+        let isInactive = segment.isInactive
+        let activeEvents = segment.events.filter { !$0.isCanceledOrDeclined }
+        let colors: [Color] = {
+            if isInactive {
+                return [Color.gray.opacity(isDark ? 0.35 : 0.45)]
+            } else if !activeEvents.isEmpty {
+                return activeEvents.map { $0.effectiveColor(settings: settings) }
+            } else {
+                return segment.events.map { $0.effectiveColor(settings: settings) }
+            }
+        }()
         let primaryColor = colors.first ?? .blue
-        let segmentOpacity: Double = (isPast && !isHovered) ? (isDark ? 0.35 : 0.55) : 1.0
-        let segmentSaturation: Double = (isPast && !isHovered) ? (isDark ? 0.35 : 0.60) : 1.0
+        let segmentOpacity: Double = isInactive
+            ? (isHovered ? 0.70 : (isDark ? 0.35 : 0.45))
+            : ((isPast && !isHovered) ? (isDark ? 0.35 : 0.55) : 1.0)
+        let segmentSaturation: Double = isInactive ? 0.2 : ((isPast && !isHovered) ? (isDark ? 0.35 : 0.60) : 1.0)
 
         Group {
             if segment.isOverlap {

@@ -180,6 +180,42 @@ public enum BarPosition: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+public enum PreferredMapService: String, Codable, CaseIterable, Identifiable, Sendable {
+    case apple  = "apple"
+    case google = "google"
+    case naver  = "naver"
+    case kakao  = "kakao"
+
+    public var id: String { rawValue }
+
+    public func title(lang: AppLanguage = .system) -> String {
+        switch self {
+        case .apple:  return L10n.tr(.mapServiceApple, lang: lang)
+        case .google: return L10n.tr(.mapServiceGoogle, lang: lang)
+        case .naver:  return L10n.tr(.mapServiceNaver, lang: lang)
+        case .kakao:  return L10n.tr(.mapServiceKakao, lang: lang)
+        }
+    }
+
+    public func url(for location: String) -> URL? {
+        let trimmed = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            return nil
+        }
+        switch self {
+        case .apple:
+            return URL(string: "maps://?q=\(encoded)") ?? URL(string: "https://maps.apple.com/?q=\(encoded)")
+        case .google:
+            return URL(string: "https://www.google.com/maps/search/?api=1&query=\(encoded)")
+        case .naver:
+            return URL(string: "https://map.naver.com/v5/search/\(encoded)")
+        case .kakao:
+            return URL(string: "https://map.kakao.com/link/search/\(encoded)")
+        }
+    }
+}
+
 // MARK: - 2. 앱 전역 설정 저장소 본체 (AppSettings)
 public final class AppSettings: ObservableObject {
     public static let shared = AppSettings()
@@ -187,6 +223,7 @@ public final class AppSettings: ObservableObject {
     // MARK: 2-1. UserDefaults 저장소 키
     private enum Keys {
         static let language = "settings_language"
+        static let preferredMapService = "settings_preferred_map_service"
         static let eventHoverStyle = "settings_event_hover_style"
         static let eventCardTheme = "settings_event_card_theme"
         static let cardOpacity = "settings_card_opacity"
@@ -221,6 +258,7 @@ public final class AppSettings: ObservableObject {
         static let enableSegmentRim = "settings_enable_segment_rim"
         static let enableSegmentGlow = "settings_enable_segment_glow"
         static let dimPastEvents = "settings_dim_past_events"
+        static let showDeclinedEvents = "settings_show_declined_events"
         static let hideOnScreenShare = "settings_hide_on_screen_share"
         static let hideOnFullScreen = "settings_hide_on_full_screen"
     }
@@ -230,6 +268,10 @@ public final class AppSettings: ObservableObject {
     // MARK: 2-2. 관찰 가능한 상태 프로퍼티 (@Published)
     @Published public var language: AppLanguage {
         didSet { defaults.set(language.rawValue, forKey: Keys.language) }
+    }
+
+    @Published public var preferredMapService: PreferredMapService {
+        didSet { defaults.set(preferredMapService.rawValue, forKey: Keys.preferredMapService) }
     }
 
     @Published public var eventHoverStyle: EventHoverStyle {
@@ -377,6 +419,10 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(dimPastEvents, forKey: Keys.dimPastEvents) }
     }
 
+    @Published public var showDeclinedEvents: Bool {
+        didSet { defaults.set(showDeclinedEvents, forKey: Keys.showDeclinedEvents) }
+    }
+
     @Published public var enablePreEventAlert: Bool {
         didSet { defaults.set(enablePreEventAlert, forKey: Keys.enablePreEventAlert) }
     }
@@ -389,6 +435,9 @@ public final class AppSettings: ObservableObject {
     private init() {
         let savedLang = defaults.string(forKey: Keys.language) ?? AppLanguage.system.rawValue
         self.language = AppLanguage(rawValue: savedLang) ?? .system
+
+        let savedMapService = defaults.string(forKey: Keys.preferredMapService) ?? PreferredMapService.apple.rawValue
+        self.preferredMapService = PreferredMapService(rawValue: savedMapService) ?? .apple
 
         let savedHoverStyle = defaults.string(forKey: Keys.eventHoverStyle) ?? EventHoverStyle.card.rawValue
         self.eventHoverStyle = EventHoverStyle(rawValue: savedHoverStyle) ?? .card
@@ -477,6 +526,7 @@ public final class AppSettings: ObservableObject {
         self.enableSegmentRim = defaults.object(forKey: Keys.enableSegmentRim) != nil ? defaults.bool(forKey: Keys.enableSegmentRim) : false
         self.enableSegmentGlow = defaults.object(forKey: Keys.enableSegmentGlow) != nil ? defaults.bool(forKey: Keys.enableSegmentGlow) : false
         self.dimPastEvents = defaults.object(forKey: Keys.dimPastEvents) != nil ? defaults.bool(forKey: Keys.dimPastEvents) : false
+        self.showDeclinedEvents = defaults.object(forKey: Keys.showDeclinedEvents) != nil ? defaults.bool(forKey: Keys.showDeclinedEvents) : true
         self.enablePreEventAlert = defaults.object(forKey: Keys.enablePreEventAlert) != nil ? defaults.bool(forKey: Keys.enablePreEventAlert) : false
         self.preEventAlertMinutes = defaults.object(forKey: Keys.preEventAlertMinutes) != nil ? defaults.integer(forKey: Keys.preEventAlertMinutes) : 5
     }

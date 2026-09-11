@@ -148,10 +148,11 @@ public struct EventPopoverView: View {
             // 일정 제목
             Text(event.title(lang: settings.language))
                 .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(textPrimary)
+                .strikethrough(event.isCanceledOrDeclined, color: textSecondary)
+                .foregroundStyle(event.isCanceledOrDeclined ? textSecondary : textPrimary)
                 .lineLimit(2)
 
-            // 시간 범위 및 소요 시간
+            // 시간 범위 및 소요 시간 + 취소/거절 상태 배지
             HStack(spacing: 6) {
                 Text(event.formattedTimeRange(lang: settings.language))
                     .font(.system(size: 11, weight: .medium))
@@ -162,19 +163,63 @@ public struct EventPopoverView: View {
                         .font(.caption2)
                         .foregroundStyle(textMuted)
                 }
+
+                if event.isCanceled {
+                    Text(L10n.tr(.eventStatusCanceled, lang: settings.language))
+                        .font(.system(size: 9, weight: .semibold))
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1.5)
+                        .background(Color.red.opacity(0.18))
+                        .foregroundStyle(Color.red)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                } else if event.isDeclined {
+                    Text(L10n.tr(.eventStatusDeclined, lang: settings.language))
+                        .font(.system(size: 9, weight: .semibold))
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1.5)
+                        .background(Color.gray.opacity(0.20))
+                        .foregroundStyle(textSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                }
             }
 
             // 위치 정보
             if let loc = event.location, !loc.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "mappin.and.ellipse")
-                        .font(.caption2)
-                        .foregroundStyle(textSecondary)
+                if loc.contains("://") {
+                    // URL 형태의 위치는 일반 텍스트로 표출 (피싱 방어 및 직관성 유지)
+                    HStack(spacing: 4) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.caption2)
+                            .foregroundStyle(textSecondary)
 
-                    Text(loc)
-                        .font(.caption2)
-                        .foregroundStyle(textSecondary)
-                        .lineLimit(1)
+                        Text(loc)
+                            .font(.caption2)
+                            .foregroundStyle(textSecondary)
+                            .lineLimit(1)
+                    }
+                } else {
+                    // 물리적 주소/위치: 설정된 지도 서비스로 검색 연동
+                    Button(action: {
+                        if let url = settings.preferredMapService.url(for: loc) {
+                            NSWorkspace.shared.open(url)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                                PopoverPanel.shared.hide(delayed: false)
+                            }
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(.caption2)
+                                .foregroundStyle(isDarkTheme ? Color.accentColor : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+
+                            Text(loc)
+                                .font(.caption2)
+                                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.88) : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+                                .lineLimit(1)
+                                .underline(true, color: (isDarkTheme ? Color.white.opacity(0.35) : Color.blue.opacity(0.35)))
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
             }
 
@@ -196,10 +241,28 @@ public struct EventPopoverView: View {
                 }
             }
 
-            // 화상회의 원클릭 바로가기 버튼 또는 미검증 안내 배지
+            // 화상회의 원클릭 바로가기 버튼 또는 미검증 안내 배지 / 취소·거절 상태 표시
             if let meeting = event.meetingInfo {
                 let buttonColor = meeting.platform.brandColor.adjustedForContrast(isDark: isDarkTheme)
-                if meeting.platform == .unverified {
+                if event.isCanceledOrDeclined {
+                    // 취소 또는 거절된 일정: 회의 참여 비활성화 배지
+                    HStack(spacing: 5) {
+                        Image(systemName: meeting.platform.iconName)
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(event.isCanceled ? L10n.tr(.canceledMeeting, lang: settings.language) : L10n.tr(.declinedMeeting, lang: settings.language))
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 5)
+                    .background(Color.gray.opacity(isDarkTheme ? 0.20 : 0.12))
+                    .foregroundStyle(textSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.gray.opacity(isDarkTheme ? 0.35 : 0.25), lineWidth: 0.5)
+                    )
+                    .padding(.top, 3)
+                } else if meeting.platform == .unverified {
                     // 미검증 외부 링크: 피싱 방어를 위해 클릭을 차단하고 캘린더 앱 직접 확인 안내 배지로 표출
                     HStack(spacing: 5) {
                         Image(systemName: meeting.platform.iconName)
@@ -218,9 +281,9 @@ public struct EventPopoverView: View {
                     )
                     .padding(.top, 3)
                 } else {
-                    // 공식 화상회의 플랫폼: 1클릭 즉시 입장 버튼
+                    // 공식 화상회의 플랫폼: 네이티브 데스크톱 앱 우선 실행 및 웹 폴백
                     Button(action: {
-                        NSWorkspace.shared.open(meeting.url)
+                        MeetingAppLauncher.open(meeting: meeting)
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
                             PopoverPanel.shared.hide(delayed: false)
                         }

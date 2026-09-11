@@ -77,6 +77,23 @@ struct GeneralTab: View {
                             .frame(minWidth: 100, alignment: .trailing)
                     }
 
+                    LabeledContent {
+                        HStack {
+                            Picker("", selection: $settings.preferredMapService) {
+                                ForEach(PreferredMapService.allCases) { service in
+                                    Text(service.title(lang: settings.language)).tag(service)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .fixedSize()
+                            Spacer()
+                        }
+                    } label: {
+                        Text(L10n.tr(.preferredMapServiceLabel, lang: settings.language))
+                            .frame(minWidth: 100, alignment: .trailing)
+                    }
+
                     Toggle(L10n.tr(.launchAtLogin, lang: settings.language), isOn: Binding(
                         get: { launchHelper.isEnabled },
                         set: { launchHelper.setEnabled($0) }

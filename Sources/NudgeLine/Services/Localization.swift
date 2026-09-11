@@ -197,8 +197,18 @@ public struct L10n {
         case overlappingEvents(Int)
         case joinMeeting(String)
         case unverifiedMeetingLink
+        case eventStatusCanceled
+        case eventStatusDeclined
+        case declinedMeeting
+        case canceledMeeting
+        case showDeclinedEventsLabel
 
         // 일반 설정
+        case preferredMapServiceLabel
+        case mapServiceApple
+        case mapServiceNaver
+        case mapServiceKakao
+        case mapServiceGoogle
         case launchAtLogin
         case hideOnScreenShareLabel
         case hideOnFullScreenLabel
@@ -245,6 +255,12 @@ extension L10n.Key {
         case .dimPastEventsLabel: return "지난 일정 흐리게"
         case .creditsOriginal: return "원작: Andreas Katzian & ARTMIXTURE (2014-2015)"
         case .githubRepo: return "GitHub 저장소 ↗"
+
+        case .preferredMapServiceLabel: return "지도 서비스:"
+        case .mapServiceApple: return "Apple 지도"
+        case .mapServiceNaver: return "네이버 지도"
+        case .mapServiceKakao: return "카카오맵"
+        case .mapServiceGoogle: return "Google 지도"
 
         case .launchAtLogin: return "로그인할 때 자동 실행"
         case .hideOnScreenShareLabel: return "화상회의 · 녹화 · 가상화면에 표시 안 함"
@@ -357,7 +373,12 @@ extension L10n.Key {
         case .durationMinutes(let m): return "(\(m)분)"
         case .overlappingEvents(let count): return "일정 \(count)개 겹침"
         case .joinMeeting(let p): return "\(p) 바로 참여"
-        case .unverifiedMeetingLink: return "⚠️ 링크 확인 필요"
+        case .unverifiedMeetingLink: return "링크 확인 필요"
+        case .eventStatusCanceled: return "취소됨"
+        case .eventStatusDeclined: return "참석 거절됨"
+        case .declinedMeeting: return "참석 거절된 회의"
+        case .canceledMeeting: return "취소된 회의"
+        case .showDeclinedEventsLabel: return "거절/취소된 일정 로그 표시"
         }
     }
 }
@@ -401,6 +422,12 @@ extension L10n.Key {
         case .dimPastEventsLabel: return "Dim past events"
         case .creditsOriginal: return "Inspired by PixelScheduler (2014-2015) by Andreas Katzian & ARTMIXTURE"
         case .githubRepo: return "GitHub Repository ↗"
+
+        case .preferredMapServiceLabel: return "Map Service:"
+        case .mapServiceApple: return "Apple Maps"
+        case .mapServiceNaver: return "Naver Map"
+        case .mapServiceKakao: return "KakaoMap"
+        case .mapServiceGoogle: return "Google Maps"
 
         case .launchAtLogin: return "Launch at Login"
         case .hideOnScreenShareLabel: return "Exclude from Meetings, Capture & Virtual Display"
@@ -513,7 +540,12 @@ extension L10n.Key {
         case .durationMinutes(let m): return "(\(m)m)"
         case .overlappingEvents(let count): return "\(count) Overlapping Events"
         case .joinMeeting(let p): return "Join \(p)"
-        case .unverifiedMeetingLink: return "⚠️ Verify Link"
+        case .unverifiedMeetingLink: return "Verify Link"
+        case .eventStatusCanceled: return "Canceled"
+        case .eventStatusDeclined: return "Declined"
+        case .declinedMeeting: return "Declined Meeting"
+        case .canceledMeeting: return "Canceled Meeting"
+        case .showDeclinedEventsLabel: return "Show Declined/Canceled Events"
         }
     }
 }
