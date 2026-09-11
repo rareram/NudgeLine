@@ -223,6 +223,33 @@ public struct EventPopoverView: View {
                 }
             }
 
+            // 관련 웹 링크 (웨비나, 세미나, 문서 등)
+            if let webLink = event.webLink {
+                Button(action: {
+                    NSWorkspace.shared.open(webLink.url)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                        PopoverPanel.shared.hide(delayed: false)
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "link")
+                            .font(.caption2)
+                            .foregroundStyle(isDarkTheme ? Color.accentColor : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+
+                        Text(webLink.displayHost)
+                            .font(.caption2)
+                            .foregroundStyle(isDarkTheme ? Color.white.opacity(0.88) : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+                            .lineLimit(1)
+                            .underline(true, color: (isDarkTheme ? Color.white.opacity(0.35) : Color.blue.opacity(0.35)))
+
+                        Image(systemName: "arrow.up.forward")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(textMuted)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
             // 본문 메모 미리보기
             if let notes = event.notes, !notes.isEmpty {
                 let cleanNotes = notes.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -262,7 +289,7 @@ public struct EventPopoverView: View {
                             .stroke(Color.gray.opacity(isDarkTheme ? 0.35 : 0.25), lineWidth: 0.5)
                     )
                     .padding(.top, 3)
-                } else if meeting.platform == .unverified {
+                } else if meeting.platform == .unverified && event.webLink == nil {
                     // 미검증 외부 링크: 피싱 방어를 위해 클릭을 차단하고 캘린더 앱 직접 확인 안내 배지로 표출
                     HStack(spacing: 5) {
                         Image(systemName: meeting.platform.iconName)

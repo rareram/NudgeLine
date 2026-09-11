@@ -8,6 +8,7 @@ public enum MeetingPlatform: String, Hashable, Sendable {
     case googleMeet = "Google Meet"
     case zoom = "Zoom"
     case teams = "Microsoft Teams"
+    case faceTime = "FaceTime"
     case webex = "Webex"
     case whaleOn = "Whale ON"
     case discord = "Discord"
@@ -23,6 +24,7 @@ public enum MeetingPlatform: String, Hashable, Sendable {
         case .googleMeet: return "video.fill"
         case .zoom: return "video.badge.waveform.fill"
         case .teams: return "person.2.wave.2.fill"
+        case .faceTime: return "video.fill"
         case .webex: return "video.circle.fill"
         case .whaleOn: return "video.bubble.fill"
         case .discord: return "bubble.left.and.bubble.right.fill"
@@ -40,6 +42,7 @@ public enum MeetingPlatform: String, Hashable, Sendable {
         case .googleMeet: return Color(red: 0.0, green: 0.65, blue: 0.35)
         case .zoom: return Color(red: 0.18, green: 0.53, blue: 0.98)
         case .teams: return Color(red: 0.38, green: 0.40, blue: 0.85)
+        case .faceTime: return Color(red: 0.20, green: 0.78, blue: 0.35)
         case .webex: return Color(red: 0.0, green: 0.70, blue: 0.75)
         case .whaleOn: return Color(red: 0.0, green: 0.78, blue: 0.24)
         case .discord: return Color(red: 0.35, green: 0.40, blue: 0.95)
@@ -57,6 +60,17 @@ public enum MeetingPlatform: String, Hashable, Sendable {
 public struct MeetingInfo: Hashable, Sendable {
     public let platform: MeetingPlatform
     public let url: URL
+}
+
+// 관련 웹/문서/세미나 링크 정보
+public struct WebLinkInfo: Hashable, Sendable {
+    public let url: URL
+    public let displayHost: String
+
+    public init(url: URL, displayHost: String) {
+        self.url = url
+        self.displayHost = displayHost
+    }
 }
 
 // MARK: - 2. 캘린더 이벤트 모델 (CalendarEvent)
@@ -77,6 +91,7 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
     public let isDeclined: Bool
     public let isCanceled: Bool
     public let meetingInfo: MeetingInfo?
+    public let webLink: WebLinkInfo?
 
     public var isCanceledOrDeclined: Bool {
         isCanceled || isDeclined
@@ -113,7 +128,9 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
             }
         }
 
-        self.meetingInfo = CalendarEvent.extractMeetingInfo(url: ekEvent.url, location: ekEvent.location, notes: ekEvent.notes, currentUserEmail: currentUserEmail)
+        let meeting = CalendarEvent.extractMeetingInfo(url: ekEvent.url, location: ekEvent.location, notes: ekEvent.notes, currentUserEmail: currentUserEmail)
+        self.meetingInfo = meeting
+        self.webLink = CalendarEvent.extractWebLink(url: ekEvent.url, notes: ekEvent.notes, meetingInfo: meeting)
     }
 
     public init(
@@ -132,7 +149,8 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
         status: EKEventStatus = .confirmed,
         isDeclined: Bool = false,
         isCanceled: Bool = false,
-        meetingInfo: MeetingInfo? = nil
+        meetingInfo: MeetingInfo? = nil,
+        webLink: WebLinkInfo? = nil
     ) {
         self.id = id
         self.rawTitle = rawTitle
@@ -149,7 +167,9 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
         self.status = status
         self.isDeclined = isDeclined
         self.isCanceled = isCanceled
-        self.meetingInfo = meetingInfo ?? CalendarEvent.extractMeetingInfo(url: url, location: location, notes: notes)
+        let meeting = meetingInfo ?? CalendarEvent.extractMeetingInfo(url: url, location: location, notes: notes)
+        self.meetingInfo = meeting
+        self.webLink = webLink ?? CalendarEvent.extractWebLink(url: url, notes: notes, meetingInfo: meeting)
     }
 
     public func title(lang: AppLanguage = AppSettings.shared.language) -> String {
@@ -196,6 +216,7 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
         hasher.combine(calendarIdentifier)
         hasher.combine(isDeclined)
         hasher.combine(isCanceled)
+        hasher.combine(webLink)
     }
 
     public static func == (lhs: CalendarEvent, rhs: CalendarEvent) -> Bool {
@@ -206,7 +227,8 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
             lhs.isAllDay == rhs.isAllDay &&
             lhs.calendarIdentifier == rhs.calendarIdentifier &&
             lhs.isDeclined == rhs.isDeclined &&
-            lhs.isCanceled == rhs.isCanceled
+            lhs.isCanceled == rhs.isCanceled &&
+            lhs.webLink == rhs.webLink
     }
 }
 
@@ -218,6 +240,8 @@ extension CalendarEvent {
         static let zoom = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*zoom\.(?:us|com|gov|de)/[a-zA-Z0-9_.\-/?=&]+"#, options: [.caseInsensitive])
         static let teams = try? NSRegularExpression(pattern: #"https?://teams\.microsoft\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
         static let teamsLive = try? NSRegularExpression(pattern: #"https?://teams\.live\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let faceTime = try? NSRegularExpression(pattern: #"https?://facetime\.apple\.com/[a-zA-Z0-9_.\-/?=&%#]+"#, options: [.caseInsensitive])
+        static let faceTimeScheme = try? NSRegularExpression(pattern: #"facetime(?:-audio)?://[a-zA-Z0-9_.\-/?=&%#+@]+"#, options: [.caseInsensitive])
         static let webex = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*webex\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
         static let whaleOn = try? NSRegularExpression(pattern: #"https?://whaleon\.naver\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
         static let discord = try? NSRegularExpression(pattern: #"https?://(?:www\.)?discord\.(?:gg|com)/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
@@ -271,7 +295,9 @@ extension CalendarEvent {
         let hasPotentialUrl = combined.contains("http://") ||
             combined.contains("https://") ||
             combined.contains("zoommtg://") ||
-            combined.contains("msteams://")
+            combined.contains("msteams://") ||
+            combined.contains("facetime://") ||
+            combined.contains("facetime-audio://")
         guard hasPotentialUrl else { return nil }
 
         // HTML 엔티티 복원
@@ -300,7 +326,7 @@ extension CalendarEvent {
             }
             if let validUrl = URL(string: trimmed),
                let scheme = validUrl.scheme?.lowercased(),
-               (scheme == "http" || scheme == "https" || scheme == "zoommtg" || scheme == "msteams") {
+               (scheme == "http" || scheme == "https" || scheme == "zoommtg" || scheme == "msteams" || scheme == "facetime" || scheme == "facetime-audio") {
                 return validUrl
             }
             return nil
@@ -352,7 +378,18 @@ extension CalendarEvent {
             return MeetingInfo(platform: .teams, url: validUrl)
         }
 
-        // 4. Cisco Webex
+        // 4. Apple FaceTime (웹 링크 및 네이티브 스킴)
+        if let match = firstMatch(in: workingText, regex: MeetingRegex.faceTime),
+           let validUrl = sanitizeUrl(match),
+           matchesDomain(validUrl, validDomains: ["facetime.apple.com"]) {
+            return MeetingInfo(platform: .faceTime, url: validUrl)
+        }
+        if let match = firstMatch(in: workingText, regex: MeetingRegex.faceTimeScheme),
+           let validUrl = sanitizeUrl(match) {
+            return MeetingInfo(platform: .faceTime, url: validUrl)
+        }
+
+        // 5. Cisco Webex
         if let match = firstMatch(in: workingText, regex: MeetingRegex.webex),
            let validUrl = sanitizeUrl(match),
            matchesDomain(validUrl, validDomains: ["webex.com"]) {
@@ -432,6 +469,127 @@ extension CalendarEvent {
         let match = regex.firstMatch(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
         guard let m = match else { return nil }
         return nsString.substring(with: m.range)
+    }
+
+    // MARK: 3-2. 일반 웹 링크 (세미나, 웨비나, 문서 등) 추출
+    public static func extractDisplayHost(from url: URL) -> String {
+        let targetString = unwrapRedirectUrl(from: url.absoluteString) ?? url.absoluteString
+        guard let targetUrl = URL(string: targetString),
+              let host = targetUrl.host?.lowercased() else {
+            return url.host ?? url.absoluteString
+        }
+        if host.hasPrefix("www.") {
+            return String(host.dropFirst(4))
+        }
+        return host
+    }
+
+    private static func isExcludedWebLink(candidateUrl: URL, meetingInfo: MeetingInfo?) -> Bool {
+        // 화상회의 버튼 URL과 동일하면 제외 (공식 화상회의 버튼과 중복 방지)
+        if let meeting = meetingInfo, meeting.platform != .unverified {
+            if candidateUrl.absoluteString == meeting.url.absoluteString {
+                return true
+            }
+            let unwrappedCandidate = unwrapRedirectUrl(from: candidateUrl.absoluteString) ?? candidateUrl.absoluteString
+            let unwrappedMeeting = unwrapRedirectUrl(from: meeting.url.absoluteString) ?? meeting.url.absoluteString
+            if unwrappedCandidate == unwrappedMeeting {
+                return true
+            }
+        }
+
+        let targetString = unwrapRedirectUrl(from: candidateUrl.absoluteString) ?? candidateUrl.absoluteString
+        guard let target = URL(string: targetString),
+              let host = target.host?.lowercased() else {
+            return true
+        }
+
+        // 1. 공식 화상회의 플랫폼 도메인은 제외 (화상회의는 하단 전용 액션 버튼으로 표출)
+        let meetingDomains = [
+            "zoom.us", "zoom.com", "zoom.gov", "zoom.de",
+            "meet.google.com",
+            "teams.microsoft.com", "teams.live.com",
+            "webex.com",
+            "whaleon.naver.com",
+            "discord.gg", "discord.com",
+            "larksuite.com", "feishu.cn",
+            "meet.jit.si", "8x8.vc",
+            "whereby.com",
+            "chime.aws", "facetime.apple.com"
+        ]
+        if meetingDomains.contains(where: { host == $0 || host.hasSuffix("." + $0) }) {
+            return true
+        }
+
+        // 2. 캘린더 시스템 자동 첨부 및 관리 도메인은 제외 (구글/아웃룩 시스템 링크)
+        if host == "calendar.google.com" || host.hasSuffix(".calendar.google.com") {
+            return true
+        }
+        if (host == "google.com" || host.hasSuffix(".google.com")) && target.path.hasPrefix("/calendar") {
+            return true
+        }
+        if host == "outlook.office.com" || host == "outlook.live.com" {
+            if target.path.contains("/calendar") {
+                return true
+            }
+        }
+
+        // 3. 이미지 직접 링크 제외
+        let pathExtension = target.pathExtension.lowercased()
+        let imageExtensions = ["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp"]
+        if imageExtensions.contains(pathExtension) {
+            return true
+        }
+
+        return false
+    }
+
+    public static func extractWebLink(url: URL?, notes: String?, meetingInfo: MeetingInfo?) -> WebLinkInfo? {
+        // 1순위: Apple 캘린더의 명시적 URL 필드 (ekEvent.url)
+        if let explicitUrl = url {
+            let scheme = explicitUrl.scheme?.lowercased()
+            if scheme == "http" || scheme == "https" {
+                if !isExcludedWebLink(candidateUrl: explicitUrl, meetingInfo: meetingInfo) {
+                    let display = extractDisplayHost(from: explicitUrl)
+                    return WebLinkInfo(url: explicitUrl, displayHost: display)
+                }
+            }
+        }
+
+        // 2순위: 본문 메모(notes)에서 첫 번째 유효한 외부 링크 추출 (구글 캘린더 등)
+        guard let notesText = notes, !notesText.isEmpty else { return nil }
+        guard notesText.contains("http://") || notesText.contains("https://") else { return nil }
+
+        // HTML 엔티티 복원
+        let sanitized = notesText
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+
+        guard let regex = MeetingRegex.anyUrl else { return nil }
+        let nsString = sanitized as NSString
+        let matches = regex.matches(in: sanitized, options: [], range: NSRange(location: 0, length: nsString.length))
+
+        for m in matches {
+            let rawMatch = nsString.substring(with: m.range)
+            var trimmed = rawMatch.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trailingPunctuation = CharacterSet(charactersIn: ".,;:)>]}'\"`")
+            while let last = trimmed.unicodeScalars.last, trailingPunctuation.contains(last) {
+                trimmed.removeLast()
+            }
+            guard let candidateUrl = URL(string: trimmed),
+                  let scheme = candidateUrl.scheme?.lowercased(),
+                  (scheme == "http" || scheme == "https") else {
+                continue
+            }
+
+            if !isExcludedWebLink(candidateUrl: candidateUrl, meetingInfo: meetingInfo) {
+                let display = extractDisplayHost(from: candidateUrl)
+                return WebLinkInfo(url: candidateUrl, displayHost: display)
+            }
+        }
+
+        return nil
     }
 }
 
@@ -675,6 +833,11 @@ public enum MeetingAppLauncher {
             if var comps = URLComponents(url: url, resolvingAgainstBaseURL: false) {
                 comps.scheme = "discord"
                 return comps.url
+            }
+        case .faceTime:
+            let scheme = url.scheme?.lowercased()
+            if scheme == "facetime" || scheme == "facetime-audio" {
+                return url
             }
         default:
             break

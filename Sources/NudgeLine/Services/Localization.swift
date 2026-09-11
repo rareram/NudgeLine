@@ -258,7 +258,7 @@ extension L10n.Key {
         case .creditsOriginal: return "원작: Andreas Katzian & ARTMIXTURE (2014-2015)"
         case .githubRepo: return "GitHub 저장소 ↗"
 
-        case .preferredMapServiceLabel: return "지도 서비스:"
+        case .preferredMapServiceLabel: return "위치 열기:"
         case .mapServiceApple: return "Apple 지도"
         case .mapServiceNaver: return "네이버 지도"
         case .mapServiceKakao: return "카카오맵"
@@ -426,7 +426,7 @@ extension L10n.Key {
         case .creditsOriginal: return "Inspired by PixelScheduler (2014-2015) by Andreas Katzian & ARTMIXTURE"
         case .githubRepo: return "GitHub Repository ↗"
 
-        case .preferredMapServiceLabel: return "Map Service:"
+        case .preferredMapServiceLabel: return "Open Location with:"
         case .mapServiceApple: return "Apple Maps"
         case .mapServiceNaver: return "Naver Map"
         case .mapServiceKakao: return "KakaoMap"

@@ -66,8 +66,8 @@ struct LocalizationTests {
         #expect(L10n.tr(.updateNowInApp, lang: .en) == "Update Now")
         #expect(L10n.tr(.installingAndRestarting, lang: .ko) == "업데이트 설치 및 재시작 중...")
         #expect(L10n.tr(.installingAndRestarting, lang: .en) == "Installing update & restarting...")
-        #expect(L10n.tr(.preferredMapServiceLabel, lang: .ko) == "지도 서비스:")
-        #expect(L10n.tr(.preferredMapServiceLabel, lang: .en) == "Map Service:")
+        #expect(L10n.tr(.preferredMapServiceLabel, lang: .ko) == "위치 열기:")
+        #expect(L10n.tr(.preferredMapServiceLabel, lang: .en) == "Open Location with:")
     }
 }
 
@@ -255,6 +255,34 @@ struct MeetingIntegrationAndInactiveEventTests {
         let discordInfo = MeetingInfo(platform: .discord, url: URL(string: "https://discord.gg/invite123")!)
         let nativeDiscord = MeetingAppLauncher.nativeSchemeUrl(for: discordInfo)
         #expect(nativeDiscord?.scheme == "discord")
+
+        // FaceTime
+        let faceTimeInfo = MeetingInfo(platform: .faceTime, url: URL(string: "facetime://user@example.com")!)
+        let nativeFaceTime = MeetingAppLauncher.nativeSchemeUrl(for: faceTimeInfo)
+        #expect(nativeFaceTime?.scheme == "facetime")
+    }
+
+    @Test("FaceTime 미팅 링크 및 네이티브 스킴 추출 검증")
+    func testFaceTimeLinkDetection() {
+        // 1. Apple FaceTime 웹 통화 링크 (iOS 15 / macOS Monterey 이후)
+        let webEvent = CalendarEvent(
+            id: "ft-web-1",
+            rawTitle: "디자인 리뷰 미팅",
+            url: URL(string: "https://facetime.apple.com/join#v=1&p=abcdef123456&k=xyz")!
+        )
+        #expect(webEvent.meetingInfo != nil)
+        #expect(webEvent.meetingInfo?.platform == .faceTime)
+        #expect(webEvent.meetingInfo?.url.host == "facetime.apple.com")
+
+        // 2. FaceTime 네이티브 URL 스킴 (메모/위치 필드에 포함된 경우)
+        let schemeEvent = CalendarEvent(
+            id: "ft-scheme-1",
+            rawTitle: "팀장님 면담",
+            notes: "회의 링크: facetime://test@apple.com"
+        )
+        #expect(schemeEvent.meetingInfo != nil)
+        #expect(schemeEvent.meetingInfo?.platform == .faceTime)
+        #expect(schemeEvent.meetingInfo?.url.scheme == "facetime")
     }
 
     @Test("PreferredMapService 지도 검색 URL 생성 및 순서 검증")
@@ -296,6 +324,95 @@ struct MeetingIntegrationAndInactiveEventTests {
         #expect(PreferredMapService.naver.url(for: "   ") == nil)
     }
 }
+
+@Suite("WebLink and Seminar URL Extraction Tests")
+struct WebLinkExtractionTests {
+    @Test("Apple 캘린더 URL 필드 우선 추출 검증")
+    func testAppleCalendarExplicitUrl() {
+        let event = CalendarEvent(
+            id: "apple-url-1",
+            rawTitle: "AWS 이노베이션 세미나",
+            url: URL(string: "https://aws.amazon.com/ko/events/summit")!
+        )
+        #expect(event.webLink != nil)
+        #expect(event.webLink?.displayHost == "aws.amazon.com")
+        #expect(event.webLink?.url.absoluteString == "https://aws.amazon.com/ko/events/summit")
+    }
+
+    @Test("구글 캘린더 본문(notes) 내 일반 웹 링크 추출 검증")
+    func testGoogleCalendarNotesUrlExtraction() {
+        let event = CalendarEvent(
+            id: "google-notes-1",
+            rawTitle: "기획안 싱크",
+            notes: "사전 검토 부탁드립니다:\nhttps://notion.so/my-team-workspace/page-1234\n감사합니다."
+        )
+        #expect(event.webLink != nil)
+        #expect(event.webLink?.displayHost == "notion.so")
+        #expect(event.webLink?.url.absoluteString.contains("notion.so/my-team-workspace") == true)
+    }
+
+    @Test("본문 내 화상회의 링크와 일반 참고 링크 공존 시 분리 검증")
+    func testMeetingAndWebLinkCoexistence() {
+        let notesText = """
+        팀 주간 회의입니다.
+        화상 회의 참가: https://meet.google.com/abc-defg-hij
+        참고 피그마: https://www.figma.com/file/abcdef/Design-System?node-id=0%3A1
+        """
+        let event = CalendarEvent(
+            id: "coexist-1",
+            rawTitle: "프로덕트 디자인 리뷰",
+            notes: notesText
+        )
+        // 1. 화상회의 버튼은 Google Meet으로 분리
+        #expect(event.meetingInfo != nil)
+        #expect(event.meetingInfo?.platform == .googleMeet)
+        #expect(event.meetingInfo?.url.host == "meet.google.com")
+
+        // 2. 웹 링크는 Figma로 분리 (www. 접두사 제거)
+        #expect(event.webLink != nil)
+        #expect(event.webLink?.displayHost == "figma.com")
+        #expect(event.webLink?.url.absoluteString.contains("figma.com/file/abcdef") == true)
+    }
+
+    @Test("엔터프라이즈 SafeLinks 래핑 URL의 실제 타깃 호스트 표시 및 원본 보존 검증")
+    func testEnterpriseSafeLinksWebLink() {
+        let safeUrl = URL(string: "https://nam01.safelinks.protection.outlook.com/?url=https%3A%2F%2Faws.amazon.com%2Fevents%2Fcloud-day&data=corp-safe-data")!
+        let event = CalendarEvent(
+            id: "safelinks-web-1",
+            rawTitle: "클라우드 데이 기조연설",
+            url: safeUrl
+        )
+        #expect(event.webLink != nil)
+        #expect(event.webLink?.displayHost == "aws.amazon.com")
+        #expect(event.webLink?.url == safeUrl)
+    }
+
+    @Test("구글 캘린더 시스템 자동 링크 필터링 검증")
+    func testSystemCalendarUrlExclusion() {
+        let event = CalendarEvent(
+            id: "system-url-1",
+            rawTitle: "사내 티타임",
+            notes: "캘린더 상세 정보 보기: https://calendar.google.com/calendar/event?eid=abcdef"
+        )
+        // calendar.google.com은 시스템 링크이므로 일반 웹 링크로 표출되지 않음
+        #expect(event.webLink == nil)
+    }
+
+    @Test("화상회의 링크만 URL 필드에 있는 경우 중복 제외 검증")
+    func testMeetingUrlDeduplication() {
+        let zoomUrl = URL(string: "https://zoom.us/j/987654321")!
+        let event = CalendarEvent(
+            id: "zoom-only-1",
+            rawTitle: "화상 인터뷰",
+            url: zoomUrl
+        )
+        #expect(event.meetingInfo != nil)
+        #expect(event.meetingInfo?.platform == .zoom)
+        // 하단 줌 버튼이 생기므로 상단 웹 링크로는 중복 노출되지 않음
+        #expect(event.webLink == nil)
+    }
+}
+
 
 
 
