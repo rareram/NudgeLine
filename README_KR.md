@@ -33,6 +33,11 @@
 NudgeLine은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 표시하는 macOS 유틸리티입니다.
 
 <p align="center">
+  <video src="https://github.com/rareram/NudgeLine/releases/download/v0.3.295/nudgeline_play_full.mp4" width="85%" controls></video><br>
+  <em>화면 테두리의 타임라인 선과 펫 인터랙션은 플레이어 우측 하단의 [전체화면] 아이콘으로 보시면 가장 선명합니다.</em>
+</p>
+
+<p align="center">
   <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="숨기 (꼬리 살랑)" alt="숨기 (꼬리 살랑)" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="숨기 (머리 빼꼼)" alt="숨기 (머리 빼꼼)" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="사라지기 (퐁!)" alt="사라지기 (퐁!)" style="margin: 0 18px;" /><br>
@@ -45,8 +50,9 @@ NudgeLine은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 �
 - **타임라인 표시**: 배경 트랙, 이벤트 구분선, 4종 인디케이터 지원
 - **일정 중복 처리**: 동시간대 중복 일정 간 색상 교차 전환
 - **마스코트 펫**: 마우스 접근 시 회피 동작을 지원하는 펫 3종 및 커스텀 펫 등록
-- **화상회의 링크 연동**: 10개 화상회의 플랫폼(Google Meet, Zoom, MS Teams, Webex 등) 1클릭 입장 및 미검증 링크 안내
+- **화상회의 및 지도 연동**: 10개 화상회의 플랫폼 1클릭 입장, 사내 보안 링크(SafeLinks 등) 원본 자동 복원, 4대 지도 바로가기
 - **화면 공유 및 전체 화면 대응**: 화면 공유/녹화 시 자동 숨김 및 전체 화면 전환 시 간섭 배제
+- **원클릭 인앱 업데이트**: 초기 설치 후 메뉴바에서 최신 버전 자동 감지 및 무중단 인앱 갱신
 - **순정 프레임워크 구현**: 외부 라이브러리 없이 SwiftUI, AppKit, EventKit으로 구현
 
 ---
@@ -65,7 +71,7 @@ brew install rareram/tap/nudgeline
 
 ### 2. DMG 파일 직접 다운로드
 
-1. [GitHub Releases](https://github.com/rareram/NudgeLine/releases)에서 `NudgeLine.dmg`를 다운로드하여 설치합니다.
+1. [GitHub Releases](https://github.com/rareram/NudgeLine/releases)에서 `NudgeLine.dmg`를 다운로드하여 설치합니다. (이후 최신 버전은 상단 메뉴바의 [새 버전 업데이트] 항목에서 원클릭 인앱 업데이트를 지원합니다.)
 2. **보안 확인 메시지 발생 시 (최초 1회)**:
    - 개발자 인증서 미포함 오픈소스 앱이므로 최초 실행 시 확인 메시지가 표시될 수 있습니다.
    - **해결 방법**: `NudgeLine.app`을 **우클릭(Control+클릭) > [열기]**를 선택하거나, 터미널에서 다음 명령어를 실행합니다:
@@ -107,13 +113,14 @@ brew install rareram/tap/nudgeline
 - **커스텀 펫 편집기**: PNG 프레임 등록, 속도(FPS), 좌/우 숨김 오프셋 설정 및 미리보기 지원
 
 ### 5. 팝오버 카드
-- **상세 액션 카드**: 일정 상세 정보, 화상회의 입장 버튼, 미검증 링크 안내, 캘린더 앱 열기
+- **상세 액션 카드**: 일정 상세 정보, 화상회의 입장 버튼(MS Defender SafeLinks 및 Google Redirect 원본 복원 지원), 등록 장소 4대 지도(Apple/Google/네이버/카카오) 바로가기, 캘린더 앱 열기
 - **심플 툴팁**: 제목과 시간 중심의 간결한 툴팁
 - **카드 테마**: 시스템 설정 연동(Adaptive), 다크, 라이트 테마 지원 (라이트 모드 배경에 맞춘 버튼/링크 명암 보정 적용)
 - **종일 일정 표시**: 시간 지정 일정과 함께 당일 종일 일정 표시
 - **빈 바 호버 안내**: 일정이 없는 구간 호버 시 일정 상태 안내 툴팁 표시
 
-### 6. 단축어(Shortcuts) 및 Siri 연동
+### 6. 메뉴바 및 단축어(Shortcuts) 연동
+- **즉시 새로 고침**: 타임라인 우클릭 메뉴 또는 상단 메뉴바의 [새로 고침]으로 오늘 캘린더 즉시 재동기화
 - **AppIntents 지원**:
   - `NudgeLine 새로고침`: 오늘 일정 즉시 재동기화
   - `NudgeLine 펫 토글`: 타임라인 펫 마스코트 표시/숨김 전환

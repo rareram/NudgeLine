@@ -60,6 +60,14 @@ struct LocalizationTests {
         #expect(L10n.tr(.outOfRangeSingleCard("21:00", "Meeting"), lang: .en) == "1 event outside range (21:00 Meeting)")
         #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .ko) == "범위 외 2건 (21:00)")
         #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .en) == "Outside range: 2 (21:00)")
+
+        // 인앱 업데이트 및 지도 서비스 다국어 키
+        #expect(L10n.tr(.updateNowInApp, lang: .ko) == "지금 업데이트")
+        #expect(L10n.tr(.updateNowInApp, lang: .en) == "Update Now")
+        #expect(L10n.tr(.installingAndRestarting, lang: .ko) == "업데이트 설치 및 재시작 중...")
+        #expect(L10n.tr(.installingAndRestarting, lang: .en) == "Installing update & restarting...")
+        #expect(L10n.tr(.preferredMapServiceLabel, lang: .ko) == "지도 서비스:")
+        #expect(L10n.tr(.preferredMapServiceLabel, lang: .en) == "Map Service:")
     }
 }
 
@@ -135,19 +143,14 @@ struct VersionComparisonTests {
     func testIsNewerVersion() {
         // 더 높은 마이너 버전
         #expect(UpdateService.isNewerVersion(latest: "0.4", current: "0.3", currentBuild: "275") == true)
-        #expect(AppDelegate.isNewerVersion(latest: "0.4", current: "0.3", currentBuild: "275") == true)
         // 동일 버전 동일 빌드
         #expect(UpdateService.isNewerVersion(latest: "0.3", current: "0.3", currentBuild: "275") == false)
-        #expect(AppDelegate.isNewerVersion(latest: "0.3", current: "0.3", currentBuild: "275") == false)
         // 동일 메이저/마이너지만 더 높은 패치/빌드
         #expect(UpdateService.isNewerVersion(latest: "0.3.276", current: "0.3", currentBuild: "275") == true)
-        #expect(AppDelegate.isNewerVersion(latest: "0.3.276", current: "0.3", currentBuild: "275") == true)
         // 이전 버전
         #expect(UpdateService.isNewerVersion(latest: "0.2.9", current: "0.3", currentBuild: "275") == false)
-        #expect(AppDelegate.isNewerVersion(latest: "0.2.9", current: "0.3", currentBuild: "275") == false)
         // 더 높은 메이저 버전
         #expect(UpdateService.isNewerVersion(latest: "1.0.0", current: "0.3", currentBuild: "275") == true)
-        #expect(AppDelegate.isNewerVersion(latest: "1.0.0", current: "0.3", currentBuild: "275") == true)
     }
 
     @Test("ReleaseInfo ZIP Asset 식별 검증")
@@ -258,6 +261,8 @@ struct MeetingIntegrationAndInactiveEventTests {
     func testPreferredMapServiceURLs() {
         // 0. 케이스 순서 검증: Apple, Google, 네이버, 카카오
         #expect(PreferredMapService.allCases == [.apple, .google, .naver, .kakao])
+        #expect(PreferredMapService.availableCases(for: .ko) == [.apple, .google, .naver, .kakao])
+        #expect(PreferredMapService.availableCases(for: .en) == [.apple, .google])
 
         let location = "서울특별시 강남구 테헤란로 152"
 

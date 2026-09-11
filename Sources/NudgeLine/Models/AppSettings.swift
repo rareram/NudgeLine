@@ -188,6 +188,14 @@ public enum PreferredMapService: String, Codable, CaseIterable, Identifiable, Se
 
     public var id: String { rawValue }
 
+    public static func availableCases(for language: AppLanguage) -> [PreferredMapService] {
+        if language.isKorean {
+            return [.apple, .google, .naver, .kakao]
+        } else {
+            return [.apple, .google]
+        }
+    }
+
     public func title(lang: AppLanguage = .system) -> String {
         switch self {
         case .apple:  return L10n.tr(.mapServiceApple, lang: lang)
@@ -267,11 +275,24 @@ public final class AppSettings: ObservableObject {
 
     // MARK: 2-2. 관찰 가능한 상태 프로퍼티 (@Published)
     @Published public var language: AppLanguage {
-        didSet { defaults.set(language.rawValue, forKey: Keys.language) }
+        didSet {
+            defaults.set(language.rawValue, forKey: Keys.language)
+            // 비한국어 환경으로 전환 시 한국 전용 지도 서비스가 선택되어 있으면 Apple 지도로 자동 정규화
+            if !language.isKorean && (preferredMapService == .naver || preferredMapService == .kakao) {
+                preferredMapService = .apple
+            }
+        }
     }
 
     @Published public var preferredMapService: PreferredMapService {
         didSet { defaults.set(preferredMapService.rawValue, forKey: Keys.preferredMapService) }
+    }
+
+    public var effectivePreferredMapService: PreferredMapService {
+        if !language.isKorean && (preferredMapService == .naver || preferredMapService == .kakao) {
+            return .apple
+        }
+        return preferredMapService
     }
 
     @Published public var eventHoverStyle: EventHoverStyle {
@@ -434,10 +455,16 @@ public final class AppSettings: ObservableObject {
     // MARK: 2-3. 초기화 (UserDefaults 영속 데이터 로드 및 마이그레이션)
     private init() {
         let savedLang = defaults.string(forKey: Keys.language) ?? AppLanguage.system.rawValue
-        self.language = AppLanguage(rawValue: savedLang) ?? .system
+        let resolvedLang = AppLanguage(rawValue: savedLang) ?? .system
+        self.language = resolvedLang
 
         let savedMapService = defaults.string(forKey: Keys.preferredMapService) ?? PreferredMapService.apple.rawValue
-        self.preferredMapService = PreferredMapService(rawValue: savedMapService) ?? .apple
+        let loadedMapService = PreferredMapService(rawValue: savedMapService) ?? .apple
+        if !resolvedLang.isKorean && (loadedMapService == .naver || loadedMapService == .kakao) {
+            self.preferredMapService = .apple
+        } else {
+            self.preferredMapService = loadedMapService
+        }
 
         let savedHoverStyle = defaults.string(forKey: Keys.eventHoverStyle) ?? EventHoverStyle.card.rawValue
         self.eventHoverStyle = EventHoverStyle(rawValue: savedHoverStyle) ?? .card

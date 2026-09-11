@@ -8,7 +8,6 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
     public static let repoURL = URL(string: "https://github.com/rareram/NudgeLine")!
     public static let releasesURL = URL(string: "https://github.com/rareram/NudgeLine/releases")!
     public static let latestReleaseAPI = URL(string: "https://api.github.com/repos/rareram/NudgeLine/releases/latest")!
-    public static let appStoreURL: URL? = URL(string: "macappstore://showUpdatesPage")
 
     public enum UpdateState: Equatable, Sendable {
         case idle

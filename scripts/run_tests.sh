@@ -9,8 +9,17 @@ echo "=== NudgeLine 단위 테스트(Unit Tests) 실행 ==="
 TEST_ARGS=()
 if [[ ! -d "/Applications/Xcode.app" ]]; then
     TEST_ARGS+=(--build-system native)
-    if [[ -z "${SDKROOT:-}" && -d "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk" ]]; then
-        export SDKROOT="/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
+    if [[ -z "${SDKROOT:-}" ]]; then
+        if [[ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk" ]]; then
+            export SDKROOT="/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
+        elif [[ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk" ]]; then
+            export SDKROOT="/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk"
+        else
+            DETECTED_SDK="$(xcrun --show-sdk-path 2>/dev/null || true)"
+            if [[ -n "${DETECTED_SDK}" && -d "${DETECTED_SDK}" ]]; then
+                export SDKROOT="${DETECTED_SDK}"
+            fi
+        fi
     fi
     CLT_FRAMEWORKS="/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
     CLT_USRLIB="/Library/Developer/CommandLineTools/Library/Developer/usr/lib"

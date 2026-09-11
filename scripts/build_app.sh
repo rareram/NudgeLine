@@ -22,8 +22,17 @@ fi
 BUILD_SYSTEM_ARGS=()
 if [[ ! -d "/Applications/Xcode.app" ]]; then
     BUILD_SYSTEM_ARGS+=(--build-system native)
-    if [[ -z "${SDKROOT:-}" && -d "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk" ]]; then
-        export SDKROOT="/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
+    if [[ -z "${SDKROOT:-}" ]]; then
+        if [[ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk" ]]; then
+            export SDKROOT="/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
+        elif [[ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk" ]]; then
+            export SDKROOT="/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk"
+        else
+            DETECTED_SDK="$(xcrun --show-sdk-path 2>/dev/null || true)"
+            if [[ -n "${DETECTED_SDK}" && -d "${DETECTED_SDK}" ]]; then
+                export SDKROOT="${DETECTED_SDK}"
+            fi
+        fi
     fi
 fi
 

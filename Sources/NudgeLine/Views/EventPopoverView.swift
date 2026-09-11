@@ -200,7 +200,7 @@ public struct EventPopoverView: View {
                 } else {
                     // 물리적 주소/위치: 설정된 지도 서비스로 검색 연동
                     Button(action: {
-                        if let url = settings.preferredMapService.url(for: loc) {
+                        if let url = settings.effectivePreferredMapService.url(for: loc) {
                             NSWorkspace.shared.open(url)
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
                                 PopoverPanel.shared.hide(delayed: false)

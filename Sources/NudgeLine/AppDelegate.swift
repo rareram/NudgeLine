@@ -7,7 +7,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
     private var overlayPanels: [OverlayPanel] = []
     private var statusItem: NSStatusItem?
     private var cancellables = Set<AnyCancellable>()
-    private var availableUpdate: UpdateService.ReleaseInfo? = nil
 
     private let settings = AppSettings.shared
     private let calendarService = CalendarService.shared
@@ -84,10 +83,6 @@ extension AppDelegate {
         // 3. 업데이트 섹션
         if case .remoteAvailable(let version, _, _) = UpdateService.shared.updateState {
             let updateTitle = L10n.tr(.newVersionAvailableMenu(version), lang: settings.language)
-            let updateItem = NSMenuItem(title: updateTitle, action: #selector(handleUpdateAction), keyEquivalent: "")
-            menu.addItem(updateItem)
-        } else if let update = availableUpdate {
-            let updateTitle = L10n.tr(.newVersionAvailableMenu(update.version), lang: settings.language)
             let updateItem = NSMenuItem(title: updateTitle, action: #selector(handleUpdateAction), keyEquivalent: "")
             menu.addItem(updateItem)
         } else {
@@ -196,28 +191,28 @@ extension AppDelegate {
 
     // 새 버전 릴리스 웹페이지 오픈 또는 인앱 다운로드 실행
     @objc public func handleUpdateAction() {
-        guard let release = availableUpdate else {
-            NSWorkspace.shared.open(UpdateService.releasesURL)
-            return
-        }
+        if case .remoteAvailable(let version, let url, let zipURL) = UpdateService.shared.updateState {
+            let release = UpdateService.ReleaseInfo(version: version, url: url, zipURL: zipURL)
+            if release.zipURL != nil {
+                let alert = NSAlert()
+                alert.messageText = "NudgeLine"
+                alert.informativeText = L10n.tr(.newVersionAvailable(release.version), lang: settings.language)
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: L10n.tr(.updateNowInApp, lang: settings.language))
+                alert.addButton(withTitle: L10n.tr(.viewRelease, lang: settings.language))
+                alert.addButton(withTitle: L10n.tr(.cancelButton, lang: settings.language))
 
-        if release.zipURL != nil {
-            let alert = NSAlert()
-            alert.messageText = "NudgeLine"
-            alert.informativeText = L10n.tr(.newVersionAvailable(release.version), lang: settings.language)
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: L10n.tr(.updateNowInApp, lang: settings.language))
-            alert.addButton(withTitle: L10n.tr(.viewRelease, lang: settings.language))
-            alert.addButton(withTitle: L10n.tr(.cancelButton, lang: settings.language))
-
-            let resp = alert.runModal()
-            if resp == .alertFirstButtonReturn {
-                UpdateService.shared.startInAppDownload(release: release)
-            } else if resp == .alertSecondButtonReturn {
+                let resp = alert.runModal()
+                if resp == .alertFirstButtonReturn {
+                    UpdateService.shared.startInAppDownload(release: release)
+                } else if resp == .alertSecondButtonReturn {
+                    NSWorkspace.shared.open(release.url)
+                }
+            } else {
                 NSWorkspace.shared.open(release.url)
             }
         } else {
-            NSWorkspace.shared.open(release.url)
+            NSWorkspace.shared.open(UpdateService.releasesURL)
         }
     }
 
@@ -231,7 +226,6 @@ extension AppDelegate {
             switch result {
             case .success(let release):
                 if UpdateService.isNewerVersion(latest: release.version, current: appVersion, currentBuild: buildNumber) {
-                    self.availableUpdate = release
                     self.setupStatusItem()
                     self.handleUpdateAction()
                 } else {
@@ -273,13 +267,8 @@ extension AppDelegate {
         UpdateService.shared.fetchLatestRelease { [weak self] result in
             guard let self = self, case .success(let release) = result else { return }
             if UpdateService.isNewerVersion(latest: release.version, current: appVersion, currentBuild: buildNumber) {
-                self.availableUpdate = release
                 self.setupStatusItem()
             }
         }
-    }
-
-    public static func isNewerVersion(latest: String, current: String, currentBuild: String) -> Bool {
-        UpdateService.isNewerVersion(latest: latest, current: current, currentBuild: currentBuild)
     }
 }

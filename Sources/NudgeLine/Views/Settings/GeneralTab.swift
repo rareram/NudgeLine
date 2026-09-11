@@ -80,7 +80,7 @@ struct GeneralTab: View {
                     LabeledContent {
                         HStack {
                             Picker("", selection: $settings.preferredMapService) {
-                                ForEach(PreferredMapService.allCases) { service in
+                                ForEach(PreferredMapService.availableCases(for: settings.language)) { service in
                                     Text(service.title(lang: settings.language)).tag(service)
                                 }
                             }

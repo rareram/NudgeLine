@@ -33,6 +33,11 @@
 NudgeLine displays your daily schedule as a thin bar along the edge of your screen (Left, Right, or Bottom).
 
 <p align="center">
+  <video src="https://github.com/rareram/NudgeLine/releases/download/v0.3.295/nudgeline_play_full.mp4" width="85%" controls></video><br>
+  <em>Use the fullscreen icon in the player bottom-right for the sharpest view of the timeline bar and mascot interactions.</em>
+</p>
+
+<p align="center">
   <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="Hide - Tail Wag" alt="Hide - Tail Wag" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="Hide - Head Peek" alt="Hide - Head Peek" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="Disappear - Pop" alt="Disappear - Pop" style="margin: 0 18px;" /><br>
@@ -45,8 +50,9 @@ Key Features:
 - **Timeline Bar**: Background track, event boundary lines, and 4 indicator styles.
 - **Overlapping Events**: Alternating color transitions for concurrent events.
 - **Mascots**: 3 built-in animated pets with 6 hide motions, and custom pet support.
-- **Meeting Links**: 1-click launch for 10 meeting platforms (Google Meet, Zoom, MS Teams, Webex, etc.) and unverified link notices.
+- **Meeting & Map Integration**: 1-click launch for 10 meeting platforms, automatic unwrapping of corporate SafeLinks/Redirects, and preferred map shortcuts (Apple, Google, Naver, Kakao).
 - **Privacy**: Option to hide the bar during screen sharing/recording or in full-screen spaces.
+- **One-Click In-App Update**: Automatic update notifications and seamless in-app download/relaunch from the menu bar.
 - **Native Implementation**: Built with SwiftUI, AppKit, and EventKit with no external dependencies.
 
 ---
@@ -63,7 +69,7 @@ brew install rareram/tap/nudgeline
 
 ### 2. Direct Download (.dmg)
 
-1. Download `NudgeLine.dmg` from [GitHub Releases](https://github.com/rareram/NudgeLine/releases) and move `NudgeLine.app` to `/Applications`.
+1. Download `NudgeLine.dmg` from [GitHub Releases](https://github.com/rareram/NudgeLine/releases) and move `NudgeLine.app` to `/Applications`. Subsequent updates can be installed with a single click via the menu bar.
 2. **Gatekeeper Notice (First launch only)**:
    - Since this is an unsigned open-source app, macOS may prompt a security confirmation on first open.
    - Right-click (Control + Click) `NudgeLine.app` > select **Open**, or run:
@@ -102,16 +108,17 @@ brew install rareram/tap/nudgeline
   - `vortex`: Rotates and disappears.
   - `squish`: Squishes and disappears.
   - `smoke`: Blurs and disappears.
-- **Custom Pets**: Import PNG frame sequences, adjust FPS, configure hide offsets with live preview.
+  - **Custom Pets**: Import PNG frame sequences, adjust FPS, configure hide offsets with live preview.
 
 ### 5. Event Popovers
-- **Action Card**: Schedule details, meeting join button, unverified link notice, and Apple Calendar shortcut.
+- **Action Card**: Schedule details, 1-click meeting join (supports unwrapping MS SafeLinks & Google Redirects), preferred map shortcuts (Apple, Google, Naver, Kakao), and Apple Calendar shortcut.
 - **Simple Tooltip**: Compact tooltip showing title and time.
 - **Card Themes**: Supports System Adaptive, Dark, and Light themes with contrast adjustment for buttons and links on light backgrounds.
 - **All-day Events**: Displays all-day events alongside timed schedules in popovers.
 - **Empty Track Guidance**: Displays a status tooltip when hovering over empty timeline gaps.
 
-### 6. Shortcuts & Siri
+### 6. Shortcuts & Menu Controls
+- **Instant Refresh**: Re-fetch today's calendar events via the timeline bar context menu or menu bar [Refresh] item.
 - **AppIntents Integration**:
   - `Refresh Schedule` / `NudgeLine 새로고침`: Refetch today's calendar events.
   - `Toggle Pet` / `NudgeLine 펫 토글`: Toggle pet visibility on the timeline bar.

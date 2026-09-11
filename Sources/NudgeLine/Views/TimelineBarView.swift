@@ -17,7 +17,8 @@ public struct TimelineBarView: View {
     @State private var activeEffectId: UUID = UUID()
     @State private var lastTriggeredEventKey: String? = nil
     @State private var lastTriggeredHourlyHour: Int = -1
-    @State private var lastTriggeredDate: Date? = nil
+    @State private var lastTriggeredEventDate: Date? = nil
+    @State private var lastTriggeredHourlyDate: Date? = nil
     @State private var pulsingSegmentId: String? = nil
     @State private var lastTriggeredPreAlertEventKey: String? = nil
 
@@ -304,6 +305,11 @@ public struct TimelineBarView: View {
     private func checkEventContactEffect(at time: Date) {
         guard settings.enableEventTriggerEffect, activeEffectType == nil else { return }
 
+        // 현재 시각이 타임라인 표시 범위 내에 있을 때만 이펙트를 트리거합니다 (인디케이터 미렌더 시 고착 방지).
+        let dayStart = settings.startDate(for: time)
+        let dayEnd = settings.endDate(for: time)
+        guard time >= dayStart && time <= dayEnd else { return }
+
         let calendar = Calendar.current
         let currentHour = calendar.component(.hour, from: time)
         let minute = calendar.component(.minute, from: time)
@@ -315,14 +321,13 @@ public struct TimelineBarView: View {
             if diff <= 2.5 {
                 let eventKey = "\(event.id)_\(Int(event.startDate.timeIntervalSince1970))"
                 if lastTriggeredEventKey != eventKey {
-                    let isCoolingDown = lastTriggeredDate.map { time.timeIntervalSince($0) < 180 } ?? false
+                    let isCoolingDown = lastTriggeredEventDate.map { time.timeIntervalSince($0) < 180 } ?? false
                     guard !isCoolingDown else { continue }
 
                     lastTriggeredEventKey = eventKey
-                    lastTriggeredDate = time
-                    lastTriggeredHourlyHour = currentHour // 정각 중복 발동 억제
-                    activeEffectId = UUID()
-                    activeEffectType = settings.eventTriggerEffectType
+                    lastTriggeredEventDate = time
+                    lastTriggeredHourlyHour = currentHour // 정각 접점 알림 발동 시 해당 시간 정각 차임 중복 억제
+                    triggerActiveEffect(settings.eventTriggerEffectType)
                     return
                 }
             }
@@ -331,14 +336,25 @@ public struct TimelineBarView: View {
         // 2. 매시간 정각 알림 (00분 00초 ~ 04초 윈도우 보장)
         if settings.enableHourlyAlertEffect && minute == 0 && second <= 4 {
             if lastTriggeredHourlyHour != currentHour {
-                let isCoolingDown = lastTriggeredDate.map { time.timeIntervalSince($0) < 180 } ?? false
+                let isCoolingDown = lastTriggeredHourlyDate.map { time.timeIntervalSince($0) < 180 } ?? false
                 if !isCoolingDown {
                     lastTriggeredHourlyHour = currentHour
-                    lastTriggeredDate = time
-                    activeEffectId = UUID()
-                    activeEffectType = settings.eventTriggerEffectType
+                    lastTriggeredHourlyDate = time
+                    triggerActiveEffect(settings.eventTriggerEffectType)
                     return
                 }
+            }
+        }
+    }
+
+    private func triggerActiveEffect(_ type: EventTriggerEffectType) {
+        activeEffectId = UUID()
+        activeEffectType = type
+
+        // 안전 타이머: 뷰 라이프사이클(onComplete) 누락 시에도 1.5초 후 자동 복구 보장
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            if self.activeEffectType != nil {
+                self.activeEffectType = nil
             }
         }
     }
