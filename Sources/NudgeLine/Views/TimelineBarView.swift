@@ -66,23 +66,12 @@ public struct TimelineBarView: View {
 
                 // 2. 일정 세그먼트 렌더링
                 ForEach(segments) { segment in
-                    let segOffset = calculateTimeOffset(time: segment.start, dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
-                    let segEndOffset = calculateTimeOffset(time: segment.end, dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
-                    let segLength = max(1.0, round(segEndOffset - segOffset))
-
-                    SegmentBlockView(
+                    renderSegment(
                         segment: segment,
-                        settings: settings,
-                        hoveredFocusId: hoveredFocusId,
-                        length: segLength,
-                        isHorizontal: isHorizontal,
-                        currentTime: currentTime,
-                        isPulsing: pulsingSegmentId == segment.id,
-                        isDark: isDark
-                    )
-                    .offset(
-                        x: isHorizontal ? segOffset : 0,
-                        y: isHorizontal ? 0 : segOffset
+                        dayStart: dayStart,
+                        totalSec: totalSec,
+                        totalLength: totalLength,
+                        isHorizontal: isHorizontal
                     )
                 }
 
@@ -141,7 +130,6 @@ public struct TimelineBarView: View {
                     }
 
                     isBarHovered = true
-                    UpdateService.shared.checkDiskBundleUpdate()
                     let cursorCoord = isHorizontal ? location.x : location.y
 
                     // 현재 시각 인디케이터 인접 감지 (12px 이내)
@@ -170,20 +158,8 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else if calendarService.events.isEmpty {
-                        // 오늘 등록된 일정이 없을 때: 재시작 대기 중이면 업데이트 안내, 아니면 빈 상태 툴팁을 띄웁니다.
-                        if case .pendingRestart(let version) = UpdateService.shared.updateState {
-                            if hoveredActiveId != "__UPDATE_NOTICE__" {
-                                hoveredActiveId = "__UPDATE_NOTICE__"
-                                hoveredFocusId = nil
-                                PopoverPanel.shared.showUpdateNotice(
-                                    cursorOffset: cursorCoord,
-                                    version: version,
-                                    isHorizontal: isHorizontal,
-                                    barPosition: settings.barPosition,
-                                    settings: settings
-                                )
-                            }
-                        } else if hoveredActiveId != "__EMPTY_SCHEDULE_TOOLTIP__" {
+                        // 오늘 등록된 일정이 없을 때: 빈 상태 툴팁을 띄웁니다.
+                        if hoveredActiveId != "__EMPTY_SCHEDULE_TOOLTIP__" {
                             hoveredActiveId = "__EMPTY_SCHEDULE_TOOLTIP__"
                             hoveredFocusId = nil
                             PopoverPanel.shared.showEmptyScheduleTooltip(
@@ -217,26 +193,13 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else {
-                        // 마우스가 일정 블록 바깥에 있을 때는 종일 일정, 범위 외 일정, 또는 업데이트 대기 툴팁을 표시합니다.
+                        // 마우스가 일정 블록 바깥에 있을 때는 종일 일정 또는 범위 외 일정을 표시합니다.
                         let allDayEvents = calendarService.events.filter { $0.isAllDay }
                         let timedEvents = calendarService.events.filter { !$0.isAllDay }
                         let hasTimedEventsInRange = timedEvents.contains { $0.endDate > dayStart && $0.startDate < dayEnd }
                         let outOfRangeEvents = timedEvents.filter { $0.endDate <= dayStart || $0.startDate >= dayEnd }
 
-                        // 디스크에 새 버전이 설치되어 재시작 대기 중인 경우 업데이트 안내를 최우선 노출
-                        if case .pendingRestart(let version) = UpdateService.shared.updateState {
-                            if hoveredActiveId != "__UPDATE_NOTICE__" {
-                                hoveredActiveId = "__UPDATE_NOTICE__"
-                                hoveredFocusId = nil
-                                PopoverPanel.shared.showUpdateNotice(
-                                    cursorOffset: cursorCoord,
-                                    version: version,
-                                    isHorizontal: isHorizontal,
-                                    barPosition: settings.barPosition,
-                                    settings: settings
-                                )
-                            }
-                        } else if !allDayEvents.isEmpty || (!hasTimedEventsInRange && !outOfRangeEvents.isEmpty) {
+                        if !allDayEvents.isEmpty || (!hasTimedEventsInRange && !outOfRangeEvents.isEmpty) {
                             let clusterId = "__SCHEDULE_STATUS_TOOLTIP__" +
                                 allDayEvents.map(\.id).sorted().joined(separator: "_") +
                                 outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
@@ -520,6 +483,34 @@ public struct TimelineBarView: View {
         }
 
         return nil
+    }
+
+    @ViewBuilder
+    private func renderSegment(
+        segment: TimelineSegment,
+        dayStart: Date,
+        totalSec: TimeInterval,
+        totalLength: CGFloat,
+        isHorizontal: Bool
+    ) -> some View {
+        let segOffset = calculateTimeOffset(time: segment.start, dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
+        let segEndOffset = calculateTimeOffset(time: segment.end, dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
+        let segLength = max(1.0, round(segEndOffset - segOffset))
+
+        SegmentBlockView(
+            segment: segment,
+            settings: settings,
+            hoveredFocusId: hoveredFocusId,
+            length: segLength,
+            isHorizontal: isHorizontal,
+            currentTime: currentTime,
+            isPulsing: pulsingSegmentId == segment.id,
+            isDark: isDark
+        )
+        .offset(
+            x: isHorizontal ? segOffset : 0,
+            y: isHorizontal ? 0 : segOffset
+        )
     }
 
     @ViewBuilder

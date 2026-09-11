@@ -150,20 +150,22 @@ struct VersionComparisonTests {
         #expect(AppDelegate.isNewerVersion(latest: "1.0.0", current: "0.3", currentBuild: "275") == true)
     }
 
-    @Test("로컬 디스크 번들 교체(빌드/버전 상승) 판별 검증")
-    func testIsDiskNewer() {
-        // 동일 버전에서 디스크 빌드 번호가 더 높은 경우 (brew upgrade 일반 시나리오)
-        #expect(UpdateService.isDiskNewer(diskVersion: "0.3", diskBuild: "285", currentVersion: "0.3", currentBuild: "284") == true)
-        // 동일 버전 동일 빌드
-        #expect(UpdateService.isDiskNewer(diskVersion: "0.3", diskBuild: "284", currentVersion: "0.3", currentBuild: "284") == false)
-        // 디스크가 이전 빌드인 경우
-        #expect(UpdateService.isDiskNewer(diskVersion: "0.3", diskBuild: "283", currentVersion: "0.3", currentBuild: "284") == false)
-        // 디스크의 마이너 버전이 상승한 경우
-        #expect(UpdateService.isDiskNewer(diskVersion: "0.4", diskBuild: "1", currentVersion: "0.3", currentBuild: "284") == true)
-        // 디스크의 메이저 버전이 상승한 경우
-        #expect(UpdateService.isDiskNewer(diskVersion: "1.0", diskBuild: "1", currentVersion: "0.3", currentBuild: "284") == true)
-        // 디스크 버전이 이미 3단 시맨틱 태그(0.3.285)로 들어온 경우
-        #expect(UpdateService.isDiskNewer(diskVersion: "0.3.285", diskBuild: "", currentVersion: "0.3", currentBuild: "284") == true)
+    @Test("ReleaseInfo ZIP Asset 식별 검증")
+    func testReleaseInfoZipAsset() {
+        let releaseWithZip = UpdateService.ReleaseInfo(
+            version: "0.4.0",
+            url: URL(string: "https://github.com/rareram/NudgeLine/releases/tag/v0.4.0")!,
+            zipURL: URL(string: "https://github.com/rareram/NudgeLine/releases/download/v0.4.0/NudgeLine.zip")!
+        )
+        #expect(releaseWithZip.version == "0.4.0")
+        #expect(releaseWithZip.zipURL != nil)
+        #expect(releaseWithZip.zipURL?.pathExtension == "zip")
+
+        let releaseWithoutZip = UpdateService.ReleaseInfo(
+            version: "0.4.0",
+            url: URL(string: "https://github.com/rareram/NudgeLine/releases/tag/v0.4.0")!
+        )
+        #expect(releaseWithoutZip.zipURL == nil)
     }
 }
 

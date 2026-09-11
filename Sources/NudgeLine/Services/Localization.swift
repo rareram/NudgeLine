@@ -52,9 +52,10 @@ public struct L10n {
         case newVersionAvailableMenu(String)
         case checkUpdateFailed
         case viewRelease
-        case restartToApplyUpdate(String)
-        case newVersionReadyNotice(String)
-        case restartNow
+        case downloadingUpdate(String)
+        case installingAndRestarting
+        case updateNowInApp
+        case inAppUpdateFailed
 
         // 환경설정 4대 핵심 탭
         case tabTimeline
@@ -232,9 +233,10 @@ extension L10n.Key {
         case .newVersionAvailableMenu(let v): return "새 버전 업데이트 가능 (v\(v)) →"
         case .checkUpdateFailed: return "업데이트 확인 실패"
         case .viewRelease: return "릴리스 보기"
-        case .restartToApplyUpdate(let v): return "업데이트 적용을 위해 재시작 (v\(v))"
-        case .newVersionReadyNotice(let v): return "새 버전 v\(v) 설치됨"
-        case .restartNow: return "지금 재시작"
+        case .downloadingUpdate(let v): return "NudgeLine v\(v) 다운로드 중..."
+        case .installingAndRestarting: return "업데이트 설치 및 재시작 중..."
+        case .updateNowInApp: return "지금 업데이트"
+        case .inAppUpdateFailed: return "인앱 업데이트 실패"
 
         case .tabTimeline: return "타임라인"
         case .tabAppearance: return "표시 및 효과"
@@ -399,9 +401,10 @@ extension L10n.Key {
         case .newVersionAvailableMenu(let v): return "Update Available (v\(v)) →"
         case .checkUpdateFailed: return "Failed to check for updates"
         case .viewRelease: return "View Release"
-        case .restartToApplyUpdate(let v): return "Restart to Apply Update (v\(v))"
-        case .newVersionReadyNotice(let v): return "New version v\(v) ready"
-        case .restartNow: return "Restart Now"
+        case .downloadingUpdate(let v): return "Downloading NudgeLine v\(v)..."
+        case .installingAndRestarting: return "Installing update & restarting..."
+        case .updateNowInApp: return "Update Now"
+        case .inAppUpdateFailed: return "In-App Update Failed"
 
         case .tabTimeline: return "Timeline"
         case .tabAppearance: return "Appearance"

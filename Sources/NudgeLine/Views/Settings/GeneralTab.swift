@@ -159,7 +159,7 @@ enum UpdateCheckStatus: Equatable {
     case idle
     case checking
     case upToDate
-    case newVersion(String, URL)
+    case newVersion(UpdateService.ReleaseInfo)
     case failed
 }
 
@@ -190,13 +190,25 @@ extension GeneralTab {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-            case .newVersion(let version, let url):
-                HStack(spacing: 4) {
-                    Text(L10n.tr(.newVersionAvailable(version), lang: settings.language))
+            case .newVersion(let release):
+                HStack(spacing: 5) {
+                    Text(L10n.tr(.newVersionAvailable(release.version), lang: settings.language))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.primary)
-                    Link(L10n.tr(.viewRelease, lang: settings.language), destination: url)
-                        .font(.caption)
+
+                    if release.zipURL != nil {
+                        Button(action: {
+                            UpdateService.shared.startInAppDownload(release: release)
+                        }) {
+                            Text(L10n.tr(.updateNowInApp, lang: settings.language))
+                                .font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.mini)
+                    } else {
+                        Link(L10n.tr(.viewRelease, lang: settings.language), destination: release.url)
+                            .font(.caption)
+                    }
                 }
 
             case .failed:
@@ -218,7 +230,7 @@ extension GeneralTab {
             switch result {
             case .success(let release):
                 if UpdateService.isNewerVersion(latest: release.version, current: currentVersion, currentBuild: currentBuild) {
-                    self.updateStatus = .newVersion(release.version, release.url)
+                    self.updateStatus = .newVersion(release)
                 } else {
                     self.updateStatus = .upToDate
                 }
