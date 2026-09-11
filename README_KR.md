@@ -33,7 +33,7 @@
 NudgeLine은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 표시하는 macOS 유틸리티입니다.
 
 <p align="center">
-  <video src="https://github.com/rareram/NudgeLine/releases/download/v0.3.295/nudgeline_play_full.mp4" width="85%" controls></video><br>
+  <video src="https://github.com/user-attachments/assets/a3380d76-9313-4f39-83aa-e25fc015ea8e" width="85%" controls></video><br>
   <em>화면 테두리의 타임라인 선과 펫 인터랙션은 플레이어 우측 하단의 [전체화면] 아이콘으로 보시면 가장 선명합니다.</em>
 </p>
 
