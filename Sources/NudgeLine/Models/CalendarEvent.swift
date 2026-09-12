@@ -209,7 +209,11 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
 
     // 시스템 자동 생성 노이즈(Google Meet, Teams, Zoom 등)를 제외한 사용자 순수 메모
     public var displayNotes: String? {
-        guard let raw = notes, !raw.isEmpty else { return nil }
+        CalendarEvent.cleanNotes(from: notes)
+    }
+
+    public static func cleanNotes(from raw: String?) -> String? {
+        guard let raw = raw, !raw.isEmpty else { return nil }
         let lines = raw.components(separatedBy: .newlines)
         var filtered: [String] = []
 
@@ -219,13 +223,14 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
 
             // 1. Google Meet 시스템 마커 및 구분선
             if trimmed.contains("-::~") || trimmed.contains("::~-") { continue }
-            if trimmed.contains("Do not edit this section") { continue }
-            if trimmed.contains("This event has a video call") { continue }
+            if trimmed.contains("Do not edit this section") || trimmed.contains("이 섹션을 수정하지 마시기 바랍니다") { continue }
+            if trimmed.contains("This event has a video call") || trimmed.contains("이 일정에는 화상 통화가 있습니다") { continue }
 
-            // 2. Microsoft Teams 시스템 마커 및 구분선
+            // 2. Microsoft Teams 및 캘린더 애드온 시스템 마커
             if trimmed.hasPrefix("_____") || trimmed.contains("________________") { continue }
-            if trimmed.contains("Microsoft Teams") && (trimmed.contains("Need help") || trimmed.contains("Meeting ID")) { continue }
-            if trimmed.contains("Join the meeting now") { continue }
+            if trimmed.contains("Microsoft Teams") && (trimmed.contains("Need help") || trimmed.contains("Meeting ID") || trimmed.contains("참여")) { continue }
+            if trimmed.contains("Join the meeting now") || trimmed.contains("모임 옵션") || trimmed.contains("웹에서 참가") { continue }
+            if trimmed.contains("launchAgent=GSuiteAddOn") { continue }
 
             // 3. Zoom 시스템 마커
             if trimmed.contains("Join Zoom Meeting") || trimmed.contains("One tap mobile") || trimmed.contains("Dial by your location") { continue }
@@ -237,9 +242,11 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
             // 5. 화상회의 직접 접속 링크 라인 (이미 별도 버튼으로 표출됨)
             if trimmed.contains("meet.google.com") ||
                trimmed.contains("teams.microsoft.com") ||
+               trimmed.contains("teams.live.com") ||
                trimmed.contains("zoom.us") ||
                trimmed.contains("facetime.apple.com") ||
-               trimmed.contains("webex.com") {
+               trimmed.contains("webex.com") ||
+               (trimmed.contains("google.com/url?") && (trimmed.contains("teams.") || trimmed.contains("zoom."))) {
                 continue
             }
 
@@ -296,7 +303,7 @@ extension CalendarEvent {
         static let whereby = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*whereby\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
         static let chime = try? NSRegularExpression(pattern: #"https?://app\.chime\.aws/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
         static let genericMeeting = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]+/(?:meeting|join|call|conference|j|room|bridge)/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let anyUrl = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]+\.[a-zA-Z]{2,}[a-zA-Z0-9_.\-/?=&%]*"#, options: [.caseInsensitive])
+        static let anyUrl = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]+\.[a-zA-Z]{2,}[a-zA-Z0-9_.\-/?=&%:]*"#, options: [.caseInsensitive])
 
         // 기업 환경 URL 래퍼 (SafeLinks 및 Google 리디렉터)
         static let safeLinks = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.-]*safelinks\.protection\.outlook\.com/[^\s"'<>]+"#, options: [.caseInsensitive])
@@ -563,17 +570,23 @@ extension CalendarEvent {
             return true
         }
 
-        // 2. 캘린더 시스템 자동 첨부 및 관리 도메인은 제외 (구글/아웃룩 시스템 링크)
+        // 2. 캘린더 시스템 자동 첨부 및 관리 도메인은 제외 (구글/아웃룩 시스템 링크 및 미해결 리디렉터)
         if host == "calendar.google.com" || host.hasSuffix(".calendar.google.com") {
             return true
         }
-        if (host == "google.com" || host.hasSuffix(".google.com")) && target.path.hasPrefix("/calendar") {
+        if (host == "google.com" || host.hasSuffix(".google.com")) && (target.path.hasPrefix("/calendar") || target.path == "/url") {
             return true
         }
         if host == "outlook.office.com" || host == "outlook.live.com" {
             if target.path.contains("/calendar") {
                 return true
             }
+        }
+        if host == "dialin.teams.microsoft.com" ||
+           target.path.contains("meetingOptions") ||
+           target.path.contains("download") ||
+           target.path.contains("JoinTeamsMeeting") {
+            return true
         }
 
         // 3. 이미지 직접 링크 제외
@@ -599,7 +612,9 @@ extension CalendarEvent {
         }
 
         // 2순위: 본문 메모(notes)에서 첫 번째 유효한 외부 링크 추출 (구글 캘린더 등)
-        guard let notesText = notes, !notesText.isEmpty else { return nil }
+        // 시스템 보일러플레이트 노이즈가 제거된 사용자 순수 메모 영역에서만 링크를 탐색합니다.
+        let cleanText = cleanNotes(from: notes)
+        guard let notesText = cleanText, !notesText.isEmpty else { return nil }
         guard notesText.contains("http://") || notesText.contains("https://") else { return nil }
 
         // HTML 엔티티 복원

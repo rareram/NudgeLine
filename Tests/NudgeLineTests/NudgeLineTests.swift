@@ -475,6 +475,74 @@ struct NotesSanitizationTests {
         )
         #expect(event.displayNotes == nil)
     }
+
+    @Test("구글 캘린더 Teams 애드온 주입 시 회의 버튼 정상 감지 및 부가 링크와 안내문구 은폐 검증")
+    func testGoogleCalendarTeamsAddonNotes() {
+        let rawNotes = """
+        Microsoft Teams Meeting 참여
+        (https://teams.live.com/meet/9332192349757?p=2go8p171oCTqwlRYZQ&launchAgent=GSuiteAddOn&correlationId=a03e1a2b-7aac-4ceb-97c2-a803b10f38e9
+
+        https://www.google.com/url?q=https://teams.live.com/meetingOptions/meetings/9332192349757/view?localeCode%3Den-US&amp;sa=D&amp;source=calendar&amp;usg=AOvVaw206AkhYZrpX5FfK4OmsXkW
+
+        https://www.google.com/url?q=https://teams.live.com/meet/9332192349757?p%3D2go8p171oCTqwlRYZQ%26launchAgent%3DGSuiteAddOn%26correlationId%3Da03e1a2b-7aac-4ceb-97c2-a803b10f38e9&amp;sa=D&amp;source=calendar&amp;usg=AOvVaw0MGOGtT-NiZ1UZiHxl9lH2
+
+        " target="_blank">웹에서 참가</a><br />
+
+        이 섹션을 수정하지 마시기 바랍니다.)
+        """
+
+        let event = CalendarEvent(
+            id: "gsuite-teams-1",
+            rawTitle: "구글 캘린더 팀즈 회의",
+            notes: rawNotes
+        )
+
+        // 1. 화상회의 버튼은 정상적으로 Teams 플랫폼으로 감지되어야 함
+        #expect(event.meetingInfo != nil)
+        #expect(event.meetingInfo?.platform == .teams)
+        #expect(event.meetingInfo?.url.host == "teams.live.com")
+
+        // 2. 모임 옵션이나 리디렉션 링크가 엉뚱하게 웹 링크 버튼으로 생성되지 않아야 함
+        #expect(event.webLink == nil)
+
+        // 3. 사용자 메모가 없으므로 시스템 안내 문구가 모두 걸러져 displayNotes도 nil이어야 함
+        #expect(event.displayNotes == nil)
+    }
+
+    @Test("구글 캘린더 Teams 애드온과 사용자 메모 및 참고 링크 공존 시 정상 추출 검증")
+    func testGoogleCalendarTeamsAddonWithUserNotesAndLink() {
+        let rawNotes = """
+        프로젝트 킥오프 회의
+        참고 문서: https://notion.so/my-team/kickoff-doc
+
+        Microsoft Teams Meeting 참여
+        (https://teams.live.com/meet/9332192349757?p=2go8p171oCTqwlRYZQ&launchAgent=GSuiteAddOn&correlationId=a03e1a2b-7aac-4ceb-97c2-a803b10f38e9
+
+        https://www.google.com/url?q=https://teams.live.com/meetingOptions/meetings/9332192349757/view?localeCode%3Den-US&amp;sa=D&amp;source=calendar&amp;usg=AOvVaw206AkhYZrpX5FfK4OmsXkW
+
+        " target="_blank">웹에서 참가</a><br />
+
+        이 섹션을 수정하지 마시기 바랍니다.)
+        """
+
+        let event = CalendarEvent(
+            id: "gsuite-teams-coexist-1",
+            rawTitle: "프로젝트 킥오프",
+            notes: rawNotes
+        )
+
+        // 1. 화상회의 버튼은 Teams 정상 감지
+        #expect(event.meetingInfo?.platform == .teams)
+
+        // 2. 웹 링크는 노션 정상 추출 (Teams 부가 링크가 아닌 사용자 참고 링크)
+        #expect(event.webLink != nil)
+        #expect(event.webLink?.displayHost == "notion.so")
+
+        // 3. 본문 메모는 사용자 메모만 보존
+        #expect(event.displayNotes != nil)
+        #expect(event.displayNotes?.contains("프로젝트 킥오프 회의") == true)
+        #expect(event.displayNotes?.contains("이 섹션을 수정하지 마시기 바랍니다") == false)
+    }
 }
 
 
