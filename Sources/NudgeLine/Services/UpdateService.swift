@@ -57,6 +57,10 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
 
     // MARK: - 2. 인앱 원클릭 다운로드 및 자동 설치 파이프라인
     public func startInAppDownload(release: ReleaseInfo) {
+        #if APP_STORE
+        // App Store 환경에서는 시스템 App Store 또는 릴리스 페이지로 이동
+        NSWorkspace.shared.open(Self.releasesURL)
+        #else
         guard let zipURL = release.zipURL else {
             // ZIP 에셋이 없으면 브라우저로 릴리스 페이지 오픈 폴백
             NSWorkspace.shared.open(release.url)
@@ -73,6 +77,7 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         let task = session.downloadTask(with: zipURL)
         self.activeDownloadTask = task
         task.resume()
+        #endif
     }
 
     // 네이티브 진행률 플로팅 윈도우 표시
@@ -207,6 +212,7 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
     }
 
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        #if !APP_STORE
         let uniqueId = UUID().uuidString
         let tempZipURL = URL(fileURLWithPath: "/tmp/nudgeline_pkg_\(uniqueId).zip")
         let extractDir = URL(fileURLWithPath: "/tmp/nudgeline_extract_\(uniqueId)")
@@ -305,6 +311,7 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
                 }
             }
         }
+        #endif
     }
 
     public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {

@@ -40,11 +40,13 @@ struct GeneralTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    #if !APP_STORE
                     Text("·")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
 
                     updateCheckView(currentVersion: appVersion, currentBuild: buildNumber)
+                    #endif
                 }
 
                 Text(L10n.tr(.appDescription, lang: settings.language))
@@ -163,6 +165,7 @@ enum UpdateCheckStatus: Equatable {
     case failed
 }
 
+#if !APP_STORE
 extension GeneralTab {
     @ViewBuilder
     func updateCheckView(currentVersion: String, currentBuild: String) -> some View {
@@ -240,6 +243,7 @@ extension GeneralTab {
         }
     }
 }
+#endif
 
 private struct PawPrintItem: Identifiable {
     let id: Int

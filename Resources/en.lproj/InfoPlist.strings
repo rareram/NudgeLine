@@ -1,0 +1,5 @@
+/* Localized versions of Info.plist keys for English */
+"CFBundleDisplayName" = "NudgeLine";
+"CFBundleName" = "NudgeLine";
+"NSCalendarsFullAccessUsageDescription" = "NudgeLine needs calendar access to visualize today's schedule along your screen edges.";
+"NSCalendarsUsageDescription" = "NudgeLine needs calendar access to visualize today's schedule along your screen edges.";

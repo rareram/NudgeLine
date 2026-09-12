@@ -1,0 +1,5 @@
+/* Localized versions of Info.plist keys for Korean */
+"CFBundleDisplayName" = "NudgeLine";
+"CFBundleName" = "NudgeLine";
+"NSCalendarsFullAccessUsageDescription" = "화면 모서리에 오늘의 일정을 시각화하기 위해 캘린더 접근 권한이 필요합니다.";
+"NSCalendarsUsageDescription" = "화면 모서리에 오늘의 일정을 시각화하기 위해 캘린더 접근 권한이 필요합니다.";

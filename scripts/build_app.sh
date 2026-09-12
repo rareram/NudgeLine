@@ -43,11 +43,16 @@ cd "${ROOT_DIR}"
 CONFIGURATION="release"
 BUILD_UNIVERSAL=false
 IS_DEV=true
+IS_MAS=false
 
 for arg in "$@"; do
     case "${arg}" in
         --debug)
             CONFIGURATION="debug"
+            ;;
+        --mas|--appstore)
+            IS_MAS=true
+            IS_DEV=false
             ;;
         --universal|--release|--prod)
             IS_DEV=false
@@ -58,7 +63,12 @@ for arg in "$@"; do
     esac
 done
 
-if [[ "${IS_DEV}" == true ]]; then
+if [[ "${IS_MAS}" == true ]]; then
+    echo ">> [Mac App Store 모드] 샌드박스 배포 빌드 (NudgeLine, BUNDLE_ID: com.rareram.NudgeLine, APP_STORE=1)..."
+    SWIFT_FLAGS=(-Xswiftc -DAPP_STORE)
+    APP_NAME="NudgeLine"
+    BUNDLE_ID="com.rareram.NudgeLine"
+elif [[ "${IS_DEV}" == true ]]; then
     echo ">> [개발 모드] 로컬 개발 빌드 (NudgeLine (Dev), BUNDLE_ID: com.rareram.NudgeLine.dev)..."
     SWIFT_FLAGS=(-Xswiftc -DLOCAL_DEV)
     APP_NAME="NudgeLine (Dev)"
@@ -175,8 +185,21 @@ else
     fi
 fi
 
-echo ">> 4. Ad-hoc 코드 서명 적용..."
-codesign --force --deep -s - "${APP_DIR}"
+# 다국어 InfoPlist.strings 및 lproj 리소스 번들 복사
+for lproj in "${ROOT_DIR}/Resources/"*.lproj; do
+    if [[ -d "${lproj}" ]]; then
+        cp -R "${lproj}" "${RESOURCES_DIR}/"
+    fi
+done
+
+if [[ "${IS_MAS}" == true ]]; then
+    ENTITLEMENTS_FILE="${ROOT_DIR}/Resources/NudgeLine.entitlements"
+    echo ">> 4. Mac App Store 샌드박스 Ad-hoc 서명 적용 (${ENTITLEMENTS_FILE})..."
+    codesign --force --deep --entitlements "${ENTITLEMENTS_FILE}" -s - "${APP_DIR}"
+else
+    echo ">> 4. Ad-hoc 코드 서명 적용..."
+    codesign --force --deep -s - "${APP_DIR}"
+fi
 
 if [[ "${IS_DEV}" == true ]]; then
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "${APP_DIR}" 2>/dev/null || true

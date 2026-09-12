@@ -61,11 +61,15 @@ extension AppDelegate {
         } else {
             button.title = "NudgeLine"
         }
+        #if !APP_STORE
         if case .remoteAvailable(let version, _, _) = UpdateService.shared.updateState {
             button.toolTip = (settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine") + " - \(L10n.tr(.newVersionAvailable(version), lang: settings.language))"
         } else {
             button.toolTip = settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine"
         }
+        #else
+        button.toolTip = settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine"
+        #endif
 
         let menu = NSMenu()
         menu.delegate = self
@@ -78,6 +82,7 @@ extension AppDelegate {
         let refreshItem = NSMenuItem(title: L10n.tr(.refresh, lang: settings.language), action: #selector(refreshAction), keyEquivalent: "r")
         menu.addItem(refreshItem)
 
+        #if !APP_STORE
         menu.addItem(NSMenuItem.separator())
 
         // 3. 업데이트 섹션
@@ -90,6 +95,7 @@ extension AppDelegate {
             let checkUpdateItem = NSMenuItem(title: L10n.tr(.checkForUpdates, lang: settings.language), action: #selector(checkForUpdatesAction), keyEquivalent: "")
             menu.addItem(checkUpdateItem)
         }
+        #endif
 
         menu.addItem(NSMenuItem.separator())
 
@@ -149,6 +155,7 @@ extension AppDelegate {
             }
             .store(in: &cancellables)
 
+        #if !APP_STORE
         // 업데이트 상태 변경 시 메뉴바 상태 항목 실시간 갱신
         UpdateService.shared.$updateState
             .receive(on: DispatchQueue.main)
@@ -172,6 +179,7 @@ extension AppDelegate {
                 self?.checkLatestReleaseSilently()
             }
             .store(in: &cancellables)
+        #endif
     }
 }
 
@@ -189,6 +197,7 @@ extension AppDelegate {
         SettingsWindowController.shared.showSettings()
     }
 
+    #if !APP_STORE
     // 새 버전 릴리스 웹페이지 오픈 또는 인앱 다운로드 실행
     @objc public func handleUpdateAction() {
         if case .remoteAvailable(let version, let url, let zipURL) = UpdateService.shared.updateState {
@@ -247,6 +256,7 @@ extension AppDelegate {
             }
         }
     }
+    #endif
 
     // 앱을 종료하고 0.3초 뒤 새 프로세스로 다시 실행합니다.
     @objc public func restartApp() {
@@ -261,6 +271,7 @@ extension AppDelegate {
 // MARK: - 6. 백그라운드 릴리스 업데이트 검사
 extension AppDelegate {
     private func checkLatestReleaseSilently() {
+        #if !APP_STORE
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "60"
 
@@ -270,5 +281,6 @@ extension AppDelegate {
                 self.setupStatusItem()
             }
         }
+        #endif
     }
 }
