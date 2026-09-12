@@ -30,13 +30,6 @@ NudgeLine은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 �
   <video src="https://github.com/user-attachments/assets/63386ef2-a62a-44bb-a629-badb966f11a5" width="480" controls></video>
 </p>
 
-<p align="center">
-  <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="숨기 (꼬리 살랑)" alt="숨기 (꼬리 살랑)" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="숨기 (머리 빼꼼)" alt="숨기 (머리 빼꼼)" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="사라지기 (퐁!)" alt="사라지기 (퐁!)" style="margin: 0 18px;" /><br>
-  <em>마우스 커서 접근 시 베젤 뒤로 회피하거나 사라지는 동작을 지원합니다 (6종).</em>
-</p>
-
 주요 특징:
 
 - **마우스 패스스루**: 바 영역 외 클릭/스크롤이 통과되어 뒤쪽 창 조작 유지
@@ -47,6 +40,13 @@ NudgeLine은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 �
 - **화면 공유 및 전체 화면 대응**: 화면 공유/녹화 시 자동 숨김 및 전체 화면 전환 시 간섭 배제
 - **원클릭 인앱 업데이트**: 초기 설치 후 메뉴바에서 최신 버전 자동 감지 및 무중단 인앱 갱신
 - **순정 프레임워크 구현**: 외부 라이브러리 없이 SwiftUI, AppKit, EventKit으로 구현
+
+<p align="center">
+  <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="숨기 (꼬리 살랑)" alt="숨기 (꼬리 살랑)" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="숨기 (머리 빼꼼)" alt="숨기 (머리 빼꼼)" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="사라지기 (퐁!)" alt="사라지기 (퐁!)" style="margin: 0 18px;" /><br>
+  <em>마우스 커서 접근 시 베젤 뒤로 회피하거나 사라지는 동작을 지원합니다 (6종).</em>
+</p>
 
 ---
 

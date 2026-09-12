@@ -27,15 +27,7 @@
 NudgeLine displays your daily schedule as a thin bar along the edge of your screen (Left, Right, or Bottom).
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/a3380d76-9313-4f39-83aa-e25fc015ea8e" width="85%" controls></video><br>
-  <em>Use the fullscreen icon in the player bottom-right for the sharpest view of the timeline bar and mascot interactions.</em>
-</p>
-
-<p align="center">
-  <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="Hide - Tail Wag" alt="Hide - Tail Wag" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="Hide - Head Peek" alt="Hide - Head Peek" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="Disappear - Pop" alt="Disappear - Pop" style="margin: 0 18px;" /><br>
-  <em>Mascots hide behind the bezel or disappear upon cursor proximity (6 motions supported).</em>
+  <video src="https://github.com/user-attachments/assets/a3380d76-9313-4f39-83aa-e25fc015ea8e" width="85%" controls></video>
 </p>
 
 Key Features:
@@ -48,6 +40,13 @@ Key Features:
 - **Privacy**: Option to hide the bar during screen sharing/recording or in full-screen spaces.
 - **One-Click In-App Update**: Automatic update notifications and seamless in-app download/relaunch from the menu bar.
 - **Native Implementation**: Built with SwiftUI, AppKit, and EventKit with no external dependencies.
+
+<p align="center">
+  <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="Hide - Tail Wag" alt="Hide - Tail Wag" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="Hide - Head Peek" alt="Hide - Head Peek" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="Disappear - Pop" alt="Disappear - Pop" style="margin: 0 18px;" /><br>
+  <em>Mascots hide behind the bezel or disappear upon cursor proximity (6 motions supported).</em>
+</p>
 
 ---
 
