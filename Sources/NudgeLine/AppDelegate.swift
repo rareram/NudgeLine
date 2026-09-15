@@ -7,6 +7,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
     private var overlayPanels: [OverlayPanel] = []
     private var statusItem: NSStatusItem?
     private var cancellables = Set<AnyCancellable>()
+    private var globalMouseMonitor: Any?
+    private var localMouseMonitor: Any?
+    private var presentationCheckTimer: Timer?
 
     private let settings = AppSettings.shared
     private let calendarService = CalendarService.shared
@@ -19,6 +22,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
         setupStatusItem()
         setupOverlayPanels()
         observeDataChanges()
+
+        startGlobalMouseTracking()
+        startPresentationTracking()
+        scheduleBurstChecks()
 
         // 캘린더 접근 권한 확인 및 초기 1회 즉시 데이터 로드
         if calendarService.isAuthorized() {
@@ -33,6 +40,12 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
 
         // 앱을 처음 실행했을 때 사용자가 설정을 인지할 수 있도록 설정창을 한 번 열어줍니다.
         checkFirstLaunchAndOpenSettings()
+    }
+
+    public func applicationWillTerminate(_ notification: Notification) {
+        stopGlobalMouseTracking()
+        stopPresentationTracking()
+        overlayPanels.forEach { $0.cleanup() }
     }
 
     private func checkFirstLaunchAndOpenSettings() {
@@ -125,6 +138,10 @@ extension AppDelegate {
             panel.orderFrontRegardless()
             overlayPanels.append(panel)
         }
+
+        // 패널 생성 직후 마우스 호버 상태 및 전체화면 은폐 즉시 동기화
+        dispatchMouseMoved()
+        scheduleBurstChecks()
     }
 }
 
@@ -146,6 +163,51 @@ extension AppDelegate {
                 self?.setupOverlayPanels()
             }
             .store(in: &cancellables)
+
+        // 전체화면 은폐 옵션 변경 즉시 반영
+        settings.$hideOnFullScreen
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.scheduleBurstChecks()
+            }
+            .store(in: &cancellables)
+
+        // 스페이스 및 활성 앱 전환 시 전체화면 은폐 감지
+        let wsCenter = NSWorkspace.shared.notificationCenter
+        Publishers.Merge(
+            wsCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification),
+            wsCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in
+            self?.scheduleBurstChecks()
+        }
+        .store(in: &cancellables)
+
+        // 절전 진입 시 모니터링 중단으로 이벤트 소모 차단
+        Publishers.Merge(
+            wsCenter.publisher(for: NSWorkspace.willSleepNotification),
+            wsCenter.publisher(for: NSWorkspace.screensDidSleepNotification)
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in
+            self?.stopGlobalMouseTracking()
+            self?.stopPresentationTracking()
+        }
+        .store(in: &cancellables)
+
+        // 절전 해제 시 모니터링 복구 및 화면 상태 재검사
+        Publishers.Merge(
+            wsCenter.publisher(for: NSWorkspace.didWakeNotification),
+            wsCenter.publisher(for: NSWorkspace.screensDidWakeNotification)
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in
+            self?.startGlobalMouseTracking()
+            self?.startPresentationTracking()
+            self?.scheduleBurstChecks()
+        }
+        .store(in: &cancellables)
 
         // 다국어 설정 변경 시 메뉴 항목 재생성
         settings.$language
@@ -282,5 +344,87 @@ extension AppDelegate {
             }
         }
         #endif
+    }
+}
+
+// MARK: - 7. 중앙 마우스 트래킹 및 전체화면 감지
+extension AppDelegate {
+    // 전역 및 로컬 마우스 이벤트 감시 등록
+    private func startGlobalMouseTracking() {
+        stopGlobalMouseTracking()
+        let mask: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .leftMouseDown, .rightMouseDown]
+        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.dispatchMouseMoved()
+            }
+        }
+        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
+            self?.dispatchMouseMoved()
+            return event
+        }
+        dispatchMouseMoved()
+    }
+
+    // 마우스 이벤트 감시 해제
+    private func stopGlobalMouseTracking() {
+        if let monitor = globalMouseMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalMouseMonitor = nil
+        }
+        if let monitor = localMouseMonitor {
+            NSEvent.removeMonitor(monitor)
+            localMouseMonitor = nil
+        }
+    }
+
+    // 모든 패널에 현재 마우스 좌표 일괄 전송
+    private func dispatchMouseMoved() {
+        let mouseLoc = NSEvent.mouseLocation
+        for panel in overlayPanels {
+            panel.handleMouseMoved(at: mouseLoc)
+        }
+    }
+
+    // 5초 주기 전체화면 검사 타이머 가동
+    private func startPresentationTracking() {
+        stopPresentationTracking()
+        let timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            self?.checkFullScreenAcrossPanels()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        presentationCheckTimer = timer
+    }
+
+    // 전체화면 검사 타이머 해제
+    private func stopPresentationTracking() {
+        presentationCheckTimer?.invalidate()
+        presentationCheckTimer = nil
+    }
+
+    // 스페이스 및 앱 전환 시 즉각 반영 위한 버스트 검사
+    private func scheduleBurstChecks() {
+        checkFullScreenAcrossPanels()
+        let delays: [Double] = [0.1, 0.3, 0.5]
+        for delay in delays {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.checkFullScreenAcrossPanels()
+            }
+        }
+    }
+
+    // 시스템 윈도우 목록 1회 조회 후 각 패널 전체화면 여부 갱신
+    private func checkFullScreenAcrossPanels() {
+        let currentPid = NSRunningApplication.current.processIdentifier
+        guard settings.hideOnFullScreen else {
+            for panel in overlayPanels {
+                panel.updateFullScreenState(windowList: [], currentPid: currentPid)
+            }
+            return
+        }
+
+        let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        for panel in overlayPanels {
+            panel.updateFullScreenState(windowList: windowList, currentPid: currentPid)
+        }
     }
 }

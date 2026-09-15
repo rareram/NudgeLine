@@ -31,7 +31,12 @@ public final class CalendarService: ObservableObject {
     @Published public private(set) var authorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published public private(set) var events: [CalendarEvent] = []
     @Published public private(set) var sourceGroups: [CalendarSourceGroup] = []
-    @Published public var errorMessage: String? = nil
+    // @Published public var errorMessage: String? = nil
+
+    /// 연동된 전체 캘린더 목록 (편의 접근자)
+    public var allCalendars: [CalendarInfo] {
+        sourceGroups.flatMap(\.calendars)
+    }
 
     private init() {
         let initialStatus = EKEventStore.authorizationStatus(for: .event)
@@ -62,9 +67,9 @@ extension CalendarService {
     public func requestAccess() {
         eventStore.requestFullAccessToEvents { [weak self] granted, error in
             DispatchQueue.main.async {
-                if let error = error {
-                    self?.errorMessage = L10n.tr(.permissionRequestFailed(error.localizedDescription))
-                }
+                // if let error = error {
+                //     self?.errorMessage = L10n.tr(.permissionRequestFailed(error.localizedDescription))
+                // }
                 self?.checkAuthorizationStatus()
             }
         }

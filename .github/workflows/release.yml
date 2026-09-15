@@ -21,6 +21,17 @@ jobs:
         run: |
           swift --version
 
+      - name: Verify Tag and App Version Consistency
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          APP_VERSION=$(osascript -l JavaScript -e "JSON.parse($.NSString.stringWithContentsOfFileEncodingError('version.json', $.NSUTF8StringEncoding, null).js).version")
+          echo ">> Tag Version: ${TAG_VERSION}, version.json: ${APP_VERSION}"
+          if [[ "${TAG_VERSION}" != "${APP_VERSION}" ]]; then
+            echo "::error::Tag version (${TAG_VERSION}) does not match version.json (${APP_VERSION})! Update version.json before tagging."
+            exit 1
+          fi
+
       - name: Build Universal App (Apple Silicon + Intel)
         run: |
           chmod +x ./scripts/build_app.sh

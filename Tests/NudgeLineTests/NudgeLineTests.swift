@@ -7,7 +7,11 @@ import SwiftUI
 struct LocalizationTests {
     @Test("한/영 다국어 주요 키 번역 검증")
     func testLocalizationKeys() {
-        // 오늘 예정된 일정 없음 키
+        // 캘린더 미연동 및 오늘 예정된 일정 없음 키
+        #expect(L10n.tr(.noCalendars, lang: .ko) == "등록된 캘린더가 없습니다.")
+        #expect(L10n.tr(.noCalendars, lang: .en) == "No calendars found.")
+        #expect(L10n.tr(.noCalendarsWithSettings, lang: .ko) == "연동된 캘린더가 없습니다 (설정 ⌘,)")
+        #expect(L10n.tr(.noCalendarsWithSettings, lang: .en) == "No calendars connected (Settings ⌘,)")
         #expect(L10n.tr(.noEventsToday, lang: .ko) == "오늘 예정된 일정이 없습니다.")
         #expect(L10n.tr(.noEventsToday, lang: .en) == "No events scheduled for today.")
 
@@ -207,6 +211,15 @@ struct MeetingIntegrationAndInactiveEventTests {
         #expect(zoomEvent.meetingInfo != nil)
         #expect(zoomEvent.meetingInfo?.platform == .zoom)
         #expect(zoomEvent.meetingInfo?.url.host == "zoom.us")
+
+        // 4. 미인증 외부 링크의 .unverified 플랫폼 격리 검증
+        let unverifiedEvent = CalendarEvent(
+            id: "unverified-1",
+            rawTitle: "외부 참고 링크",
+            url: URL(string: "https://unknown-external-domain.com/portal/login")!
+        )
+        #expect(unverifiedEvent.meetingInfo != nil)
+        #expect(unverifiedEvent.meetingInfo?.platform == .unverified)
     }
 
     @Test("거절 및 취소 일정 모델 플래그 검증")

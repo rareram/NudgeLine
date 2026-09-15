@@ -31,6 +31,9 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
 
     // 인앱 다운로드 진행 상태 UI 컴포넌트
     private var activeDownloadTask: URLSessionDownloadTask?
+    private var activeTaskId: Int?
+    private var currentJobId: UUID?
+    private var isCancelled: Bool = false
     private var progressWindow: NSWindow?
     private var progressIndicator: NSProgressIndicator?
     private var statusLabel: NSTextField?
@@ -67,6 +70,16 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
             return
         }
 
+        // 기존 진행 중인 다운로드 작업 취소 및 신규 작업 식별자 발급
+        if let existing = activeDownloadTask {
+            existing.cancel()
+            activeDownloadTask = nil
+        }
+        activeTaskId = nil
+        let jobId = UUID()
+        self.currentJobId = jobId
+        self.isCancelled = false
+
         self.pendingRelease = release
         self.updateState = .downloading(version: release.version, progress: 0.0)
 
@@ -75,6 +88,7 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         let sessionConfig = URLSessionConfiguration.default
         let session = URLSession(configuration: sessionConfig, delegate: self, delegateQueue: OperationQueue.main)
         let task = session.downloadTask(with: zipURL)
+        self.activeTaskId = task.taskIdentifier
         self.activeDownloadTask = task
         task.resume()
         #endif
@@ -143,6 +157,9 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
     }
 
     @objc private func cancelDownload() {
+        isCancelled = true
+        currentJobId = nil
+        activeTaskId = nil
         activeDownloadTask?.cancel()
         activeDownloadTask = nil
         progressWindow?.close()
@@ -201,18 +218,26 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
 
     // MARK: - 4. URLSessionDownloadDelegate 이벤트 수신
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        guard totalBytesExpectedToWrite > 0 else { return }
+        guard downloadTask.taskIdentifier == activeTaskId, totalBytesExpectedToWrite > 0 else { return }
         let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
         let percent = Int(progress * 100)
 
         DispatchQueue.main.async { [weak self] in
-            self?.progressIndicator?.doubleValue = progress * 100.0
-            self?.percentLabel?.stringValue = "\(percent)%"
+            guard let self = self, !self.isCancelled, downloadTask.taskIdentifier == self.activeTaskId else { return }
+            self.progressIndicator?.doubleValue = progress * 100.0
+            self.percentLabel?.stringValue = "\(percent)%"
         }
     }
 
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         #if !APP_STORE
+        guard !isCancelled, let jobId = currentJobId, downloadTask.taskIdentifier == activeTaskId else {
+            try? FileManager.default.removeItem(at: location)
+            return
+        }
+
+        let targetJobId = jobId
+        let targetTaskId = downloadTask.taskIdentifier
         let uniqueId = UUID().uuidString
         let tempZipURL = URL(fileURLWithPath: "/tmp/nudgeline_pkg_\(uniqueId).zip")
         let extractDir = URL(fileURLWithPath: "/tmp/nudgeline_extract_\(uniqueId)")
@@ -234,14 +259,22 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         }
 
         DispatchQueue.main.async { [weak self] in
-            self?.statusLabel?.stringValue = L10n.tr(.installingAndRestarting)
-            self?.progressIndicator?.isIndeterminate = true
-            self?.progressIndicator?.startAnimation(nil)
-            self?.percentLabel?.stringValue = ""
+            guard let self = self, !self.isCancelled, self.currentJobId == targetJobId, self.activeTaskId == targetTaskId else {
+                try? FileManager.default.removeItem(at: tempZipURL)
+                return
+            }
+            self.statusLabel?.stringValue = L10n.tr(.installingAndRestarting)
+            self.progressIndicator?.isIndeterminate = true
+            self.progressIndicator?.startAnimation(nil)
+            self.percentLabel?.stringValue = ""
         }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
+            guard let self = self, !self.isCancelled, self.currentJobId == targetJobId, self.activeTaskId == targetTaskId else {
+                try? FileManager.default.removeItem(at: tempZipURL)
+                try? FileManager.default.removeItem(at: extractDir)
+                return
+            }
             do {
                 if FileManager.default.fileExists(atPath: extractDir.path) {
                     try FileManager.default.removeItem(at: extractDir)
@@ -259,12 +292,25 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
                     throw NSError(domain: "UpdateError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to extract package via ditto."])
                 }
 
-                // 압축 해제된 폴더 내 NudgeLine.app 또는 *.app 탐색
-                let contents = try FileManager.default.contentsOfDirectory(atPath: extractDir.path)
-                guard let appBundleName = contents.first(where: { $0.hasSuffix(".app") }) else {
-                    throw NSError(domain: "UpdateError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Extracted update is missing application bundle."])
+                // 압축 해제된 폴더 내 NudgeLine.app 패키지 무결성 검증
+                let extractedAppURL = extractDir.appendingPathComponent("NudgeLine.app")
+                guard FileManager.default.fileExists(atPath: extractedAppURL.path) else {
+                    throw NSError(domain: "UpdateError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Extracted update is missing NudgeLine.app bundle."])
                 }
-                let extractedAppURL = extractDir.appendingPathComponent(appBundleName)
+
+                // 번들 ID 및 실행 파일 유효성 검증
+                let infoPlistURL = extractedAppURL.appendingPathComponent("Contents/Info.plist")
+                guard let data = try? Data(contentsOf: infoPlistURL),
+                      let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
+                      let bundleId = plist["CFBundleIdentifier"] as? String,
+                      bundleId == "com.rareram.NudgeLine" || bundleId == "com.rareram.NudgeLine.dev" else {
+                    throw NSError(domain: "UpdateError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Invalid bundle identifier in update package."])
+                }
+
+                let execURL = extractedAppURL.appendingPathComponent("Contents/MacOS/NudgeLine")
+                guard FileManager.default.fileExists(atPath: execURL.path) else {
+                    throw NSError(domain: "UpdateError", code: 4, userInfo: [NSLocalizedDescriptionKey: "Extracted update is missing executable binary."])
+                }
 
                 // 타깃 설치 경로 확인
                 var targetAppPath = Bundle.main.bundleURL.path
@@ -272,27 +318,52 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
                     targetAppPath = "/Applications/NudgeLine.app"
                 }
 
-                // 백그라운드 교체 및 재실행 스크립트 실행
-                // 1) 0.6초 대기 (현재 프로세스 안전 종료)
-                // 2) 기존 앱 삭제 및 ditto로 새 앱 무손실 복사
-                // 3) xattr 격리 속성 해제 (Gatekeeper 경고 방지)
-                // 4) open 명령어로 새 앱 실행 및 임시 파일 정리
+                // 백업 보존 및 롤백 지원 백그라운드 교체 스크립트 (위치 인자 전달로 셸 주입 방어)
                 let shellScript = """
+                TARGET="$1"
+                SOURCE="$2"
+                EXTRACT="$3"
+                TEMPZIP="$4"
+                BACKUP="${TARGET}.old"
+
                 sleep 0.6
-                rm -rf "\(targetAppPath)"
-                /usr/bin/ditto "\(extractedAppURL.path)" "\(targetAppPath)"
-                /usr/bin/xattr -d -r com.apple.quarantine "\(targetAppPath)" 2>/dev/null || true
-                /usr/bin/open "\(targetAppPath)"
-                rm -rf "\(extractDir.path)" "\(tempZipURL.path)"
+
+                rm -rf "$BACKUP"
+                if [ -d "$TARGET" ]; then
+                    if ! mv "$TARGET" "$BACKUP"; then
+                        rm -rf "$EXTRACT" "$TEMPZIP"
+                        /usr/bin/open "$TARGET" 2>/dev/null || true
+                        exit 1
+                    fi
+                fi
+
+                if /usr/bin/ditto "$SOURCE" "$TARGET"; then
+                    rm -rf "$BACKUP"
+                    /usr/bin/xattr -d -r com.apple.quarantine "$TARGET" 2>/dev/null || true
+                    /usr/bin/open "$TARGET"
+                else
+                    if [ -d "$BACKUP" ]; then
+                        mv "$BACKUP" "$TARGET"
+                        /usr/bin/open "$TARGET"
+                    fi
+                fi
+
+                rm -rf "$EXTRACT" "$TEMPZIP"
                 """
 
                 DispatchQueue.main.async {
+                    guard !self.isCancelled, self.currentJobId == targetJobId, self.activeTaskId == targetTaskId else {
+                        try? FileManager.default.removeItem(at: tempZipURL)
+                        try? FileManager.default.removeItem(at: extractDir)
+                        return
+                    }
+
                     self.progressWindow?.close()
                     self.progressWindow = nil
 
                     let relaunchProcess = Process()
                     relaunchProcess.executableURL = URL(fileURLWithPath: "/bin/sh")
-                    relaunchProcess.arguments = ["-c", shellScript]
+                    relaunchProcess.arguments = ["-c", shellScript, "sh", targetAppPath, extractedAppURL.path, extractDir.path, tempZipURL.path]
 
                     do {
                         try relaunchProcess.run()
@@ -302,8 +373,6 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
                     }
                 }
             } catch {
-                try? FileManager.default.removeItem(at: tempZipURL)
-                try? FileManager.default.removeItem(at: extractDir)
                 DispatchQueue.main.async {
                     self.progressWindow?.close()
                     self.progressWindow = nil

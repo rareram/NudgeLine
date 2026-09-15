@@ -15,9 +15,6 @@ public final class OverlayPanel: NSPanel {
     private let settings: AppSettings
     public let panelState = OverlayPanelState()
     private var cancellables = Set<AnyCancellable>()
-    private var globalMouseMonitor: Any?
-    private var localMouseMonitor: Any?
-    private var presentationCheckTimer: Timer?
     private var isOccludedByFullScreen: Bool = false
     private var lastMouseLoc: NSPoint = .zero
 
@@ -51,27 +48,14 @@ public final class OverlayPanel: NSPanel {
 
         updateFrame()
         observeNotifications()
-        startMouseTracking()
-        startPresentationTracking()
-        scheduleBurstChecks()
     }
 
     deinit {
         cleanup()
     }
 
-    // 패널 파기 시 리소스 및 모니터/타이머 명시적 정리
+    // 패널 파기 시 리소스 명시적 정리
     public func cleanup() {
-        if let monitor = globalMouseMonitor {
-            NSEvent.removeMonitor(monitor)
-            globalMouseMonitor = nil
-        }
-        if let monitor = localMouseMonitor {
-            NSEvent.removeMonitor(monitor)
-            localMouseMonitor = nil
-        }
-        presentationCheckTimer?.invalidate()
-        presentationCheckTimer = nil
         cancellables.removeAll()
     }
 }
@@ -119,34 +103,8 @@ extension OverlayPanel {
 
 // MARK: - 4. 마우스 감지 및 클릭 통과 처리 (Mouse Proximity & Hit Testing)
 extension OverlayPanel {
-    // 마우스가 이동할 때만 좌표를 감지하여 불필요한 연산을 줄입니다.
-    private func startMouseTracking() {
-        if let monitor = globalMouseMonitor {
-            NSEvent.removeMonitor(monitor)
-            globalMouseMonitor = nil
-        }
-        if let monitor = localMouseMonitor {
-            NSEvent.removeMonitor(monitor)
-            localMouseMonitor = nil
-        }
-
-        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged]) { [weak self] _ in
-            DispatchQueue.main.async {
-                self?.checkMouseProximityAndHit()
-            }
-        }
-        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged]) { [weak self] event in
-            DispatchQueue.main.async {
-                self?.checkMouseProximityAndHit()
-            }
-            return event
-        }
-        // 기동 시 초기 1회 마우스 위치 검사
-        checkMouseProximityAndHit()
-    }
-
-    // 마우스 위치에 따라 타임라인 상호작용 또는 배경 클릭 통과를 결정합니다.
-    private func checkMouseProximityAndHit() {
+    // 마우스 위치 기반 바 호버 판정 및 펫 근접 숨김 연산
+    public func handleMouseMoved(at mouseLoc: NSPoint) {
         // 전체화면 상태일 때는 마우스 이벤트를 완전히 통과시킵니다.
         if isOccludedByFullScreen {
             if !self.ignoresMouseEvents {
@@ -155,7 +113,6 @@ extension OverlayPanel {
             return
         }
 
-        let mouseLoc = NSEvent.mouseLocation
         if mouseLoc == lastMouseLoc { return }
         lastMouseLoc = mouseLoc
         let panelRect = self.frame
@@ -277,83 +234,13 @@ extension OverlayPanel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] hide in
                 self?.collectionBehavior = hide ? [.canJoinAllSpaces, .stationary, .ignoresCycle] : [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-                self?.scheduleBurstChecks()
             }
             .store(in: &cancellables)
-
-        // 활성 앱 전환 및 스페이스 전환 시 즉시 버스트 재시도 검사 (애니메이션 완료 동기화)
-        let wsCenter = NSWorkspace.shared.notificationCenter
-        Publishers.Merge(
-            wsCenter.publisher(for: NSWorkspace.didActivateApplicationNotification),
-            wsCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] _ in
-            self?.scheduleBurstChecks()
-        }
-        .store(in: &cancellables)
-
-        // 절전 및 화면 꺼짐 시 마우스 모니터 및 프레젠테이션 감시 타이머 정지 (배터리 보존)
-        Publishers.Merge(
-            wsCenter.publisher(for: NSWorkspace.willSleepNotification),
-            wsCenter.publisher(for: NSWorkspace.screensDidSleepNotification)
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] _ in
-            if let monitor = self?.globalMouseMonitor {
-                NSEvent.removeMonitor(monitor)
-                self?.globalMouseMonitor = nil
-            }
-            if let monitor = self?.localMouseMonitor {
-                NSEvent.removeMonitor(monitor)
-                self?.localMouseMonitor = nil
-            }
-            self?.presentationCheckTimer?.invalidate()
-            self?.presentationCheckTimer = nil
-        }
-        .store(in: &cancellables)
-
-        // 깨어남 및 화면 켜짐 시 감시 재개
-        Publishers.Merge(
-            wsCenter.publisher(for: NSWorkspace.didWakeNotification),
-            wsCenter.publisher(for: NSWorkspace.screensDidWakeNotification)
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] _ in
-            self?.startMouseTracking()
-            self?.startPresentationTracking()
-            self?.scheduleBurstChecks()
-        }
-        .store(in: &cancellables)
     }
 }
 
 // MARK: - 6. 몰입형 전체화면 및 프레젠테이션 이중 감지 엔진 (Dual Full-Screen Detection)
 extension OverlayPanel {
-    // 스페이스 전환 애니메이션(300~400ms) 레이스 컨디션을 극복하는 버스트 재시도 검사
-    private func scheduleBurstChecks() {
-        self.checkFullScreenAndPresentation()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) { [weak self] in
-            self?.checkFullScreenAndPresentation()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { [weak self] in
-            self?.checkFullScreenAndPresentation()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.50) { [weak self] in
-            self?.checkFullScreenAndPresentation()
-        }
-    }
-
-    // 저주파(5.0초) 프레젠테이션/보더리스 전체화면 창 감시 루프 (App Nap 및 저전력 보존)
-    private func startPresentationTracking() {
-        presentationCheckTimer?.invalidate()
-        let timer = Timer(timeInterval: 5.0, repeats: true) { [weak self] _ in
-            self?.checkFullScreenAndPresentation()
-        }
-        RunLoop.main.add(timer, forMode: .default)
-        presentationCheckTimer = timer
-    }
-
     // AppKit 화면 좌표계를 CoreGraphics 전역 좌표계(Quartz, 좌상단 원점, Y축 하향)로 변환
     private var cgScreenBounds: CGRect {
         let primaryHeight = NSScreen.screens.first?.frame.height ?? targetScreen.frame.height
@@ -365,8 +252,8 @@ extension OverlayPanel {
         )
     }
 
-    // 듀얼 시그널 기반 몰입형 전체화면 및 프레젠테이션 실시간 감지
-    private func checkFullScreenAndPresentation() {
+    // 주입받은 시스템 윈도우 목록 기반 해당 모니터 전체화면 및 프레젠테이션 판정
+    public func updateFullScreenState(windowList: [[String: Any]], currentPid: pid_t) {
         guard settings.hideOnFullScreen else {
             if self.isOccludedByFullScreen {
                 self.isOccludedByFullScreen = false
@@ -378,12 +265,7 @@ extension OverlayPanel {
             return
         }
 
-        let currentPid = ProcessInfo.processInfo.processIdentifier
         let targetBounds = self.cgScreenBounds
-
-        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
-            return
-        }
 
         var onScreenCoveringApps = Set<String>()
         var hasFullScreenLayer = false

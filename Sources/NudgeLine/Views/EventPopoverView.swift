@@ -247,24 +247,26 @@ public struct EventPopoverView: View {
                             .stroke(Color.gray.opacity(isDarkTheme ? 0.35 : 0.25), lineWidth: 0.5)
                     )
                     .padding(.top, 3)
-                } else if meeting.platform == .unverified && event.webLink == nil {
-                    // 미검증 외부 링크: 피싱 방어를 위해 클릭을 차단하고 캘린더 앱 직접 확인 안내 배지로 표출
-                    HStack(spacing: 5) {
-                        Image(systemName: meeting.platform.iconName)
-                            .font(.system(size: 11, weight: .semibold))
-                        Text(L10n.tr(.unverifiedMeetingLink, lang: settings.language))
-                            .font(.system(size: 11, weight: .semibold))
+                } else if meeting.platform == .unverified {
+                    // 미검증 외부 링크: 참여 버튼 진입 차단 및 웹링크 미중복 시 정적 안내 배지 노출
+                    if event.webLink == nil || event.webLink?.url.absoluteString != meeting.url.absoluteString {
+                        HStack(spacing: 5) {
+                            Image(systemName: meeting.platform.iconName)
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(L10n.tr(.unverifiedMeetingLink, lang: settings.language))
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(buttonColor.opacity(isDarkTheme ? 0.24 : 0.14))
+                        .foregroundStyle(buttonColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(buttonColor.opacity(isDarkTheme ? 0.45 : 0.30), lineWidth: 0.5)
+                        )
+                        .padding(.top, 3)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 5)
-                    .background(buttonColor.opacity(isDarkTheme ? 0.24 : 0.14))
-                    .foregroundStyle(buttonColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(buttonColor.opacity(isDarkTheme ? 0.45 : 0.30), lineWidth: 0.5)
-                    )
-                    .padding(.top, 3)
                 } else {
                     // 공식 화상회의 플랫폼: 네이티브 데스크톱 앱 우선 실행 및 웹 폴백
                     Button(action: {

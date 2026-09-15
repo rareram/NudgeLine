@@ -267,6 +267,7 @@ extension GeneralTab {
         if logoClickCount >= 7 {
             logoClickCount = 0
             pawPrints = generatePawPrints()
+            NotificationCenter.default.post(name: .previewEventContactEffect, object: nil)
 
             withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
                 logoBounce = true

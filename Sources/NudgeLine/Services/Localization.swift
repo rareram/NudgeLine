@@ -90,6 +90,7 @@ public struct L10n {
         case permissionRequestFailed(String)
         case openSystemPrivacy
         case noCalendars
+        case noCalendarsWithSettings
         case noEventsToday
         case noEventsShort
         case allDayNotice(String)
@@ -274,6 +275,7 @@ extension L10n.Key {
         case .permissionRequestFailed(let err): return "캘린더 권한 요청 실패: \(err)"
         case .openSystemPrivacy: return "시스템 설정 열기"
         case .noCalendars: return "등록된 캘린더가 없습니다."
+        case .noCalendarsWithSettings: return "연동된 캘린더가 없습니다 (설정 ⌘,)"
         case .noEventsToday: return "오늘 예정된 일정이 없습니다."
         case .noEventsShort: return "일정 없음"
         case .allDayNotice(let title): return "하루 종일: \(title)"
@@ -442,6 +444,7 @@ extension L10n.Key {
         case .permissionRequestFailed(let err): return "Calendar permission request failed: \(err)"
         case .openSystemPrivacy: return "Open System Settings"
         case .noCalendars: return "No calendars found."
+        case .noCalendarsWithSettings: return "No calendars connected (Settings ⌘,)"
         case .noEventsToday: return "No events scheduled for today."
         case .noEventsShort: return "No events"
         case .allDayNotice(let title): return "All Day: \(title)"

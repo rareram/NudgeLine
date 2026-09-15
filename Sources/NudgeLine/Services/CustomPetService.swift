@@ -108,13 +108,13 @@ extension CustomPetService {
             }
         }
 
-        // 애니메이션 재생 중 디스크 읽기 지연을 방지하기 위해 백그라운드에서 프레임을 캐싱합니다.
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            for pet in loaded {
-                let isCached: Bool = self.cacheLock.withLock { self.imageCache[pet.id] != nil }
+        // 현재 선택된 커스텀 펫 프레임만 백그라운드에서 우선 워밍
+        if let selectedId = AppSettings.shared.selectedCustomPetId {
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                guard let self = self else { return }
+                let isCached: Bool = self.cacheLock.withLock { self.imageCache[selectedId] != nil }
                 if !isCached {
-                    _ = self.getFrames(for: pet.id)
+                    _ = self.getFrames(for: selectedId)
                 }
             }
         }
@@ -160,36 +160,42 @@ extension CustomPetService {
 
         let petId = UUID().uuidString
         let petDir = petsDirectoryURL.appendingPathComponent(petId)
-        try? fileManager.createDirectory(at: petDir, withIntermediateDirectories: true)
 
-        // 프레임 이미지 저장
-        for (index, img) in images.enumerated() {
-            let frameURL = petDir.appendingPathComponent(String(format: "frame_%03d.png", index))
-            if let tiff = img.tiffRepresentation,
-               let bitmap = NSBitmapImageRep(data: tiff),
-               let pngData = bitmap.representation(using: .png, properties: [:]) {
-                try? pngData.write(to: frameURL)
+        do {
+            try fileManager.createDirectory(at: petDir, withIntermediateDirectories: true)
+
+            // 프레임 이미지 저장 (실패 시 롤백)
+            for (index, img) in images.enumerated() {
+                let frameURL = petDir.appendingPathComponent(String(format: "frame_%03d.png", index))
+                guard let tiff = img.tiffRepresentation,
+                      let bitmap = NSBitmapImageRep(data: tiff),
+                      let pngData = bitmap.representation(using: .png, properties: [:]) else {
+                    throw NSError(domain: "CustomPetError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to generate PNG data for frame \(index)"])
+                }
+                try pngData.write(to: frameURL)
             }
-        }
 
-        let pet = CustomPet(
-            id: petId,
-            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            fps: fps,
-            frameCount: images.count,
-            leftHideOffset: leftHideOffset,
-            rightHideOffset: rightHideOffset
-        )
-        let metaURL = petDir.appendingPathComponent("metadata.json")
-        if let metaData = try? JSONEncoder().encode(pet) {
-            try? metaData.write(to: metaURL)
-        }
+            let pet = CustomPet(
+                id: petId,
+                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                fps: fps,
+                frameCount: images.count,
+                leftHideOffset: leftHideOffset,
+                rightHideOffset: rightHideOffset
+            )
+            let metaURL = petDir.appendingPathComponent("metadata.json")
+            let metaData = try JSONEncoder().encode(pet)
+            try metaData.write(to: metaURL)
 
-        cacheLock.withLock {
-            imageCache[petId] = images
+            cacheLock.withLock {
+                imageCache[petId] = images
+            }
+            loadAllPets()
+            return pet
+        } catch {
+            try? fileManager.removeItem(at: petDir)
+            return nil
         }
-        loadAllPets()
-        return pet
     }
 
     // 커스텀 펫 삭제 및 디렉토리 정리

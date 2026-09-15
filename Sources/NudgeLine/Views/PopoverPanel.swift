@@ -41,7 +41,7 @@ public final class PopoverPanel: NSPanel {
     private var hostingView: FirstMouseHostingView<AnyView>?
     private var hideTimer: Timer?
     private var currentClusterId: String? = nil
-    private var isMouseInside: Bool = false
+    // private var isMouseInside: Bool = false
     private var hasEnteredPopover: Bool = false
     private var isDetailMode: Bool = false
     private var showGeneration: Int = 0
@@ -103,7 +103,7 @@ public final class PopoverPanel: NSPanel {
     }
 
     public func setMouseInside(_ inside: Bool) {
-        self.isMouseInside = inside
+        // self.isMouseInside = inside
         if inside {
             self.hasEnteredPopover = true
             hideTimer?.invalidate()
@@ -299,6 +299,7 @@ extension PopoverPanel {
         allDayEvents: [CalendarEvent] = [],
         outOfRangeEvents: [CalendarEvent] = [],
         hasTimedEventsInRange: Bool = false,
+        hasConnectedCalendars: Bool = true,
         isHorizontal: Bool,
         barPosition: BarPosition,
         settings: AppSettings = .shared
@@ -310,6 +311,7 @@ extension PopoverPanel {
             for: allDayEvents,
             outOfRangeEvents: outOfRangeEvents,
             hasTimedEventsInRange: hasTimedEventsInRange,
+            hasConnectedCalendars: hasConnectedCalendars,
             settings: settings
         )
         let font = NSFont.systemFont(ofSize: 10, weight: .medium)
@@ -329,13 +331,14 @@ extension PopoverPanel {
         let clusterId = "__SCHEDULE_STATUS_TOOLTIP__" +
             allDayEvents.map(\.id).sorted().joined(separator: "_") +
             outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
-            "_\(hasTimedEventsInRange)_\(settings.eventHoverStyle.rawValue)"
+            "_\(hasTimedEventsInRange)_\(hasConnectedCalendars)_\(settings.eventHoverStyle.rawValue)"
 
         presentTooltip(
             content: AnyView(EmptyScheduleTooltipView(
                 allDayEvents: allDayEvents,
                 outOfRangeEvents: outOfRangeEvents,
                 hasTimedEventsInRange: hasTimedEventsInRange,
+                hasConnectedCalendars: hasConnectedCalendars,
                 settings: settings
             )),
             frame: finalFrame,
@@ -431,7 +434,7 @@ extension PopoverPanel {
                 if self.frame.contains(NSEvent.mouseLocation) {
                     return
                 }
-                self.isMouseInside = false
+                // self.isMouseInside = false
                 self.performHide()
             }
             RunLoop.main.add(timer, forMode: .common)
@@ -453,7 +456,7 @@ extension PopoverPanel {
             if self.showGeneration == hideGen {
                 self.orderOut(nil)
                 self.currentClusterId = nil
-                self.isMouseInside = false
+                // self.isMouseInside = false
                 self.hasEnteredPopover = false
             }
         })
@@ -529,6 +532,7 @@ private struct EmptyScheduleTooltipView: View {
     let allDayEvents: [CalendarEvent]
     let outOfRangeEvents: [CalendarEvent]
     let hasTimedEventsInRange: Bool
+    let hasConnectedCalendars: Bool
     let settings: AppSettings
 
     @Environment(\.colorScheme) private var colorScheme
@@ -546,6 +550,7 @@ private struct EmptyScheduleTooltipView: View {
         for allDayEvents: [CalendarEvent],
         outOfRangeEvents: [CalendarEvent] = [],
         hasTimedEventsInRange: Bool = false,
+        hasConnectedCalendars: Bool = true,
         settings: AppSettings
     ) -> String {
         let isCard = (settings.eventHoverStyle == .card)
@@ -602,6 +607,11 @@ private struct EmptyScheduleTooltipView: View {
         }
 
         // 4. 하루 24시간 전체 0건인 경우
+        if !hasConnectedCalendars {
+            return isCard
+                ? L10n.tr(.noCalendarsWithSettings, lang: settings.language)
+                : L10n.tr(.noCalendars, lang: settings.language)
+        }
         return isCard
             ? L10n.tr(.noEventsToday, lang: settings.language)
             : L10n.tr(.noEventsShort, lang: settings.language)
@@ -612,6 +622,7 @@ private struct EmptyScheduleTooltipView: View {
             for: allDayEvents,
             outOfRangeEvents: outOfRangeEvents,
             hasTimedEventsInRange: hasTimedEventsInRange,
+            hasConnectedCalendars: hasConnectedCalendars,
             settings: settings
         )
         let iconName: String = {
@@ -619,6 +630,8 @@ private struct EmptyScheduleTooltipView: View {
                 return "calendar.badge.clock"
             } else if !outOfRangeEvents.isEmpty {
                 return "clock.badge.exclamationmark"
+            } else if !hasConnectedCalendars {
+                return "calendar.badge.exclamationmark"
             } else {
                 return "calendar"
             }

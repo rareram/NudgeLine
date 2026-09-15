@@ -160,14 +160,17 @@ public struct TimelineBarView: View {
                         }
                     } else if calendarService.events.isEmpty {
                         // 오늘 등록된 일정이 없을 때: 빈 상태 툴팁을 띄웁니다.
-                        if hoveredActiveId != "__EMPTY_SCHEDULE_TOOLTIP__" {
-                            hoveredActiveId = "__EMPTY_SCHEDULE_TOOLTIP__"
+                        let hasCalendars = !calendarService.allCalendars.isEmpty
+                        let clusterId = hasCalendars ? "__EMPTY_SCHEDULE_TOOLTIP__" : "__NO_CALENDARS_TOOLTIP__"
+                        if hoveredActiveId != clusterId {
+                            hoveredActiveId = clusterId
                             hoveredFocusId = nil
                             PopoverPanel.shared.showEmptyScheduleTooltip(
                                 cursorOffset: cursorCoord,
                                 allDayEvents: [],
                                 outOfRangeEvents: [],
                                 hasTimedEventsInRange: false,
+                                hasConnectedCalendars: hasCalendars,
                                 isHorizontal: isHorizontal,
                                 barPosition: settings.barPosition,
                                 settings: settings
@@ -257,6 +260,7 @@ public struct TimelineBarView: View {
         }
         .onAppear {
             updateSegments()
+            checkFirstLaunchWelcomeEffect()
         }
         .onReceive(calendarService.$events) { _ in
             updateSegments()
@@ -348,14 +352,28 @@ public struct TimelineBarView: View {
     }
 
     private func triggerActiveEffect(_ type: EventTriggerEffectType) {
-        activeEffectId = UUID()
+        guard settings.enableEventTriggerEffect else { return }
+        let effectId = UUID()
+        activeEffectId = effectId
         activeEffectType = type
 
-        // 안전 타이머: 뷰 라이프사이클(onComplete) 누락 시에도 1.5초 후 자동 복구 보장
+        // 안전 타이머: 1.5초 후 동일 효과에 한해 상태 자동 초기화
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            if self.activeEffectType != nil {
+            if self.activeEffectId == effectId {
                 self.activeEffectType = nil
             }
+        }
+    }
+
+    // 앱 최초 실행 온보딩 환영 앰비언트 이펙트 (1회성 1.0초 방전)
+    private func checkFirstLaunchWelcomeEffect() {
+        guard settings.enableEventTriggerEffect else { return }
+        let key = "hasShownFirstLaunchWelcomeEffect"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            triggerActiveEffect(settings.eventTriggerEffectType)
         }
     }
 
