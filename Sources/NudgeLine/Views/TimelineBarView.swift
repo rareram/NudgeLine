@@ -24,6 +24,7 @@ public struct TimelineBarView: View {
     @State private var lastTriggeredPreAlertEventKey: String? = nil
     @State private var isPreviewingMarker: Bool = false
     @State private var previewMarkerPos: CGFloat = 0
+    @State private var previewGeneration: Int = 0
 
     @Environment(\.colorScheme) private var colorScheme
     private var isDark: Bool {
@@ -378,33 +379,29 @@ public struct TimelineBarView: View {
         // 1. 캘린더 일정 시작 접점 알림 (최우선 순위)
         for event in calendarService.events where !event.isAllDay {
             let diff = abs(time.timeIntervalSince(event.startDate))
-            if diff <= 2.5 {
-                let eventKey = "\(event.id)_\(Int(event.startDate.timeIntervalSince1970))"
-                if lastTriggeredEventKey != eventKey {
-                    let isCoolingDown = lastTriggeredEventDate.map { time.timeIntervalSince($0) < 180 } ?? false
-                    guard !isCoolingDown else { continue }
+            let eventKey = "\(event.id)_\(Int(event.startDate.timeIntervalSince1970))"
+            guard diff <= 2.5, lastTriggeredEventKey != eventKey else { continue }
 
-                    lastTriggeredEventKey = eventKey
-                    lastTriggeredEventDate = time
-                    lastTriggeredHourlyHour = currentHour // 정각 접점 알림 발동 시 해당 시간 정각 차임 중복 억제
-                    triggerActiveEffect(settings.eventTriggerEffectType)
-                    return
-                }
-            }
+            let isCoolingDown = lastTriggeredEventDate.map { time.timeIntervalSince($0) < 180 } ?? false
+            guard !isCoolingDown else { continue }
+
+            lastTriggeredEventKey = eventKey
+            lastTriggeredEventDate = time
+            lastTriggeredHourlyHour = currentHour // 정각 접점 알림 발동 시 해당 시간 정각 차임 중복 억제
+            triggerActiveEffect(settings.eventTriggerEffectType)
+            return
         }
 
         // 2. 매시간 정각 알림 (00분 00초 ~ 04초 윈도우 보장)
-        if settings.enableHourlyAlertEffect && minute == 0 && second <= 4 {
-            if lastTriggeredHourlyHour != currentHour {
-                let isCoolingDown = lastTriggeredHourlyDate.map { time.timeIntervalSince($0) < 180 } ?? false
-                if !isCoolingDown {
-                    lastTriggeredHourlyHour = currentHour
-                    lastTriggeredHourlyDate = time
-                    triggerActiveEffect(settings.eventTriggerEffectType)
-                    return
-                }
-            }
-        }
+        guard settings.enableHourlyAlertEffect, minute == 0, second <= 4,
+              lastTriggeredHourlyHour != currentHour else { return }
+
+        let isCoolingDown = lastTriggeredHourlyDate.map { time.timeIntervalSince($0) < 180 } ?? false
+        guard !isCoolingDown else { return }
+
+        lastTriggeredHourlyHour = currentHour
+        lastTriggeredHourlyDate = time
+        triggerActiveEffect(settings.eventTriggerEffectType)
     }
 
     private func triggerActiveEffect(_ type: EventTriggerEffectType) {
@@ -440,17 +437,15 @@ public struct TimelineBarView: View {
 
         for event in calendarService.events where !event.isAllDay {
             let remainingSec = event.startDate.timeIntervalSince(time)
-            if abs(remainingSec - targetLeadSec) <= 2.5 {
-                let eventKey = "pre_\(event.id)_\(Int(event.startDate.timeIntervalSince1970))"
-                if lastTriggeredPreAlertEventKey != eventKey {
-                    lastTriggeredPreAlertEventKey = eventKey
+            let eventKey = "pre_\(event.id)_\(Int(event.startDate.timeIntervalSince1970))"
+            guard abs(remainingSec - targetLeadSec) <= 2.5,
+                  lastTriggeredPreAlertEventKey != eventKey else { continue }
 
-                    if let matchedSegment = cachedSegments.first(where: { $0.events.contains(where: { $0.id == event.id }) }) {
-                        triggerSegmentPulse(segmentId: matchedSegment.id)
-                    }
-                    return
-                }
+            lastTriggeredPreAlertEventKey = eventKey
+            if let matchedSegment = cachedSegments.first(where: { $0.events.contains(where: { $0.id == event.id }) }) {
+                triggerSegmentPulse(segmentId: matchedSegment.id)
             }
+            return
         }
     }
 
@@ -652,7 +647,8 @@ public struct TimelineBarView: View {
         return round(ratio * totalLength)
     }
 
-    // MARK: - 미리알림 마커 렌더링 및 호버 감지 헬퍼
+    // MARK: - 미리알림 마커 렌더링 헬퍼
+    // 가시 범위 내의 마커만 타임라인 좌표에 렌더링
     @ViewBuilder
     private func renderReminder(
         reminder: ReminderItem,
@@ -662,32 +658,29 @@ public struct TimelineBarView: View {
         isHorizontal: Bool
     ) -> some View {
         let secFromStart = reminder.dueDate.timeIntervalSince(dayStart)
-        if secFromStart >= 0 && secFromStart <= totalSec {
-            let diffMinutes = reminder.dueDate.timeIntervalSince(currentTime) / 60.0
-            let isWithinRange = settings.reminderProximityMinutes >= 1440 ||
-                (diffMinutes <= Double(settings.reminderProximityMinutes) && diffMinutes >= -10.0)
-            if isWithinRange {
-                let ratio = CGFloat(secFromStart / totalSec)
-                let pos = round(ratio * totalLength)
-                let isHovered = hoveredActiveId == "__REMINDER_\(reminder.id)__"
-                let offsets = markerOffsets(pos: pos, isApproaching: true)
+        if secFromStart >= 0 && secFromStart <= totalSec,
+           reminder.isWithinVisibilityWindow(currentTime: currentTime, proximityMinutes: settings.reminderProximityMinutes) {
+            let ratio = CGFloat(secFromStart / totalSec)
+            let pos = round(ratio * totalLength)
+            let isHovered = hoveredActiveId == "__REMINDER_\(reminder.id)__"
+            let offsets = markerOffsets(pos: pos, isApproaching: true)
 
-                ReminderMarkerView(
-                    reminder: reminder,
-                    isApproaching: true,
-                    isHovered: isHovered,
-                    symbol: settings.reminderMarkerStyle.symbolName,
-                    barPosition: settings.barPosition,
-                    isHorizontal: isHorizontal,
-                    isDark: isDark
-                )
-                .offset(x: offsets.x, y: offsets.y)
-            }
+            ReminderMarkerView(
+                reminder: reminder,
+                isApproaching: true,
+                isHovered: isHovered,
+                markerStyle: settings.reminderMarkerStyle,
+                selectedPetType: settings.selectedPetType,
+                barPosition: settings.barPosition,
+                isHorizontal: isHorizontal,
+                isDark: isDark
+            )
+            .offset(x: offsets.x, y: offsets.y)
         }
     }
 
     // MARK: - 미리알림 마커 미리보기 헬퍼
-    // [원인/배경: 설정창에서 마커 스타일 변경 시 타임라인 상의 시각적 외형 확인 필요 -> 해결 방법: 설정된 근접 타이밍에 맞춰 미래 시점 타임라인 좌표를 계산하고, 0.4초 시차 팝업 및 3.2초 페이드아웃 적용 -> 기대 효과: 이동 글리치 없이 직관적인 시각 피드백 제공]
+    // 설정 변경 시 타임라인 마커를 즉시 미리보기하기 위한 렌더링
     @ViewBuilder
     private func renderPreviewMarker(
         totalLength: CGFloat,
@@ -711,7 +704,8 @@ public struct TimelineBarView: View {
             reminder: sampleReminder,
             isApproaching: true,
             isHovered: true,
-            symbol: settings.reminderMarkerStyle.symbolName,
+            markerStyle: settings.reminderMarkerStyle,
+            selectedPetType: settings.selectedPetType,
             barPosition: settings.barPosition,
             isHorizontal: isHorizontal,
             isDark: isDark
@@ -741,6 +735,8 @@ public struct TimelineBarView: View {
 
         // 1. 위치 선할당 (이동 글리치 차단)
         previewMarkerPos = targetPos
+        previewGeneration += 1
+        let currentGen = previewGeneration
 
         // 2. 마커 팝업 출현 (0.0초)
         withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
@@ -762,7 +758,7 @@ public struct TimelineBarView: View {
 
         // 3. 0.4초 시차 후 풍선도움말 출현
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [self] in
-            guard self.isPreviewingMarker else { return }
+            guard self.isPreviewingMarker, self.previewGeneration == currentGen else { return }
             PopoverPanel.shared.showReminderTooltip(
                 reminder: sampleReminder,
                 offset: targetPos,
@@ -773,7 +769,8 @@ public struct TimelineBarView: View {
         }
 
         // 4. 3.2초 후 마커와 팝오버 동시 페이드아웃 및 정리
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { [self] in
+            guard self.previewGeneration == currentGen else { return }
             withAnimation(.easeOut(duration: 0.25)) {
                 self.isPreviewingMarker = false
             }
@@ -823,6 +820,8 @@ public struct TimelineBarView: View {
         }
     }
 
+    // MARK: - 마우스 커서 위치 기반 호버 미리알림 감지 헬퍼
+    // 커서 위치(±12px)와 일치하는 표시 마커 탐색
     private func resolveHoveredReminder(
         at cursorCoord: CGFloat,
         dayStart: Date,
@@ -831,11 +830,10 @@ public struct TimelineBarView: View {
     ) -> (reminder: ReminderItem, pos: CGFloat)? {
         for reminder in reminderService.reminders {
             let sec = reminder.dueDate.timeIntervalSince(dayStart)
-            guard sec >= 0 && sec <= totalSec else { continue }
-            let diffMinutes = reminder.dueDate.timeIntervalSince(currentTime) / 60.0
-            let isWithinRange = settings.reminderProximityMinutes >= 1440 ||
-                (diffMinutes <= Double(settings.reminderProximityMinutes) && diffMinutes >= -10.0)
-            guard isWithinRange else { continue }
+            guard sec >= 0 && sec <= totalSec,
+                  reminder.isWithinVisibilityWindow(currentTime: currentTime, proximityMinutes: settings.reminderProximityMinutes) else {
+                continue
+            }
 
             let pos = round(CGFloat(sec / totalSec) * totalLength)
             if abs(cursorCoord - pos) <= 12 {
@@ -1251,12 +1249,13 @@ private struct RoundDomeShape: Shape {
 }
 
 // MARK: - 미리알림 시점 마커 뷰 (ReminderMarkerView)
-// [원인/배경: 원형 배경 배지로 인한 시각적 답답함 및 방향성 부재 -> 해결 방법: 원형 배경을 제거하고 순수 심볼에 카테고리 색상/외곽 글로우 및 3대 바 포지션별 정밀 회전(하단 0도, 좌측 90도, 우측 -90도) 적용 -> 기대 효과: 바에 꽂힌 깃발 형태의 명확한 시각적 메타포 및 미려한 룩앤필 완성]
+// 바 밖으로 꽂힌 마커 심볼 또는 펫 먹이 렌더링
 private struct ReminderMarkerView: View {
     let reminder: ReminderItem
     let isApproaching: Bool
     let isHovered: Bool
-    let symbol: String
+    let markerStyle: ReminderMarkerStyle
+    let selectedPetType: HangingPetType
     let barPosition: BarPosition
     let isHorizontal: Bool
     let isDark: Bool
@@ -1271,18 +1270,29 @@ private struct ReminderMarkerView: View {
 
     var body: some View {
         if isApproaching {
-            // 접근 시: 6x6px 순수 깃발 심볼 (바에 꽂혀 안쪽으로 펄럭이는 형태, 50% 축소 규격)
-            Image(systemName: symbol)
-                .font(.system(size: 6.0, weight: .bold))
-                .foregroundStyle(reminder.color)
-                .shadow(color: Color.black.opacity(isDark ? 0.6 : 0.3), radius: 0.6, x: 0, y: 0.5)
-                .shadow(color: reminder.color.opacity(0.85), radius: 1.2)
-                .rotationEffect(.degrees(rotationAngle))
-                .frame(width: 6, height: 6)
-                .scaleEffect(isHovered ? 1.25 : 1.0)
-                .animation(.spring(response: 0.35, dampingFraction: 0.65), value: isApproaching)
-                .animation(.easeInOut(duration: 0.15), value: isHovered)
-                .allowsHitTesting(false)
+            if markerStyle == .petItem {
+                Text(markerStyle.snackEmoji(for: selectedPetType))
+                    .font(.system(size: 7.0))
+                    .shadow(color: Color.black.opacity(isDark ? 0.6 : 0.3), radius: 0.6, x: 0, y: 0.5)
+                    .rotationEffect(.degrees(rotationAngle))
+                    .frame(width: 7, height: 7)
+                    .scaleEffect(isHovered ? 1.25 : 1.0)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.65), value: isApproaching)
+                    .animation(.easeInOut(duration: 0.15), value: isHovered)
+                    .allowsHitTesting(false)
+            } else {
+                Image(systemName: markerStyle.symbolName)
+                    .font(.system(size: 6.0, weight: .bold))
+                    .foregroundStyle(reminder.color)
+                    .shadow(color: Color.black.opacity(isDark ? 0.6 : 0.3), radius: 0.6, x: 0, y: 0.5)
+                    .shadow(color: reminder.color.opacity(0.85), radius: 1.2)
+                    .rotationEffect(.degrees(rotationAngle))
+                    .frame(width: 6, height: 6)
+                    .scaleEffect(isHovered ? 1.25 : 1.0)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.65), value: isApproaching)
+                    .animation(.easeInOut(duration: 0.15), value: isHovered)
+                    .allowsHitTesting(false)
+            }
         } else {
             // 평상시(잠복기): 보물처럼 은은하게 빛나는 2.5px 다이아몬드 노치
             ZStack {

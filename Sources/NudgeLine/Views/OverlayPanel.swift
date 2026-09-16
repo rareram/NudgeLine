@@ -289,23 +289,21 @@ extension OverlayPanel {
             let isRegularApp = (runningApp?.activationPolicy == .regular) || (owner == "Google Chrome" || owner == "IINA" || owner == "Microsoft PowerPoint" || owner == "Keynote")
 
             // 현재 담당 모니터와 교차하는 전체화면 전용 특수 레이어 감지 (크롬 툴바: 26, 종료 배너: 999)
-            if (layer == 26 || layer == 999) && owner != "Window Server" {
-                if winBounds.intersects(targetBounds) {
-                    hasFullScreenLayer = true
-                }
+            if (layer == 26 || layer == 999) && owner != "Window Server", winBounds.intersects(targetBounds) {
+                hasFullScreenLayer = true
             }
 
-            if layer == 0 && isRegularApp {
-                // 현재 담당 모니터 화면 안에 떠 있는 화면 크기 창 감지
-                if winBounds.minX >= targetBounds.minX - 15.0 && winBounds.minX < targetBounds.maxX {
-                    if winBounds.width >= targetBounds.width - 25.0 &&
-                       winBounds.height >= targetScreen.visibleFrame.height - 25.0 {
-                        onScreenCoveringApps.insert(owner)
-                        if winBounds.height > maxCoveringHeight {
-                            maxCoveringHeight = winBounds.height
-                        }
-                    }
-                }
+            // 현재 담당 모니터 화면 안에 떠 있는 화면 크기 창 감지
+            guard layer == 0, isRegularApp,
+                  winBounds.minX >= targetBounds.minX - 15.0, winBounds.minX < targetBounds.maxX,
+                  winBounds.width >= targetBounds.width - 25.0,
+                  winBounds.height >= targetScreen.visibleFrame.height - 25.0 else {
+                continue
+            }
+
+            onScreenCoveringApps.insert(owner)
+            if winBounds.height > maxCoveringHeight {
+                maxCoveringHeight = winBounds.height
             }
         }
 

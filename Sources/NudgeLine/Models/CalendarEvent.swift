@@ -537,12 +537,9 @@ extension CalendarEvent {
     private static func isExcludedWebLink(candidateUrl: URL, meetingInfo: MeetingInfo?) -> Bool {
         // 화상회의 버튼 URL과 동일하면 제외 (공식 화상회의 버튼과 중복 방지)
         if let meeting = meetingInfo, meeting.platform != .unverified {
-            if candidateUrl.absoluteString == meeting.url.absoluteString {
-                return true
-            }
             let unwrappedCandidate = unwrapRedirectUrl(from: candidateUrl.absoluteString) ?? candidateUrl.absoluteString
             let unwrappedMeeting = unwrapRedirectUrl(from: meeting.url.absoluteString) ?? meeting.url.absoluteString
-            if unwrappedCandidate == unwrappedMeeting {
+            if candidateUrl.absoluteString == meeting.url.absoluteString || unwrappedCandidate == unwrappedMeeting {
                 return true
             }
         }
@@ -564,7 +561,8 @@ extension CalendarEvent {
             "larksuite.com", "feishu.cn",
             "meet.jit.si", "8x8.vc",
             "whereby.com",
-            "chime.aws", "facetime.apple.com"
+            "chime.aws",
+            "facetime.apple.com"
         ]
         if meetingDomains.contains(where: { host == $0 || host.hasSuffix("." + $0) }) {
             return true
@@ -577,10 +575,8 @@ extension CalendarEvent {
         if (host == "google.com" || host.hasSuffix(".google.com")) && (target.path.hasPrefix("/calendar") || target.path == "/url") {
             return true
         }
-        if host == "outlook.office.com" || host == "outlook.live.com" {
-            if target.path.contains("/calendar") {
-                return true
-            }
+        if (host == "outlook.office.com" || host == "outlook.live.com") && target.path.contains("/calendar") {
+            return true
         }
         if host == "dialin.teams.microsoft.com" ||
            target.path.contains("meetingOptions") ||
@@ -601,14 +597,12 @@ extension CalendarEvent {
 
     public static func extractWebLink(url: URL?, notes: String?, meetingInfo: MeetingInfo?) -> WebLinkInfo? {
         // 1순위: Apple 캘린더의 명시적 URL 필드 (ekEvent.url)
-        if let explicitUrl = url {
-            let scheme = explicitUrl.scheme?.lowercased()
-            if scheme == "http" || scheme == "https" {
-                if !isExcludedWebLink(candidateUrl: explicitUrl, meetingInfo: meetingInfo) {
-                    let display = extractDisplayHost(from: explicitUrl)
-                    return WebLinkInfo(url: explicitUrl, displayHost: display)
-                }
-            }
+        if let explicitUrl = url,
+           let scheme = explicitUrl.scheme?.lowercased(),
+           (scheme == "http" || scheme == "https"),
+           !isExcludedWebLink(candidateUrl: explicitUrl, meetingInfo: meetingInfo) {
+            let display = extractDisplayHost(from: explicitUrl)
+            return WebLinkInfo(url: explicitUrl, displayHost: display)
         }
 
         // 2순위: 본문 메모(notes)에서 첫 번째 유효한 외부 링크 추출 (구글 캘린더 등)

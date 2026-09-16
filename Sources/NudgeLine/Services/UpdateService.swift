@@ -191,18 +191,13 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
             let releaseUrl = (json["html_url"] as? String).flatMap { URL(string: $0) } ?? Self.releasesURL
 
             // Release Assets 중 .zip 확장자를 가진 바이너리 다운로드 URL 추출
-            var zipDownloadURL: URL?
-            if let assets = json["assets"] as? [[String: Any]] {
-                for asset in assets {
-                    if let name = asset["name"] as? String,
-                       name.hasSuffix(".zip"),
-                       let downloadStr = asset["browser_download_url"] as? String,
-                       let assetURL = URL(string: downloadStr) {
-                        zipDownloadURL = assetURL
-                        break
-                    }
+            let zipDownloadURL = (json["assets"] as? [[String: Any]])?
+                .compactMap { asset -> URL? in
+                    guard let name = asset["name"] as? String, name.hasSuffix(".zip"),
+                          let downloadStr = asset["browser_download_url"] as? String else { return nil }
+                    return URL(string: downloadStr)
                 }
-            }
+                .first
 
             let info = ReleaseInfo(version: version, url: releaseUrl, zipURL: zipDownloadURL)
             DispatchQueue.main.async {

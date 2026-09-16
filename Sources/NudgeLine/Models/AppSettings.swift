@@ -226,13 +226,19 @@ public enum PreferredMapService: String, Codable, CaseIterable, Identifiable, Se
 
 public enum ReminderMarkerStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     case flag = "flag"         // 깃발 심볼 (기본)
-    case petItem = "petItem"   // 펫 아이템 (별 심볼)
+    case diamond = "diamond"   // 다이아몬드 심볼
+    case heart = "heart"       // 하트 심볼
+    case star = "star"         // 별 심볼
+    case petItem = "petItem"   // 펫 먹이·간식
 
     public var id: String { rawValue }
 
     public func title(lang: AppLanguage = .system) -> String {
         switch self {
         case .flag: return L10n.tr(.reminderStyleFlag, lang: lang)
+        case .diamond: return L10n.tr(.reminderStyleDiamond, lang: lang)
+        case .heart: return L10n.tr(.reminderStyleHeart, lang: lang)
+        case .star: return L10n.tr(.reminderStyleStar, lang: lang)
         case .petItem: return L10n.tr(.reminderStylePetItem, lang: lang)
         }
     }
@@ -240,7 +246,20 @@ public enum ReminderMarkerStyle: String, Codable, CaseIterable, Identifiable, Se
     public var symbolName: String {
         switch self {
         case .flag: return "flag.fill"
+        case .diamond: return "diamond.fill"
+        case .heart: return "heart.fill"
+        case .star: return "star.fill"
         case .petItem: return "star.fill"
+        }
+    }
+
+    // 펫 종류에 따른 먹이 이모지
+    public func snackEmoji(for petType: HangingPetType) -> String {
+        switch petType {
+        case .whiteTiger: return "🥩"
+        case .jindoDog: return "🦴"
+        case .calicoCat: return "🐟"
+        case .custom: return "⭐"
         }
     }
 }

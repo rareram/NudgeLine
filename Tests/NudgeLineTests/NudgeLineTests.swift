@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import SwiftUI
+import EventKit
 @testable import NudgeLine
 
 @Suite("Localization Tests")
@@ -615,12 +616,77 @@ struct ReminderIntegrationTests {
     @Test("미리알림 마커 스타일 및 심볼 검증")
     func testReminderMarkerStyles() {
         #expect(ReminderMarkerStyle.flag.symbolName == "flag.fill")
+        #expect(ReminderMarkerStyle.diamond.symbolName == "diamond.fill")
+        #expect(ReminderMarkerStyle.heart.symbolName == "heart.fill")
+        #expect(ReminderMarkerStyle.star.symbolName == "star.fill")
         #expect(ReminderMarkerStyle.petItem.symbolName == "star.fill")
+
         #expect(ReminderMarkerStyle.flag.title(lang: .ko) == "기본 깃발 심볼")
+        #expect(ReminderMarkerStyle.diamond.title(lang: .ko) == "다이아몬드 심볼")
+        #expect(ReminderMarkerStyle.heart.title(lang: .ko) == "하트 심볼")
+        #expect(ReminderMarkerStyle.star.title(lang: .ko) == "별 심볼")
+        #expect(ReminderMarkerStyle.petItem.title(lang: .ko) == "펫 먹이·간식")
+
         #expect(ReminderMarkerStyle.flag.title(lang: .en) == "Flag Symbol (Default)")
+        #expect(ReminderMarkerStyle.diamond.title(lang: .en) == "Diamond Symbol")
+        #expect(ReminderMarkerStyle.petItem.title(lang: .en) == "Pet Snack")
+
+        // 펫 종류별 먹이 이모지 매핑 검증
+        #expect(ReminderMarkerStyle.petItem.snackEmoji(for: .whiteTiger) == "🥩")
+        #expect(ReminderMarkerStyle.petItem.snackEmoji(for: .jindoDog) == "🦴")
+        #expect(ReminderMarkerStyle.petItem.snackEmoji(for: .calicoCat) == "🐟")
+        #expect(ReminderMarkerStyle.petItem.snackEmoji(for: .custom) == "⭐")
+    }
+
+    @Test("미리알림 가시 범위 판정 로직 검증")
+    func testReminderVisibilityWindow() {
+        let calendar = Calendar.current
+        let now = Date()
+
+        // 30분 뒤 마감 미리알림
+        let dueIn30Min = calendar.date(byAdding: .minute, value: 30, to: now)!
+        let item30Min = ReminderItem(title: "회의 준비", dueDate: dueIn30Min)
+
+        // 2시간 뒤 마감 미리알림
+        let dueIn120Min = calendar.date(byAdding: .minute, value: 120, to: now)!
+        let item120Min = ReminderItem(title: "퇴근 보고", dueDate: dueIn120Min)
+
+        // 5분 전 경과 미리알림 (지나간 10분 유예 범위 내)
+        let duePast5Min = calendar.date(byAdding: .minute, value: -5, to: now)!
+        let itemPast5Min = ReminderItem(title: "지각 점검", dueDate: duePast5Min)
+
+        // 15분 전 경과 미리알림 (10분 유예 초과)
+        let duePast15Min = calendar.date(byAdding: .minute, value: -15, to: now)!
+        let itemPast15Min = ReminderItem(title: "오래된 알림", dueDate: duePast15Min)
+
+        // 1. 종일 모드 (1440분 이상): 모두 노출
+        #expect(item30Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 1440) == true)
+        #expect(item120Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 1440) == true)
+
+        // 2. 60분 근접 모드
+        #expect(item30Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 60) == true)
+        #expect(item120Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 60) == false)
+        #expect(itemPast5Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 60) == true)
+        #expect(itemPast15Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 60) == false)
+    }
+
+    @Test("초과 일정 더 보기 L10n 포맷 검증")
+    func testMoreEventsNoticeLocalization() {
+        #expect(L10n.tr(.moreEventsNotice(3), lang: .ko) == "외 3건의 일정 더 보기...")
+        #expect(L10n.tr(.moreEventsNotice(3), lang: .en) == "+3 more events...")
+    }
+
+    @Test("빈 제목 미리알림 생성 방어 검증")
+    func testReminderEmptyTitleRejection() {
+        let store = EKEventStore()
+        let ekReminder = EKReminder(eventStore: store)
+        ekReminder.title = "   \t\n" // 공백만 있는 제목
+        
+        let calendar = Calendar.current
+        let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: Date())
+        ekReminder.dueDateComponents = comps
+        
+        let item = ReminderItem(from: ekReminder, calendar: calendar)
+        #expect(item == nil)
     }
 }
-
-
-
-

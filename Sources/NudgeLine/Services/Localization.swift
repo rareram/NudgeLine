@@ -93,6 +93,9 @@ public struct L10n {
         case reminderMarkerStyleSection
         case reminderMarkerStyleLabel
         case reminderStyleFlag
+        case reminderStyleDiamond
+        case reminderStyleHeart
+        case reminderStyleStar
         case reminderStylePetItem
         case visibleReminderListsSection
         case noReminderLists
@@ -117,6 +120,7 @@ public struct L10n {
         case noEventsShort
         case allDayNotice(String)
         case allDayNoticeWithCount(String, Int)
+        case moreEventsNotice(Int)
         case noTimedEventsWithAllDayCard(String)
         case noTimedEventsWithAllDayCountCard(String, Int)
         case outOfRangeSingleCard(String, String)
@@ -289,7 +293,10 @@ extension L10n.Key {
         case .reminderMarkerStyleSection: return "마커 설정"
         case .reminderMarkerStyleLabel: return "스타일:"
         case .reminderStyleFlag: return "기본 깃발 심볼"
-        case .reminderStylePetItem: return "펫 아이템 (별 심볼)"
+        case .reminderStyleDiamond: return "다이아몬드 심볼"
+        case .reminderStyleHeart: return "하트 심볼"
+        case .reminderStyleStar: return "별 심볼"
+        case .reminderStylePetItem: return "펫 먹이·간식"
         case .visibleReminderListsSection: return "표시할 미리알림 목록"
         case .noReminderLists: return "등록된 미리알림 목록이 없습니다."
         case .openRemindersApp: return "미리알림 앱 열기"
@@ -322,6 +329,7 @@ extension L10n.Key {
         case .noEventsShort: return "일정 없음"
         case .allDayNotice(let title): return "하루 종일: \(title)"
         case .allDayNoticeWithCount(let title, let others): return "하루 종일: \(title) 외 \(others)건"
+        case .moreEventsNotice(let count): return "외 \(count)건의 일정 더 보기..."
         case .noTimedEventsWithAllDayCard(let title): return "시간 일정 없음 · 종일: \(title)"
         case .noTimedEventsWithAllDayCountCard(let title, let others): return "시간 일정 없음 · 종일: \(title) 외 \(others)건"
         case .outOfRangeSingleCard(let time, let title): return "표시 범위 외 1건 (\(time) \(title))"
@@ -478,7 +486,10 @@ extension L10n.Key {
         case .reminderMarkerStyleSection: return "Markers"
         case .reminderMarkerStyleLabel: return "Style:"
         case .reminderStyleFlag: return "Flag Symbol (Default)"
-        case .reminderStylePetItem: return "Pet Item (Star Symbol)"
+        case .reminderStyleDiamond: return "Diamond Symbol"
+        case .reminderStyleHeart: return "Heart Symbol"
+        case .reminderStyleStar: return "Star Symbol"
+        case .reminderStylePetItem: return "Pet Snack"
         case .visibleReminderListsSection: return "Visible Reminder Lists"
         case .noReminderLists: return "No reminder lists found."
         case .openRemindersApp: return "Open Reminders"
@@ -511,6 +522,7 @@ extension L10n.Key {
         case .noEventsShort: return "No events"
         case .allDayNotice(let title): return "All Day: \(title)"
         case .allDayNoticeWithCount(let title, let others): return "All Day: \(title) +\(others)"
+        case .moreEventsNotice(let count): return "+\(count) more events..."
         case .noTimedEventsWithAllDayCard(let title): return "No timed events · All-Day: \(title)"
         case .noTimedEventsWithAllDayCountCard(let title, let others): return "No timed events · All-Day: \(title) +\(others)"
         case .outOfRangeSingleCard(let time, let title): return "1 event outside range (\(time) \(title))"

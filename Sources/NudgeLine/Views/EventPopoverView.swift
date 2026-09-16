@@ -408,7 +408,7 @@ public struct EventPopoverView: View {
                     .font(.caption2)
                     .foregroundStyle(isDarkTheme ? Color.white.opacity(0.6) : Color.black.opacity(0.5))
 
-                Text(settings.language.isKorean ? "외 \(count)건의 일정 더 보기..." : "+\(count) more events...")
+                Text(L10n.tr(.moreEventsNotice(count), lang: settings.language))
                     .font(.caption2)
                     .foregroundStyle(isDarkTheme ? Color.white.opacity(0.75) : Color.black.opacity(0.65))
 

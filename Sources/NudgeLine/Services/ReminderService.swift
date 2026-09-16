@@ -12,6 +12,7 @@ public final class ReminderService: ObservableObject {
     private let fetchSerialQueue = DispatchQueue(label: "com.nudgeline.reminderFetchSerialQueue", qos: .userInitiated)
     private var cancellables = Set<AnyCancellable>()
     private var isSleeping: Bool = false
+    private var fetchGeneration: Int = 0
 
     @Published public private(set) var authorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published public private(set) var reminders: [ReminderItem] = []
@@ -87,7 +88,12 @@ extension ReminderService {
             guard let self = self else { return }
             let calendars = self.eventStore.calendars(for: .reminder)
             let listInfos = calendars.map { cal -> ReminderListInfo in
-                let srcTitle = (cal.source?.title.isEmpty == false) ? (cal.source?.title ?? L10n.tr(.otherSource)) : L10n.tr(.otherSource)
+                let srcTitle: String
+                if let rawTitle = cal.source?.title, !rawTitle.isEmpty {
+                    srcTitle = rawTitle
+                } else {
+                    srcTitle = L10n.tr(.otherSource)
+                }
                 let color: Color
                 if let cg = cal.cgColor {
                     color = Color(cgColor: cg)
@@ -109,6 +115,9 @@ extension ReminderService {
     }
 
     public func fetchReminders(for baseDate: Date = Date(), settings: AppSettings = .shared) {
+        fetchGeneration += 1
+        let currentGeneration = fetchGeneration
+
         guard settings.enableReminders, isAuthorized() else {
             DispatchQueue.main.async {
                 if !self.reminders.isEmpty {
@@ -133,6 +142,7 @@ extension ReminderService {
 
             guard !activeCalendars.isEmpty else {
                 DispatchQueue.main.async {
+                    guard self.fetchGeneration == currentGeneration else { return }
                     self.reminders = []
                 }
                 return
@@ -146,20 +156,13 @@ extension ReminderService {
 
             self.eventStore.fetchReminders(matching: predicate) { [weak self] ekReminders in
                 guard let self = self else { return }
-                var items: [ReminderItem] = []
-
-                for ekReminder in (ekReminders ?? []) {
-                    guard let item = ReminderItem(from: ekReminder, calendar: calendar) else {
-                        continue
-                    }
-                    if item.dueDate >= startOfDay && item.dueDate < endOfDay {
-                        items.append(item)
-                    }
-                }
-
-                items.sort { $0.dueDate < $1.dueDate }
+                let items = (ekReminders ?? [])
+                    .compactMap { ReminderItem(from: $0, calendar: calendar) }
+                    .filter { $0.dueDate >= startOfDay && $0.dueDate < endOfDay }
+                    .sorted { $0.dueDate < $1.dueDate }
 
                 DispatchQueue.main.async {
+                    guard self.fetchGeneration == currentGeneration, settings.enableReminders else { return }
                     self.reminders = items
                 }
             }
@@ -170,7 +173,7 @@ extension ReminderService {
 // MARK: - 3. 시스템 및 환경설정 변경 옵저버 등록
 extension ReminderService {
     private func setupEventStoreObserver() {
-        // 1. 시스템 미리알림 데이터 변경 옵저버
+        // DB 변경 이벤트 폭주 방지를 위해 300ms 디바운스 후 갱신
         NotificationCenter.default.publisher(for: .EKEventStoreChanged, object: eventStore)
             .receive(on: DispatchQueue.main)
             .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
@@ -181,7 +184,7 @@ extension ReminderService {
             }
             .store(in: &cancellables)
 
-        // 2. 미리알림 연동 켜기/끄기 설정 옵저버
+        // 연동 해제 시 메모리를 비우고, 활성화 시 최신 데이터 재조회
         AppSettings.shared.$enableReminders
             .receive(on: DispatchQueue.main)
             .sink { [weak self] enabled in
@@ -191,12 +194,13 @@ extension ReminderService {
                     self.loadReminderLists()
                     self.fetchReminders()
                 } else {
+                    self.fetchGeneration += 1
                     self.reminders = []
                 }
             }
             .store(in: &cancellables)
 
-        // 3. 미리알림 목록 필터 변경 옵저버
+        // 체크박스 연속 조작 시 중복 조회를 방지하기 위해 150ms 디바운스 적용
         AppSettings.shared.$reminderVisibility
             .map { _ in () }
             .debounce(for: .milliseconds(150), scheduler: DispatchQueue.main)
@@ -206,7 +210,7 @@ extension ReminderService {
             }
             .store(in: &cancellables)
 
-        // 4. 날짜 변경(자정)
+        // 자정 경과 시 오늘 기준 미리알림 목록과 당일 데이터를 자동 갱신
         NotificationCenter.default.publisher(for: .NSCalendarDayChanged, object: nil)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -217,7 +221,7 @@ extension ReminderService {
             }
             .store(in: &cancellables)
 
-        // 5. 절전 모드 진입 및 복귀
+        // 절전 모드 진입 시 쿼리를 중단하고, 복귀 시 최신 데이터로 동기화
         let wsCenter = NSWorkspace.shared.notificationCenter
         Publishers.Merge(
             wsCenter.publisher(for: NSWorkspace.willSleepNotification),
@@ -241,7 +245,7 @@ extension ReminderService {
         }
         .store(in: &cancellables)
 
-        // 6. 시스템 설정 등 외부에서 앱으로 복귀했을 때 권한 상태 즉시 갱신
+        // 외부 시스템 설정에서 권한을 변경하고 복귀했을 때 즉시 반영
         NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in

@@ -18,7 +18,9 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
 
     public init?(from ekReminder: EKReminder, calendar: Calendar = .current) {
         let itemID = ekReminder.calendarItemIdentifier
+        let rawTitle = (ekReminder.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !itemID.isEmpty,
+              !rawTitle.isEmpty,
               !ekReminder.isCompleted,
               let dueComponents = ekReminder.dueDateComponents,
               dueComponents.hour != nil,
@@ -28,7 +30,7 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
         }
 
         self.id = itemID
-        self.title = (ekReminder.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        self.title = rawTitle
         self.dueDate = date
         self.listIdentifier = ekReminder.calendar?.calendarIdentifier ?? "unknown"
         self.listTitle = ekReminder.calendar?.title ?? ""
@@ -66,6 +68,17 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
         self.priority = priority
         self.isCompleted = isCompleted
     }
+
+    // MARK: - 가시 범위 판정
+    // 렌더링과 호버 감지에 동일한 표시 기준을 유지하기 위한 범위 확인
+    public func isWithinVisibilityWindow(
+        currentTime: Date,
+        proximityMinutes: Int
+    ) -> Bool {
+        guard proximityMinutes < 1440 else { return true }
+        let diffMinutes = dueDate.timeIntervalSince(currentTime) / 60.0
+        return diffMinutes <= Double(proximityMinutes) && diffMinutes >= -10.0
+    }
 }
 
 // MARK: - 2. 미리알림 목록(List/Calendar) 메타데이터 모델
@@ -83,8 +96,8 @@ public struct ReminderListInfo: Identifiable, Sendable {
     }
 }
 
-// MARK: - 3. 미리알림 마커 미리보기 노티피케이션
-// [배경: 설정창에서 마커 스타일 변경 시 타임라인 즉각 피드백 제공 -> 해결: 노티피케이션 이벤트 디스패치 -> 기대효과: 무간섭 비동기 프리뷰 트리거]
+// MARK: - 3. 마커 미리보기 노티피케이션
+// 설정 변경 시 타임라인 마커를 즉시 미리보기하기 위한 알림
 extension Notification.Name {
     public static let previewReminderMarker = Notification.Name("NudgeLine.previewReminderMarker")
 }
