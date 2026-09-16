@@ -62,7 +62,7 @@ struct GeneralTab: View {
             // 시스템 환경설정 폼
             Form {
                 Section(header: Text(L10n.tr(.systemPreferencesSection, lang: settings.language)).fontWeight(.semibold)) {
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.languageLabel, lang: settings.language)) {
                         HStack {
                             Picker("", selection: $settings.language) {
                                 ForEach(AppLanguage.allCases, id: \.self) { lang in
@@ -74,12 +74,9 @@ struct GeneralTab: View {
                             .fixedSize()
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.languageLabel, lang: settings.language))
-                            .frame(minWidth: 100, alignment: .trailing)
                     }
 
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.preferredMapServiceLabel, lang: settings.language)) {
                         HStack {
                             Picker("", selection: $settings.preferredMapService) {
                                 ForEach(PreferredMapService.availableCases(for: settings.language)) { service in
@@ -91,9 +88,6 @@ struct GeneralTab: View {
                             .fixedSize()
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.preferredMapServiceLabel, lang: settings.language))
-                            .frame(minWidth: 100, alignment: .trailing)
                     }
 
                     Toggle(L10n.tr(.launchAtLogin, lang: settings.language), isOn: Binding(

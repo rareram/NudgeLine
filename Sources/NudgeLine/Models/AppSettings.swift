@@ -224,6 +224,27 @@ public enum PreferredMapService: String, Codable, CaseIterable, Identifiable, Se
     }
 }
 
+public enum ReminderMarkerStyle: String, Codable, CaseIterable, Identifiable, Sendable {
+    case flag = "flag"         // 깃발 심볼 (기본)
+    case petItem = "petItem"   // 펫 아이템 (별 심볼)
+
+    public var id: String { rawValue }
+
+    public func title(lang: AppLanguage = .system) -> String {
+        switch self {
+        case .flag: return L10n.tr(.reminderStyleFlag, lang: lang)
+        case .petItem: return L10n.tr(.reminderStylePetItem, lang: lang)
+        }
+    }
+
+    public var symbolName: String {
+        switch self {
+        case .flag: return "flag.fill"
+        case .petItem: return "star.fill"
+        }
+    }
+}
+
 // MARK: - 2. 앱 전역 설정 저장소 본체 (AppSettings)
 public final class AppSettings: ObservableObject {
     public static let shared = AppSettings()
@@ -269,6 +290,10 @@ public final class AppSettings: ObservableObject {
         static let showDeclinedEvents = "settings_show_declined_events"
         static let hideOnScreenShare = "settings_hide_on_screen_share"
         static let hideOnFullScreen = "settings_hide_on_full_screen"
+        static let enableReminders = "settings_enable_reminders"
+        static let reminderProximityMinutes = "settings_reminder_proximity_minutes"
+        static let reminderMarkerStyle = "settings_reminder_marker_style"
+        static let reminderVisibility = "settings_reminder_visibility"
     }
 
     private let defaults = UserDefaults.standard
@@ -452,6 +477,22 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(preEventAlertMinutes, forKey: Keys.preEventAlertMinutes) }
     }
 
+    @Published public var enableReminders: Bool {
+        didSet { defaults.set(enableReminders, forKey: Keys.enableReminders) }
+    }
+
+    @Published public var reminderProximityMinutes: Int {
+        didSet { defaults.set(reminderProximityMinutes, forKey: Keys.reminderProximityMinutes) }
+    }
+
+    @Published public var reminderMarkerStyle: ReminderMarkerStyle {
+        didSet { defaults.set(reminderMarkerStyle.rawValue, forKey: Keys.reminderMarkerStyle) }
+    }
+
+    @Published public var reminderVisibility: [String: Bool] {
+        didSet { defaults.set(reminderVisibility, forKey: Keys.reminderVisibility) }
+    }
+
     // MARK: 2-3. 초기화 (UserDefaults 영속 데이터 로드 및 마이그레이션)
     private init() {
         let savedLang = defaults.string(forKey: Keys.language) ?? AppLanguage.system.rawValue
@@ -556,6 +597,13 @@ public final class AppSettings: ObservableObject {
         self.showDeclinedEvents = defaults.object(forKey: Keys.showDeclinedEvents) != nil ? defaults.bool(forKey: Keys.showDeclinedEvents) : true
         self.enablePreEventAlert = defaults.object(forKey: Keys.enablePreEventAlert) != nil ? defaults.bool(forKey: Keys.enablePreEventAlert) : false
         self.preEventAlertMinutes = defaults.object(forKey: Keys.preEventAlertMinutes) != nil ? defaults.integer(forKey: Keys.preEventAlertMinutes) : 5
+
+        self.enableReminders = defaults.bool(forKey: Keys.enableReminders)
+        let savedReminderProximity = defaults.integer(forKey: Keys.reminderProximityMinutes)
+        self.reminderProximityMinutes = savedReminderProximity > 0 ? savedReminderProximity : 60
+        let savedMarkerStyle = defaults.string(forKey: Keys.reminderMarkerStyle) ?? ReminderMarkerStyle.flag.rawValue
+        self.reminderMarkerStyle = ReminderMarkerStyle(rawValue: savedMarkerStyle) ?? .flag
+        self.reminderVisibility = (defaults.dictionary(forKey: Keys.reminderVisibility) as? [String: Bool]) ?? [:]
     }
 }
 
@@ -567,6 +615,14 @@ extension AppSettings {
 
     public func setCalendarVisible(id: String, visible: Bool) {
         calendarVisibility[id] = visible
+    }
+
+    public func isReminderListVisible(id: String) -> Bool {
+        return reminderVisibility[id] ?? true
+    }
+
+    public func setReminderListVisible(id: String, visible: Bool) {
+        reminderVisibility[id] = visible
     }
 
     public func customColor(for id: String) -> Color? {

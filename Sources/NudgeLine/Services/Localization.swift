@@ -57,10 +57,11 @@ public struct L10n {
         case updateNowInApp
         case inAppUpdateFailed
 
-        // 환경설정 4대 핵심 탭
+        // 환경설정 5대 핵심 탭
         case tabTimeline
         case tabAppearance
         case tabSchedule
+        case tabReminders
         case tabGeneral
 
         // 탭 1: 타임라인 섹션
@@ -76,7 +77,28 @@ public struct L10n {
         case workHoursSection
         case visibleCalendarsSection
 
-        // 탭 4: 일반 섹션
+        // 탭 4: 미리알림 섹션
+        case remindersIntegrationSection
+        case enableRemindersLabel
+        case enableRemindersDescription
+        case remindersPermissionNeeded
+        case reminderProximitySection
+        case reminderProximityLabel
+        case reminderRange1Hour
+        case reminderRange2Hours
+        case reminderRange3Hours
+        case reminderRange4Hours
+        case reminderRange12Hours
+        case reminderRangeAllDay
+        case reminderMarkerStyleSection
+        case reminderMarkerStyleLabel
+        case reminderStyleFlag
+        case reminderStylePetItem
+        case visibleReminderListsSection
+        case noReminderLists
+        case openRemindersApp
+
+        // 탭 5: 일반 섹션
         case systemPreferencesSection
         case enableSegmentRimLabel
         case enableSegmentGlowLabel
@@ -242,6 +264,7 @@ extension L10n.Key {
         case .tabTimeline: return "타임라인"
         case .tabAppearance: return "표시 및 효과"
         case .tabSchedule: return "시간 및 캘린더"
+        case .tabReminders: return "미리알림"
         case .tabGeneral: return "일반"
 
         case .barPositionAndThicknessSection: return "화면 배치 및 크기"
@@ -251,6 +274,25 @@ extension L10n.Key {
         case .timeIndicatorSection: return "시간 표시자"
         case .workHoursSection: return "시간 표시 범위"
         case .visibleCalendarsSection: return "표시할 캘린더"
+        case .remindersIntegrationSection: return "미리알림 연동"
+        case .enableRemindersLabel: return "타임라인에 미리알림 표시"
+        case .enableRemindersDescription: return "날짜 및 시간 정보가 있는 미리알림만 타임라인에 표시됩니다."
+        case .remindersPermissionNeeded: return "macOS 미리알림 접근 권한이 필요합니다."
+        case .reminderProximitySection: return "마커 설정"
+        case .reminderProximityLabel: return "표시 범위:"
+        case .reminderRange1Hour: return "1시간"
+        case .reminderRange2Hours: return "2시간"
+        case .reminderRange3Hours: return "3시간"
+        case .reminderRange4Hours: return "4시간"
+        case .reminderRange12Hours: return "12시간"
+        case .reminderRangeAllDay: return "하루 전체"
+        case .reminderMarkerStyleSection: return "마커 설정"
+        case .reminderMarkerStyleLabel: return "스타일:"
+        case .reminderStyleFlag: return "기본 깃발 심볼"
+        case .reminderStylePetItem: return "펫 아이템 (별 심볼)"
+        case .visibleReminderListsSection: return "표시할 미리알림 목록"
+        case .noReminderLists: return "등록된 미리알림 목록이 없습니다."
+        case .openRemindersApp: return "미리알림 앱 열기"
         case .systemPreferencesSection: return "시스템 설정"
 
         case .enableSegmentRimLabel: return "블록 테두리 강조"
@@ -259,7 +301,7 @@ extension L10n.Key {
         case .creditsOriginal: return "원작: Andreas Katzian & ARTMIXTURE (2014-2015)"
         case .githubRepo: return "GitHub 저장소 ↗"
 
-        case .preferredMapServiceLabel: return "위치 열기:"
+        case .preferredMapServiceLabel: return "일정 위치 열기:"
         case .mapServiceApple: return "Apple 지도"
         case .mapServiceNaver: return "네이버 지도"
         case .mapServiceKakao: return "카카오맵"
@@ -267,7 +309,7 @@ extension L10n.Key {
 
         case .launchAtLogin: return "로그인할 때 자동 실행"
         case .hideOnScreenShareLabel: return "화상회의 · 녹화 · 가상화면에 표시 안 함"
-        case .hideOnFullScreenLabel: return "전체 화면 시 숨김"
+        case .hideOnFullScreenLabel: return "전체 화면 시 숨김 (영상, 프레젠테이션)"
         case .appDescription: return "화면 가장자리에 오늘 일정을 시각화하는 세련된 macOS 캘린더 타임라인 바"
 
         case .permissionNeeded: return "macOS 캘린더 접근 권한이 필요합니다."
@@ -411,6 +453,7 @@ extension L10n.Key {
         case .tabTimeline: return "Timeline"
         case .tabAppearance: return "Appearance"
         case .tabSchedule: return "Time & Calendars"
+        case .tabReminders: return "Reminders"
         case .tabGeneral: return "General"
 
         case .barPositionAndThicknessSection: return "Position & Size"
@@ -420,6 +463,25 @@ extension L10n.Key {
         case .timeIndicatorSection: return "Time Indicator"
         case .workHoursSection: return "Display Time Range"
         case .visibleCalendarsSection: return "Visible Calendars"
+        case .remindersIntegrationSection: return "Apple Reminders"
+        case .enableRemindersLabel: return "Show Reminders on Timeline"
+        case .enableRemindersDescription: return "Only reminders with a due date and time are shown."
+        case .remindersPermissionNeeded: return "macOS Reminders access permission required."
+        case .reminderProximitySection: return "Markers"
+        case .reminderProximityLabel: return "Display Range:"
+        case .reminderRange1Hour: return "1 hour"
+        case .reminderRange2Hours: return "2 hours"
+        case .reminderRange3Hours: return "3 hours"
+        case .reminderRange4Hours: return "4 hours"
+        case .reminderRange12Hours: return "12 hours"
+        case .reminderRangeAllDay: return "All Day"
+        case .reminderMarkerStyleSection: return "Markers"
+        case .reminderMarkerStyleLabel: return "Style:"
+        case .reminderStyleFlag: return "Flag Symbol (Default)"
+        case .reminderStylePetItem: return "Pet Item (Star Symbol)"
+        case .visibleReminderListsSection: return "Visible Reminder Lists"
+        case .noReminderLists: return "No reminder lists found."
+        case .openRemindersApp: return "Open Reminders"
         case .systemPreferencesSection: return "System Preferences"
 
         case .enableSegmentRimLabel: return "Block Rim Highlight"
@@ -436,7 +498,7 @@ extension L10n.Key {
 
         case .launchAtLogin: return "Launch at Login"
         case .hideOnScreenShareLabel: return "Exclude from Meetings, Capture & Virtual Display"
-        case .hideOnFullScreenLabel: return "Hide in Full Screen"
+        case .hideOnFullScreenLabel: return "Hide in Full Screen (Video, Presentation)"
         case .appDescription: return "A sleek macOS edge timeline bar that visualizes today's schedule along screen edges."
 
         case .permissionNeeded: return "Calendar access permission is required."
@@ -456,8 +518,8 @@ extension L10n.Key {
         case .outOfRangeSimple(let count, let time): return "Outside range: \(count) (\(time))"
         case .allDayWithOutOfRangeCard(let title, let count, let time): return "All-Day: \(title) · \(count) outside range (\(time))"
         case .allDayWithOutOfRangeSimple(let title, let count): return "All-Day: \(title) · +\(count) more"
-        case .manageAccountsButton: return "Manage System Accounts..."
-        case .openCalendarApp: return "Open Calendar App"
+        case .manageAccountsButton: return "Accounts..."
+        case .openCalendarApp: return "Open Calendar"
         case .resetDefault: return "Default"
 
         case .mode24Hours: return "Full 24-Hour Timeline (00:00 - 24:00)"

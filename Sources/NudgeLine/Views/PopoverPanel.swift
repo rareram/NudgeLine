@@ -47,6 +47,10 @@ public final class PopoverPanel: NSPanel {
     private var showGeneration: Int = 0
     private var cancellables = Set<AnyCancellable>()
 
+    // 빈 영역 종일 일정 툴팁 -> 상세 카드 확장용 상태
+    private var pendingAllDayEvents: [CalendarEvent] = []
+    private var pendingTooltipContext: (cursorOffset: CGFloat, isHorizontal: Bool, barPosition: BarPosition, settings: AppSettings)? = nil
+
     private init() {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 250, height: 160),
@@ -108,6 +112,13 @@ public final class PopoverPanel: NSPanel {
             self.hasEnteredPopover = true
             hideTimer?.invalidate()
             hideTimer = nil
+
+            // [종일 일정 툴팁 -> 상세 액션 카드 자동 확장]
+            if !pendingAllDayEvents.isEmpty, let context = pendingTooltipContext {
+                expandToAllDayCard(events: pendingAllDayEvents, context: context)
+                self.pendingAllDayEvents = []
+                self.pendingTooltipContext = nil
+            }
         } else {
             hide(delayed: true)
         }
@@ -124,6 +135,7 @@ public final class PopoverPanel: NSPanel {
 extension PopoverPanel {
     public func show(
         events: [CalendarEvent],
+        allDayEvents: [CalendarEvent] = [],
         clusterId: String,
         blockOffset: CGFloat,
         blockLength: CGFloat,
@@ -135,6 +147,8 @@ extension PopoverPanel {
         hasEnteredPopover = false
         hideTimer?.invalidate()
         hideTimer = nil
+        self.pendingAllDayEvents = []
+        self.pendingTooltipContext = nil
 
         guard let screen = currentTargetScreen(), !events.isEmpty else { return }
         updatePanelAppearance(settings: settings)
@@ -147,6 +161,7 @@ extension PopoverPanel {
 
         let targetDimensions = renderer.targetSize(
             events: events,
+            allDayEvents: allDayEvents,
             isHorizontal: isHorizontal
         )
         let targetWidth = targetDimensions.width
@@ -154,6 +169,7 @@ extension PopoverPanel {
 
         let anyView = renderer.makeView(
             events: events,
+            allDayEvents: allDayEvents,
             settings: settings
         )
 
@@ -294,6 +310,42 @@ extension PopoverPanel {
         )
     }
 
+    public func showReminderTooltip(
+        reminder: ReminderItem,
+        offset: CGFloat,
+        isHorizontal: Bool,
+        barPosition: BarPosition,
+        settings: AppSettings = .shared
+    ) {
+        guard let screen = currentTargetScreen() else { return }
+
+        let font = NSFont.systemFont(ofSize: 10, weight: .medium)
+        let sampleText = "00:00 \(reminder.title) \(reminder.listTitle)"
+        let textWidth = (sampleText as NSString).size(withAttributes: [.font: font]).width
+        let targetWidth = min(360.0, max(130.0, ceil(textWidth + 36.0)))
+        let targetHeight: CGFloat = 24.0
+
+        let finalFrame = calculateTooltipFrame(
+            offset: offset,
+            targetWidth: targetWidth,
+            targetHeight: targetHeight,
+            isHorizontal: isHorizontal,
+            barPosition: barPosition,
+            settings: settings,
+            screen: screen
+        )
+
+        let clusterId = "__REMINDER_TOOLTIP_\(reminder.id)__"
+
+        presentTooltip(
+            content: AnyView(ReminderTooltipView(reminder: reminder, settings: settings)),
+            frame: finalFrame,
+            clusterId: clusterId,
+            isDetailMode: false,
+            settings: settings
+        )
+    }
+
     public func showEmptyScheduleTooltip(
         cursorOffset: CGFloat,
         allDayEvents: [CalendarEvent] = [],
@@ -333,6 +385,15 @@ extension PopoverPanel {
             outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
             "_\(hasTimedEventsInRange)_\(hasConnectedCalendars)_\(settings.eventHoverStyle.rawValue)"
 
+        // 당일 종일 일정이 있는 경우 마우스 호버 브릿지 활성화 및 확장 컨텍스트 보관
+        if !allDayEvents.isEmpty {
+            self.pendingAllDayEvents = allDayEvents
+            self.pendingTooltipContext = (cursorOffset, isHorizontal, barPosition, settings)
+        } else {
+            self.pendingAllDayEvents = []
+            self.pendingTooltipContext = nil
+        }
+
         presentTooltip(
             content: AnyView(EmptyScheduleTooltipView(
                 allDayEvents: allDayEvents,
@@ -343,9 +404,80 @@ extension PopoverPanel {
             )),
             frame: finalFrame,
             clusterId: clusterId,
-            isDetailMode: false,
+            isDetailMode: !allDayEvents.isEmpty, // 종일 일정이 있을 때는 마우스가 툴팁으로 건너올 수 있도록 브릿지 활성화
             settings: settings
         )
+    }
+
+    // MARK: - 종일 일정 미니 툴팁 -> 상세 액션 카드 자동 확장
+    // [원인/배경: 시간 일정과의 구분을 위해 24px 미니 툴팁으로 시작하되, 마우스가 툴팁에 올라가면 전체 상세 정보(링크/메모)를 확인 가능해야 함 -> 해결 방법: mouseEntered 시점에 종일 일정을 상세 카드로 교체하고 부드러운 스프링 프레임 확장 애니메이션 적용 -> 기대 효과: 시간 블록과 빈 공간의 리듬감 보존 및 종일 일정 정보 손실 없는 완벽한 UX 달성]
+    private func expandToAllDayCard(
+        events: [CalendarEvent],
+        context: (cursorOffset: CGFloat, isHorizontal: Bool, barPosition: BarPosition, settings: AppSettings)
+    ) {
+        guard let screen = currentTargetScreen(), !events.isEmpty else { return }
+        self.currentClusterId = "__ALL_DAY_CARD_EXPANDED__"
+        updatePanelAppearance(settings: context.settings)
+
+        let renderer = context.settings.eventHoverStyle.renderer()
+        self.isDetailMode = true
+
+        let targetDimensions = renderer.targetSize(
+            events: events,
+            allDayEvents: [],
+            isHorizontal: context.isHorizontal
+        )
+        let targetWidth = targetDimensions.width
+        let targetHeight = targetDimensions.height
+
+        let anyView = renderer.makeView(
+            events: events,
+            allDayEvents: [],
+            settings: context.settings
+        )
+
+        if let hosting = hostingView {
+            hosting.rootView = anyView
+        } else {
+            let hosting = FirstMouseHostingView(rootView: anyView)
+            hosting.appearance = self.appearance
+            self.contentView = hosting
+            self.hostingView = hosting
+        }
+
+        let visibleFrame = screen.visibleFrame
+        let fullFrame = screen.frame
+        let thickness = max(context.settings.barWidth, context.settings.hoverWidth)
+
+        var finalX: CGFloat
+        var finalY: CGFloat
+
+        if context.isHorizontal {
+            let idealFinalX = visibleFrame.minX + context.cursorOffset - (targetWidth / 2)
+            finalX = max(visibleFrame.minX + 8, min(visibleFrame.maxX - targetWidth - 8, idealFinalX))
+            finalY = visibleFrame.minY + thickness + 6
+        } else {
+            let idealFinalY = visibleFrame.maxY - context.cursorOffset - (targetHeight / 2)
+            finalY = max(visibleFrame.minY + 8, min(visibleFrame.maxY - targetHeight - 8, idealFinalY))
+
+            switch context.barPosition {
+            case .left:
+                finalX = fullFrame.minX + thickness + 6
+            case .right:
+                finalX = fullFrame.maxX - thickness - targetWidth - 6
+            case .bottom:
+                finalX = visibleFrame.minX + context.cursorOffset - (targetWidth / 2)
+                finalY = visibleFrame.minY + thickness + 6
+            }
+        }
+
+        let expandedFrame = NSRect(x: finalX, y: finalY, width: targetWidth, height: targetHeight)
+
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.16
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            self.animator().setFrame(expandedFrame, display: true)
+        }
     }
 
     public func showPermissionNotice(
@@ -400,7 +532,7 @@ extension PopoverPanel {
             self.hostingView = hosting
         }
 
-        let isNew = !self.isVisible || currentClusterId != clusterId
+        let isNew = !self.isVisible || currentClusterId != clusterId || self.frame.size != frame.size
         currentClusterId = clusterId
 
         if !self.isVisible {
@@ -492,6 +624,80 @@ private struct CurrentTimeTooltipView: View {
                 .lineLimit(1)
         }
         .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            VisualEffectBlur(
+                material: .popover,
+                blendingMode: .behindWindow,
+                state: .active
+            )
+            .clipShape(Capsule())
+        )
+        .background(
+            Capsule()
+                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.75))
+        )
+        .overlay(
+            Capsule()
+                .stroke(
+                    LinearGradient(
+                        colors: isDarkTheme ? [
+                            Color.white.opacity(0.35),
+                            Color.white.opacity(0.10)
+                        ] : [
+                            Color.black.opacity(0.18),
+                            Color.black.opacity(0.08)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.8
+                )
+        )
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
+    }
+}
+
+// MARK: - 6-1. 미리알림 미니 툴팁 뷰 (ReminderTooltipView)
+private struct ReminderTooltipView: View {
+    let reminder: ReminderItem
+    let settings: AppSettings
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    @Environment(\.colorScheme) private var colorScheme
+    private var isDarkTheme: Bool {
+        settings.eventCardTheme.isDark(for: colorScheme)
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: settings.reminderMarkerStyle.symbolName)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(reminder.color)
+
+            Text(Self.timeFormatter.string(from: reminder.dueDate))
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(reminder.color)
+
+            Text(reminder.title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(isDarkTheme ? Color.white : Color.black.opacity(0.9))
+                .lineLimit(1)
+
+            if !reminder.listTitle.isEmpty {
+                Text("· \(reminder.listTitle)")
+                    .font(.system(size: 9, weight: .regular))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(

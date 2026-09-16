@@ -59,8 +59,14 @@ extension CalendarService {
     }
 
     public func isAuthorized(status: EKAuthorizationStatus? = nil) -> Bool {
-        let st = status ?? EKEventStore.authorizationStatus(for: .event)
-        return st == .fullAccess
+        let currentStatus = EKEventStore.authorizationStatus(for: .event)
+        if status == nil && self.authorizationStatus != currentStatus {
+            DispatchQueue.main.async { [weak self] in
+                self?.checkAuthorizationStatus()
+            }
+        }
+        let st = status ?? currentStatus
+        return st == .fullAccess || st.rawValue == 3
     }
 
     // macOS 15+ Full Access 권한 요청
@@ -259,5 +265,13 @@ extension CalendarService {
             self.fetchEvents()
         }
         .store(in: &cancellables)
+
+        // 7. 시스템 설정 등 외부에서 돌아왔을 때 TCC 권한 변경 상태 즉시 재확인
+        NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.checkAuthorizationStatus()
+            }
+            .store(in: &cancellables)
     }
 }

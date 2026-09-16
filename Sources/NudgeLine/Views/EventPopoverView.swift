@@ -4,10 +4,16 @@ import AppKit
 
 public struct EventPopoverView: View {
     public let events: [CalendarEvent]
+    public let allDayEvents: [CalendarEvent]
     @ObservedObject public var settings: AppSettings
 
-    public init(events: [CalendarEvent], settings: AppSettings = .shared) {
+    public init(
+        events: [CalendarEvent],
+        allDayEvents: [CalendarEvent] = [],
+        settings: AppSettings = .shared
+    ) {
         self.events = events
+        self.allDayEvents = allDayEvents
         self.settings = settings
     }
 
@@ -42,7 +48,12 @@ public struct EventPopoverView: View {
         let direction = bubbleDirection
         let bubbleShape = SpeechBubbleShape(direction: direction, arrowWidth: 8, arrowHeight: 14, cornerRadius: 10)
 
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
+            // 당일 종일 일정이 존재하는 경우 1줄 미니 인라인 칩 표출 (카드 비대화 방지)
+            if !allDayEvents.isEmpty {
+                allDayInlineBadgeView()
+            }
+
             if isMulti {
                 // 다중 일정 중첩 헤더 배지
                 HStack(spacing: 5) {
@@ -58,14 +69,21 @@ public struct EventPopoverView: View {
                 .padding(.bottom, 2)
             }
 
-            ForEach(events) { event in
+            let visibleEvents = Array(events.prefix(3))
+            let overflowCount = events.count - visibleEvents.count
+
+            ForEach(visibleEvents) { event in
                 singleEventCard(event: event)
 
-                if event.id != events.last?.id {
+                if event.id != visibleEvents.last?.id || overflowCount > 0 {
                     Divider()
                         .overlay(isDarkTheme ? Color.white.opacity(0.12) : Color.black.opacity(0.1))
                         .padding(.vertical, 2)
                 }
+            }
+
+            if overflowCount > 0 {
+                overflowEventsFooterView(count: overflowCount)
             }
         }
         .padding(.leading, direction == .left ? 18 : 12)
@@ -339,6 +357,71 @@ public struct EventPopoverView: View {
                         .foregroundStyle(textMuted)
                 }
             }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - 종일 일정 1줄 미니 인라인 배지
+    // [원인/배경: 시간 일정 카드에 종일 일정을 풀 카드로 병합 시 카드 높이 폭증 및 화면 이탈 발생 -> 해결 방법: 상단에 18pt 높이의 1줄 칩으로 가볍게 표시하여 존재 사실만 인지 -> 기대 효과: 카드 높이 슬림화 및 화살표 조준 정밀도 보존]
+    @ViewBuilder
+    private func allDayInlineBadgeView() -> some View {
+        let allDayCount = allDayEvents.count
+        let firstTitle = allDayEvents[0].title(lang: settings.language)
+        let badgeText = allDayCount == 1 ? firstTitle : "\(firstTitle) +\(allDayCount - 1)"
+
+        HStack(spacing: 5) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.8) : Color.black.opacity(0.7))
+
+            Text(L10n.tr(.allDayNotice(badgeText), lang: settings.language))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.85) : Color.black.opacity(0.75))
+                .lineLimit(1)
+
+            Spacer()
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3.5)
+        .background(isDarkTheme ? Color.white.opacity(0.08) : Color.black.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .overlay(
+            RoundedRectangle(cornerRadius: 5)
+                .stroke(isDarkTheme ? Color.white.opacity(0.12) : Color.black.opacity(0.08), lineWidth: 0.6)
+        )
+    }
+
+    // MARK: - 4개 이상 일정 스택 시 축약 배지
+    // [원인/배경: 종일 일정이 4개 이상일 때 무한 스택 시 화면 과점유 및 상단 메뉴바 침범 발생 -> 해결 방법: 최대 3개까지만 풀 카드로 노출하고 4개 이상은 Apple 캘린더 열기 바로가기 칩으로 축약 -> 기대 효과: 카드 최대 높이를 약 320px로 엄격히 제한하여 화면 안정성 확보]
+    @ViewBuilder
+    private func overflowEventsFooterView(count: Int) -> some View {
+        Button(action: {
+            if let url = URL(string: "calshow:") {
+                NSWorkspace.shared.open(url)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                PopoverPanel.shared.hide(delayed: false)
+            }
+        }) {
+            HStack(spacing: 5) {
+                Image(systemName: "ellipsis.circle.fill")
+                    .font(.caption2)
+                    .foregroundStyle(isDarkTheme ? Color.white.opacity(0.6) : Color.black.opacity(0.5))
+
+                Text(settings.language.isKorean ? "외 \(count)건의 일정 더 보기..." : "+\(count) more events...")
+                    .font(.caption2)
+                    .foregroundStyle(isDarkTheme ? Color.white.opacity(0.75) : Color.black.opacity(0.65))
+
+                Spacer()
+
+                Image(systemName: "arrow.up.forward.app")
+                    .font(.system(size: 8.5, weight: .semibold))
+                    .foregroundStyle(isDarkTheme ? Color.white.opacity(0.5) : Color.black.opacity(0.4))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(isDarkTheme ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(.plain)
     }

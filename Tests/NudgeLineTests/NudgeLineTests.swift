@@ -29,9 +29,30 @@ struct LocalizationTests {
         #expect(L10n.tr(.permissionNeeded, lang: .ko) == "macOS 캘린더 접근 권한이 필요합니다.")
         #expect(L10n.tr(.permissionNeeded, lang: .en) == "Calendar access permission is required.")
 
+        // 미리알림 설명문 및 표시 범위 키
+        #expect(L10n.tr(.enableRemindersDescription, lang: .ko) == "날짜 및 시간 정보가 있는 미리알림만 타임라인에 표시됩니다.")
+        #expect(L10n.tr(.enableRemindersDescription, lang: .en) == "Only reminders with a due date and time are shown.")
+        #expect(L10n.tr(.reminderProximityLabel, lang: .ko) == "표시 범위:")
+        #expect(L10n.tr(.reminderProximityLabel, lang: .en) == "Display Range:")
+        #expect(L10n.tr(.reminderRange1Hour, lang: .ko) == "1시간")
+        #expect(L10n.tr(.reminderRangeAllDay, lang: .ko) == "하루 전체")
+        #expect(L10n.tr(.reminderRangeAllDay, lang: .en) == "All Day")
+
         // 지난 일정 흐리게 키
         #expect(L10n.tr(.dimPastEventsLabel, lang: .ko) == "지난 일정 흐리게")
         #expect(L10n.tr(.dimPastEventsLabel, lang: .en) == "Dim past events")
+
+        // 캘린더 계정 및 앱 열기 버튼 키
+        #expect(L10n.tr(.manageAccountsButton, lang: .ko) == "시스템 계정 관리...")
+        #expect(L10n.tr(.manageAccountsButton, lang: .en) == "Accounts...")
+        #expect(L10n.tr(.openCalendarApp, lang: .ko) == "캘린더 앱 열기")
+        #expect(L10n.tr(.openCalendarApp, lang: .en) == "Open Calendar")
+        #expect(L10n.tr(.openRemindersApp, lang: .ko) == "미리알림 앱 열기")
+        #expect(L10n.tr(.openRemindersApp, lang: .en) == "Open Reminders")
+
+        // 전체 화면 시 숨김 키
+        #expect(L10n.tr(.hideOnFullScreenLabel, lang: .ko) == "전체 화면 시 숨김 (영상, 프레젠테이션)")
+        #expect(L10n.tr(.hideOnFullScreenLabel, lang: .en) == "Hide in Full Screen (Video, Presentation)")
 
         // 설정창 4대 탭 타이틀 검증
         #expect(SettingsTab.timeline.title(lang: .ko) == "타임라인")
@@ -40,6 +61,8 @@ struct LocalizationTests {
         #expect(SettingsTab.appearance.title(lang: .en) == "Appearance")
         #expect(SettingsTab.schedule.title(lang: .ko) == "시간 및 캘린더")
         #expect(SettingsTab.schedule.title(lang: .en) == "Time & Calendars")
+        #expect(SettingsTab.reminders.title(lang: .ko) == "미리알림")
+        #expect(SettingsTab.reminders.title(lang: .en) == "Reminders")
         #expect(SettingsTab.general.title(lang: .ko) == "일반")
         #expect(SettingsTab.general.title(lang: .en) == "General")
 
@@ -70,7 +93,7 @@ struct LocalizationTests {
         #expect(L10n.tr(.updateNowInApp, lang: .en) == "Update Now")
         #expect(L10n.tr(.installingAndRestarting, lang: .ko) == "업데이트 설치 및 재시작 중...")
         #expect(L10n.tr(.installingAndRestarting, lang: .en) == "Installing update & restarting...")
-        #expect(L10n.tr(.preferredMapServiceLabel, lang: .ko) == "위치 열기:")
+        #expect(L10n.tr(.preferredMapServiceLabel, lang: .ko) == "일정 위치 열기:")
         #expect(L10n.tr(.preferredMapServiceLabel, lang: .en) == "Open Location with:")
     }
 }
@@ -555,6 +578,46 @@ struct NotesSanitizationTests {
         #expect(event.displayNotes != nil)
         #expect(event.displayNotes?.contains("프로젝트 킥오프 회의") == true)
         #expect(event.displayNotes?.contains("이 섹션을 수정하지 마시기 바랍니다") == false)
+    }
+}
+
+// MARK: - 8. Apple 미리알림 연동 단위 테스트
+@Suite("Reminder Integration Tests")
+struct ReminderIntegrationTests {
+    @Test("미리알림 아이템 모델 및 프로퍼티 검증")
+    func testReminderItemProperties() {
+        let calendar = Calendar.current
+        let today = Date()
+        let due = calendar.date(bySettingHour: 14, minute: 30, second: 0, of: today)!
+        let reminder = ReminderItem(
+            id: "rem-1",
+            title: "약 복용",
+            dueDate: due,
+            listIdentifier: "health",
+            listTitle: "건강",
+            color: .green,
+            notes: "식후 30분",
+            priority: 1,
+            isCompleted: false
+        )
+
+        #expect(reminder.id == "rem-1")
+        #expect(reminder.title == "약 복용")
+        #expect(reminder.dueDate == due)
+        #expect(reminder.listIdentifier == "health")
+        #expect(reminder.listTitle == "건강")
+        #expect(reminder.color == .green)
+        #expect(reminder.notes == "식후 30분")
+        #expect(reminder.priority == 1)
+        #expect(reminder.isCompleted == false)
+    }
+
+    @Test("미리알림 마커 스타일 및 심볼 검증")
+    func testReminderMarkerStyles() {
+        #expect(ReminderMarkerStyle.flag.symbolName == "flag.fill")
+        #expect(ReminderMarkerStyle.petItem.symbolName == "star.fill")
+        #expect(ReminderMarkerStyle.flag.title(lang: .ko) == "기본 깃발 심볼")
+        #expect(ReminderMarkerStyle.flag.title(lang: .en) == "Flag Symbol (Default)")
     }
 }
 

@@ -31,7 +31,7 @@ struct AppearanceTab: View {
             Form {
                 // 1. Event Card Style (일정 카드)
                 Section(header: Text(L10n.tr(.hoverCardStyleSection, lang: settings.language)).fontWeight(.semibold)) {
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.cardStyleLabel, lang: settings.language)) {
                         HStack {
                             Picker("", selection: $settings.eventHoverStyle) {
                                 ForEach(EventHoverStyle.allCases, id: \.self) { style in
@@ -43,12 +43,9 @@ struct AppearanceTab: View {
                             .fixedSize()
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.cardStyleLabel, lang: settings.language))
-                            .frame(minWidth: 135, alignment: .trailing)
                     }
 
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.cardThemeLabel, lang: settings.language)) {
                         HStack {
                             Picker("", selection: $settings.eventCardTheme) {
                                 ForEach(EventCardTheme.allCases, id: \.self) { theme in
@@ -60,20 +57,14 @@ struct AppearanceTab: View {
                             .fixedSize()
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.cardThemeLabel, lang: settings.language))
-                            .frame(minWidth: 135, alignment: .trailing)
                     }
 
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.cardOpacityLabel, lang: settings.language)) {
                         HStack(spacing: 8) {
                             Slider(value: $settings.cardOpacity, in: 0.2...1.0)
                             Text("\(Int(settings.cardOpacity * 100))%")
                                 .frame(width: 38, alignment: .trailing)
                         }
-                    } label: {
-                        Text(L10n.tr(.cardOpacityLabel, lang: settings.language))
-                            .frame(minWidth: 135, alignment: .trailing)
                     }
                 }
 
@@ -81,7 +72,7 @@ struct AppearanceTab: View {
 
                 // 2. Time Indicator Style (시간 표시자)
                 Section(header: Text(L10n.tr(.timeIndicatorSection, lang: settings.language)).fontWeight(.semibold)) {
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.indicatorStyleLabel, lang: settings.language)) {
                         HStack {
                             Picker("", selection: $settings.currentTimeIndicatorStyle) {
                                 ForEach(CurrentTimeIndicatorStyle.allCases, id: \.self) { style in
@@ -93,12 +84,9 @@ struct AppearanceTab: View {
                             .fixedSize()
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.indicatorStyleLabel, lang: settings.language))
-                            .frame(minWidth: 135, alignment: .trailing)
                     }
 
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.indicatorColorLabel, lang: settings.language)) {
                         HStack {
                             ColorPicker("", selection: Binding(
                                 get: { Color(hex: settings.currentTimeColorHex) ?? Color.red },
@@ -107,9 +95,6 @@ struct AppearanceTab: View {
                             .labelsHidden()
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.indicatorColorLabel, lang: settings.language))
-                            .frame(minWidth: 135, alignment: .trailing)
                     }
 
                     Toggle(L10n.tr(.indicatorRimLabel, lang: settings.language), isOn: $settings.enableIndicatorRim)
@@ -121,7 +106,7 @@ struct AppearanceTab: View {
                 // 3. Event Alert Effects (일정 알림 효과)
                 Section(header: Text(L10n.tr(.eventTriggerEffectSection, lang: settings.language)).fontWeight(.semibold)) {
                     // 3-1. 일정 시작 전 알림 (은은한 바 펄스 넛지)
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.preEventAlertLabel, lang: settings.language)) {
                         HStack(spacing: 8) {
                             Toggle("", isOn: $settings.enablePreEventAlert)
                                 .labelsHidden()
@@ -147,13 +132,10 @@ struct AppearanceTab: View {
 
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.preEventAlertLabel, lang: settings.language))
-                            .frame(minWidth: 135, alignment: .trailing)
                     }
 
                     // 3-2. 일정 시작 효과 (16프레임 사계절 방전 및 정각 알림)
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.eventContactEffectLabel, lang: settings.language)) {
                         HStack(spacing: 8) {
                             Toggle("", isOn: $settings.enableEventTriggerEffect)
                                 .labelsHidden()
@@ -178,20 +160,14 @@ struct AppearanceTab: View {
 
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.eventContactEffectLabel, lang: settings.language))
-                            .frame(minWidth: 135, alignment: .trailing)
                     }
 
-                    LabeledContent {
+                    LabeledContent("") {
                         HStack {
                             Toggle(L10n.tr(.hourlyAlertLabel, lang: settings.language), isOn: $settings.enableHourlyAlertEffect)
                                 .toggleStyle(.checkbox)
                             Spacer()
                         }
-                    } label: {
-                        Text("")
-                            .frame(minWidth: 135, alignment: .trailing)
                     }
                     .disabled(!settings.enableEventTriggerEffect)
                 }
@@ -200,13 +176,10 @@ struct AppearanceTab: View {
 
                 // 4. Hanging Pet Companion (대롱대롱 펫)
                 Section(header: Text(L10n.tr(.petCompanionSection, lang: settings.language)).fontWeight(.semibold)) {
-                    Toggle(isOn: $settings.isPetEnabled) {
-                        Text(L10n.tr(.showPetCompanionLabel, lang: settings.language))
-                            .frame(minWidth: 135, alignment: .trailing)
-                    }
-                    .toggleStyle(.switch)
+                    Toggle(L10n.tr(.showPetCompanionLabel, lang: settings.language), isOn: $settings.isPetEnabled)
+                        .toggleStyle(.switch)
 
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.petCharacterLabel, lang: settings.language)) {
                         HStack {
                             Picker("", selection: petSelectionBinding) {
                                 ForEach(HangingPetType.allCases.filter { $0 != .custom }, id: \.self) { pet in
@@ -224,13 +197,10 @@ struct AppearanceTab: View {
                             .fixedSize()
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.petCharacterLabel, lang: settings.language))
-                            .frame(minWidth: 135, alignment: .trailing)
                     }
                     .disabled(!settings.isPetEnabled)
 
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.petHideMotionLabel, lang: settings.language)) {
                         HStack {
                             Picker("", selection: $settings.petHideStyle) {
                                 ForEach(PetHideStyle.allCases, id: \.self) { style in
@@ -242,9 +212,6 @@ struct AppearanceTab: View {
                             .fixedSize()
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.petHideMotionLabel, lang: settings.language))
-                            .frame(minWidth: 135, alignment: .trailing)
                     }
                     .disabled(!settings.isPetEnabled)
 

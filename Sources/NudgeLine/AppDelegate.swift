@@ -13,6 +13,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
 
     private let settings = AppSettings.shared
     private let calendarService = CalendarService.shared
+    private let reminderService = ReminderService.shared
 
     // MARK: - 1. 앱 라이프사이클 (Application Lifecycle)
     public func applicationDidFinishLaunching(_ notification: Notification) {
@@ -33,6 +34,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
             calendarService.fetchEvents(settings: settings)
         } else {
             calendarService.requestAccess()
+        }
+
+        // 미리알림 설정 활성화 시 초기 권한 상태 확인 및 데이터 로드
+        if settings.enableReminders {
+            reminderService.checkAuthorizationStatus()
         }
 
         // 백그라운드에서 최신 릴리스 존재 여부를 조용히 확인합니다.

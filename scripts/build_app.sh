@@ -195,10 +195,10 @@ done
 if [[ "${IS_MAS}" == true ]]; then
     ENTITLEMENTS_FILE="${ROOT_DIR}/Resources/NudgeLine.entitlements"
     echo ">> 4. Mac App Store 샌드박스 Ad-hoc 서명 적용 (${ENTITLEMENTS_FILE})..."
-    codesign --force --deep --entitlements "${ENTITLEMENTS_FILE}" -s - "${APP_DIR}"
+    codesign --force --deep --entitlements "${ENTITLEMENTS_FILE}" -s - -r="designated => identifier \"${BUNDLE_ID}\"" "${APP_DIR}"
 else
-    echo ">> 4. Ad-hoc 코드 서명 적용..."
-    codesign --force --deep -s - "${APP_DIR}"
+    echo ">> 4. Ad-hoc 코드 서명 적용 (안정적 식별자 지정)..."
+    codesign --force --deep -s - -r="designated => identifier \"${BUNDLE_ID}\"" "${APP_DIR}"
 fi
 
 if [[ "${IS_DEV}" == true ]]; then

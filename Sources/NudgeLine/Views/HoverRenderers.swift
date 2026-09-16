@@ -151,15 +151,33 @@ public struct SpeechBubbleShape: Shape {
 public protocol EventHoverStyleRenderer {
     func makeView(
         events: [CalendarEvent],
+        allDayEvents: [CalendarEvent],
         settings: AppSettings
     ) -> AnyView
 
     func targetSize(
         events: [CalendarEvent],
+        allDayEvents: [CalendarEvent],
         isHorizontal: Bool
     ) -> (width: CGFloat, height: CGFloat)
 
     var allowsTransitBridge: Bool { get }
+}
+
+extension EventHoverStyleRenderer {
+    public func makeView(
+        events: [CalendarEvent],
+        settings: AppSettings
+    ) -> AnyView {
+        makeView(events: events, allDayEvents: [], settings: settings)
+    }
+
+    public func targetSize(
+        events: [CalendarEvent],
+        isHorizontal: Bool
+    ) -> (width: CGFloat, height: CGFloat) {
+        targetSize(events: events, allDayEvents: [], isHorizontal: isHorizontal)
+    }
 }
 
 // MARK: - 4. 상세 액션 카드 렌더러 구현체
@@ -168,20 +186,30 @@ public struct DetailCardHoverRenderer: EventHoverStyleRenderer {
 
     public func makeView(
         events: [CalendarEvent],
+        allDayEvents: [CalendarEvent] = [],
         settings: AppSettings
     ) -> AnyView {
-        AnyView(EventPopoverView(events: events, settings: settings))
+        AnyView(EventPopoverView(events: events, allDayEvents: allDayEvents, settings: settings))
     }
 
     public func targetSize(
         events: [CalendarEvent],
+        allDayEvents: [CalendarEvent] = [],
         isHorizontal: Bool
     ) -> (width: CGFloat, height: CGFloat) {
         let isMulti = events.count > 1
-        let maxTitleLength = events.map { $0.rawTitle.count }.max() ?? 8
+        let maxTitleLength = (events + allDayEvents).map { $0.rawTitle.count }.max() ?? 8
         let estimatedWidth = CGFloat(110 + maxTitleLength * 8)
         let width: CGFloat = max(220.0, min(280.0, estimatedWidth)) + (isHorizontal ? 0 : 8.0)
-        let height: CGFloat = (isMulti ? (CGFloat(events.count) * 75.0 + 40.0) : 135.0) + (isHorizontal ? 8.0 : 0)
+
+        // 최대 3개까지만 풀 카드로 렌더링하고 나머지는 축약 칩(28px)으로 처리
+        let displayCount = min(3, events.count)
+        let hasOverflow = events.count > 3
+        let overflowOffset: CGFloat = hasOverflow ? 28.0 : 0.0
+
+        // 종일 일정 1줄 미니 인라인 배지 존재 시 24px 가산
+        let allDayBadgeOffset: CGFloat = allDayEvents.isEmpty ? 0.0 : 24.0
+        let height: CGFloat = (isMulti ? (CGFloat(displayCount) * 110.0 + 35.0) : 135.0) + allDayBadgeOffset + overflowOffset + (isHorizontal ? 8.0 : 0)
         return (width, height)
     }
 
@@ -194,6 +222,7 @@ public struct SimpleInfoHoverRenderer: EventHoverStyleRenderer {
 
     public func makeView(
         events: [CalendarEvent],
+        allDayEvents: [CalendarEvent] = [],
         settings: AppSettings
     ) -> AnyView {
         AnyView(SimpleInfoPopoverView(events: events, settings: settings))
@@ -201,6 +230,7 @@ public struct SimpleInfoHoverRenderer: EventHoverStyleRenderer {
 
     public func targetSize(
         events: [CalendarEvent],
+        allDayEvents: [CalendarEvent] = [],
         isHorizontal: Bool
     ) -> (width: CGFloat, height: CGFloat) {
         let maxTitleLength = events.map { $0.rawTitle.count }.max() ?? 6

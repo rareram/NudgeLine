@@ -15,11 +15,10 @@ struct TimelineTab: View {
                         Text(L10n.tr(.positionBottom, lang: settings.language)).tag(BarPosition.bottom)
                     } label: {
                         Text(L10n.tr(.barPositionLabel, lang: settings.language))
-                            .frame(minWidth: 95, alignment: .trailing)
                     }
                     .pickerStyle(.segmented)
 
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.defaultThickness, lang: settings.language)) {
                         HStack(spacing: 8) {
                             Slider(
                                 value: $settings.barWidth,
@@ -29,9 +28,6 @@ struct TimelineTab: View {
                             Text("\(Int(settings.barWidth))px")
                                 .frame(width: 38, alignment: .trailing)
                         }
-                    } label: {
-                        Text(L10n.tr(.defaultThickness, lang: settings.language))
-                            .frame(minWidth: 95, alignment: .trailing)
                     }
                 }
 
@@ -41,7 +37,7 @@ struct TimelineTab: View {
                 Section(header: Text(L10n.tr(.barHoverEffectsSection, lang: settings.language)).fontWeight(.semibold)) {
                     Toggle(L10n.tr(.expandOnHover, lang: settings.language), isOn: $settings.expandOnHover)
 
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.hoverThickness, lang: settings.language)) {
                         HStack(spacing: 8) {
                             Slider(
                                 value: Binding(
@@ -54,9 +50,6 @@ struct TimelineTab: View {
                             Text("\(Int(max(settings.barWidth, settings.hoverWidth)))px")
                                 .frame(width: 38, alignment: .trailing)
                         }
-                    } label: {
-                        Text(L10n.tr(.hoverThickness, lang: settings.language))
-                            .frame(minWidth: 95, alignment: .trailing)
                     }
                     .disabled(!settings.expandOnHover)
 
@@ -81,7 +74,7 @@ struct TimelineTab: View {
 
                 // 3. 타임라인 배경
                 Section(header: Text(L10n.tr(.barBackgroundSection, lang: settings.language)).fontWeight(.semibold)) {
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.backgroundStyle, lang: settings.language)) {
                         HStack {
                             Picker("", selection: $settings.barStyleMode) {
                                 ForEach(BarStyleMode.allCases, id: \.self) { mode in
@@ -93,33 +86,24 @@ struct TimelineTab: View {
                             .fixedSize()
                             Spacer()
                         }
-                    } label: {
-                        Text(L10n.tr(.backgroundStyle, lang: settings.language))
-                            .frame(minWidth: 95, alignment: .trailing)
                     }
 
                     if settings.barStyleMode == .custom {
-                        LabeledContent {
+                        LabeledContent(L10n.tr(.backgroundColor, lang: settings.language)) {
                             ColorPicker("", selection: Binding(
                                 get: { Color(hex: settings.trackColorHex) ?? Color.gray },
                                 set: { if let hex = $0.toHex() { settings.trackColorHex = hex } }
                             ), supportsOpacity: false)
                             .labelsHidden()
-                        } label: {
-                            Text(L10n.tr(.backgroundColor, lang: settings.language))
-                                .frame(minWidth: 95, alignment: .trailing)
                         }
                     }
 
-                    LabeledContent {
+                    LabeledContent(L10n.tr(.backgroundOpacity, lang: settings.language)) {
                         HStack(spacing: 8) {
                             Slider(value: $settings.trackOpacity, in: 0.0...1.0)
                             Text("\(Int(settings.trackOpacity * 100))%")
                                 .frame(width: 38, alignment: .trailing)
                         }
-                    } label: {
-                        Text(L10n.tr(.backgroundOpacity, lang: settings.language))
-                            .frame(minWidth: 95, alignment: .trailing)
                     }
                 }
             }

@@ -6,15 +6,18 @@ import AppKit
 public struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var calendarService: CalendarService
+    @ObservedObject var reminderService: ReminderService
     @ObservedObject var tabManager: SettingsWindowController.TabManager
 
     public init(
         settings: AppSettings = .shared,
         calendarService: CalendarService = .shared,
+        reminderService: ReminderService = .shared,
         tabManager: SettingsWindowController.TabManager
     ) {
         self.settings = settings
         self.calendarService = calendarService
+        self.reminderService = reminderService
         self.tabManager = tabManager
     }
 
@@ -27,6 +30,8 @@ public struct SettingsView: View {
                 AppearanceTab(settings: settings)
             case .schedule:
                 ScheduleTab(settings: settings, calendarService: calendarService)
+            case .reminders:
+                RemindersTab(settings: settings, reminderService: reminderService)
             case .general:
                 GeneralTab(settings: settings)
             }

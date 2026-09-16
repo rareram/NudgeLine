@@ -3,3 +3,5 @@
 "CFBundleName" = "NudgeLine";
 "NSCalendarsFullAccessUsageDescription" = "NudgeLine needs calendar access to visualize today's schedule along your screen edges.";
 "NSCalendarsUsageDescription" = "NudgeLine needs calendar access to visualize today's schedule along your screen edges.";
+"NSRemindersFullAccessUsageDescription" = "NudgeLine needs reminders access to visualize today's scheduled tasks along your screen edges.";
+"NSRemindersUsageDescription" = "NudgeLine needs reminders access to visualize today's scheduled tasks along your screen edges.";

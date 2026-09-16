@@ -8,6 +8,7 @@ public enum SettingsTab: String, CaseIterable, Sendable {
     case timeline = "timeline"
     case appearance = "appearance"
     case schedule = "schedule"
+    case reminders = "reminders"
     case general = "general"
 
     public func title(lang: AppLanguage) -> String {
@@ -15,6 +16,7 @@ public enum SettingsTab: String, CaseIterable, Sendable {
         case .timeline: return L10n.tr(.tabTimeline, lang: lang)
         case .appearance: return L10n.tr(.tabAppearance, lang: lang)
         case .schedule: return L10n.tr(.tabSchedule, lang: lang)
+        case .reminders: return L10n.tr(.tabReminders, lang: lang)
         case .general: return L10n.tr(.tabGeneral, lang: lang)
         }
     }
@@ -24,6 +26,7 @@ public enum SettingsTab: String, CaseIterable, Sendable {
         case .timeline: return "guidepoint.vertical.arrowtriangle.forward"
         case .appearance: return "calendar.day.timeline.leading"
         case .schedule: return "calendar.badge.clock"
+        case .reminders: return "checklist"
         case .general: return "gear"
         }
     }
@@ -133,6 +136,8 @@ public final class SettingsWindowController: NSWindowController {
 extension SettingsWindowController {
     public func showSettings(tab: SettingsTab? = nil) {
         guard let window = self.window else { return }
+        CalendarService.shared.checkAuthorizationStatus()
+        ReminderService.shared.checkAuthorizationStatus()
         if let targetTab = tab {
             tabManager.selectedTab = targetTab
             window.toolbar?.selectedItemIdentifier = NSToolbarItem.Identifier(targetTab.rawValue)
