@@ -137,7 +137,9 @@ extension SettingsWindowController {
     public func showSettings(tab: SettingsTab? = nil) {
         guard let window = self.window else { return }
         CalendarService.shared.checkAuthorizationStatus()
-        ReminderService.shared.checkAuthorizationStatus()
+        if AppSettings.shared.enableReminders {
+            ReminderService.shared.checkAuthorizationStatus()
+        }
         if let targetTab = tab {
             tabManager.selectedTab = targetTab
             window.toolbar?.selectedItemIdentifier = NSToolbarItem.Identifier(targetTab.rawValue)

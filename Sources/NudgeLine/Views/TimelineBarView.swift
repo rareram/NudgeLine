@@ -169,8 +169,6 @@ public struct TimelineBarView: View {
                     isBarHovered = true
                     let cursorCoord = isHorizontal ? location.x : location.y
 
-                    let isRemindersActive = settings.enableReminders && reminderService.isAuthorized()
-
                     // 현재 시각 인디케이터 인접 감지 (12px 이내)
                     if let timePos = timeOffset, abs(cursorCoord - timePos) <= 12 {
                         if hoveredActiveId != "__TIME_TOOLTIP__" {
@@ -202,8 +200,8 @@ public struct TimelineBarView: View {
                                 settings: settings
                             )
                         }
-                    } else if !calendarService.isAuthorized() && !isRemindersActive {
-                        // 캘린더 접근 권한이 없고, 활성 미리알림도 없는 경우 설정 안내 팝오버를 띄웁니다.
+                    } else if !calendarService.isAuthorized() {
+                        // 캘린더 접근 권한이 없는 경우 설정 안내 팝오버를 띄웁니다.
                         if hoveredActiveId != "__PERMISSION_NOTICE__" {
                             hoveredActiveId = "__PERMISSION_NOTICE__"
                             hoveredFocusId = nil
@@ -215,7 +213,7 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else if calendarService.events.isEmpty {
-                        // 오늘 등록된 일정이 없을 때(또는 캘린더 권한은 없지만 미리알림이 활성화된 경우): 빈 상태 툴팁을 띄웁니다.
+                        // 오늘 등록된 일정이 없을 때: 빈 상태 툴팁을 띄웁니다.
                         let hasCalendars = calendarService.isAuthorized() && !calendarService.allCalendars.isEmpty
                         let clusterId = hasCalendars ? "__EMPTY_SCHEDULE_TOOLTIP__" : "__NO_CALENDARS_TOOLTIP__"
                         if hoveredActiveId != clusterId {

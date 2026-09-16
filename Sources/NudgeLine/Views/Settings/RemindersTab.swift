@@ -75,7 +75,15 @@ struct RemindersTab: View {
 
                 // 3. 표시할 미리알림 목록
                 Section(header: Text(L10n.tr(.visibleReminderListsSection, lang: settings.language)).fontWeight(.semibold)) {
-                    if !reminderService.isAuthorized() {
+                    if !settings.enableReminders {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(L10n.tr(.enableRemindersDescription, lang: settings.language))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                        .frame(height: 180, alignment: .topLeading)
+                    } else if !reminderService.isAuthorized() {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(L10n.tr(.remindersPermissionNeeded, lang: settings.language))
                                 .font(.subheadline)
@@ -158,7 +166,9 @@ struct RemindersTab: View {
             .padding(.vertical, 8)
         }
         .onAppear {
-            reminderService.checkAuthorizationStatus()
+            if settings.enableReminders {
+                reminderService.checkAuthorizationStatus()
+            }
         }
     }
 

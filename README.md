@@ -36,6 +36,7 @@ Key Features:
 - **Timeline Bar**: Background track, event boundary lines, and 4 indicator styles.
 - **Overlapping Events**: Alternating color transitions for concurrent events.
 - **Mascots**: 3 built-in animated pets with 6 hide motions, and custom pet support.
+- **Apple Reminders**: Pinpoint markers on the timeline for today's reminders with two-track styles (SF Symbols & pet treats).
 - **Meeting & Map Integration**: 1-click launch for 10 meeting platforms, automatic unwrapping of corporate SafeLinks/Redirects, and preferred map shortcuts (Apple, Google, Naver, Kakao).
 - **Privacy**: Option to hide the bar during screen sharing/recording or in full-screen spaces.
 - **One-Click In-App Update**: Automatic update notifications and seamless in-app download/relaunch from the menu bar.
@@ -110,16 +111,25 @@ brew install rareram/tap/nudgeline
 - **All-day Events**: Displays all-day events alongside timed schedules in popovers.
 - **Empty Track Guidance**: Displays a status tooltip when hovering over empty timeline gaps.
 
-### 6. Shortcuts & Menu Controls
+### 6. Apple Reminders Integration
+- **Timeline Markers**: Pinpoint markers indicating due times for today's reminders on the timeline.
+- **Two-Track Marker Styles**:
+  - SF Symbols: Flag, Diamond, Heart, and Star (retains reminder list color).
+  - Pet Treats: Full-color food items matching the active pet (Meat for White Tiger, Bone for Jindo Dog, Fish for Calico Cat, Star for Custom Pets).
+- **Visibility Window**: Configurable display range (1, 2, 3, 4, 12 hours, or All Day).
+- **Interactive Popovers**: View reminder details, toggle completion status directly from the popover, and open the Apple Reminders app.
+
+### 7. Shortcuts & Menu Controls
 - **Instant Refresh**: Re-fetch today's calendar events via the timeline bar context menu or menu bar [Refresh] item.
 - **AppIntents Integration**:
   - `Refresh Schedule` / `NudgeLine 새로고침`: Refetch today's calendar events.
   - `Toggle Pet` / `NudgeLine 펫 토글`: Toggle pet visibility on the timeline bar.
 
-### 7. Settings Window
+### 8. Settings Window
 - **Timeline**: Position, thickness, hover expand, border and neon highlights, past event dimming, background style (Auto, Dark, Light, Custom), and opacity.
 - **Appearance**: Card style/theme/opacity, indicator shape/color, pre-event alert, event start effects, hourly alert, pet selection and hide motions, custom pet manager.
 - **Schedule**: 24-hour mode, work hours, visible calendars with color pickers, System Settings deep link.
+- **Reminders**: Enable/disable timeline markers, marker style (SF Symbols or Pet Treats), visibility window, and reminder list filter.
 - **General**: Language (System, Korean, English), launch at login (`SMAppService`), multi-display, hide on screen share, hide in full screen, app info.
 
 ---
@@ -176,13 +186,16 @@ NudgeLine/
 │       ├── main.swift                    # Entry point & single instance guard
 │       ├── Models/
 │       │   ├── AppSettings.swift         # Settings persistence via UserDefaults
-│       │   └── CalendarEvent.swift       # Event model, meeting parser, safe indexing
+│       │   ├── CalendarEvent.swift       # Event model, meeting parser, safe indexing
+│       │   └── ReminderItem.swift        # Apple Reminders model & visibility calculator
 │       ├── Services/
 │       │   ├── CalendarService.swift     # EventKit background query service
 │       │   ├── CustomPetService.swift    # Thread-safe custom pet file manager
 │       │   ├── LaunchAtLoginHelper.swift # SMAppService login item wrapper
 │       │   ├── Localization.swift        # English/Korean L10n dictionary
-│       │   └── NudgeLineShortcuts.swift  # AppIntents for Shortcuts & Siri automation
+│       │   ├── NudgeLineShortcuts.swift  # AppIntents for Shortcuts & Siri automation
+│       │   ├── ReminderService.swift     # Apple Reminders fetch & toggle service
+│       │   └── UpdateService.swift       # In-app update checker and download coordinator
 │       └── Views/
 │           ├── OverlayPanel.swift        # Edge floating NSPanel with mouse passthrough
 │           ├── PopoverPanel.swift        # Floating popover panel with .common runloop timer & empty tooltip
@@ -198,6 +211,7 @@ NudgeLine/
 │           │   ├── TimelineTab.swift
 │           │   ├── AppearanceTab.swift
 │           │   ├── ScheduleTab.swift
+│           │   ├── RemindersTab.swift
 │           │   └── GeneralTab.swift
 │           ├── Effects/                  # 16-frame 1.0s micro event alert effects
 │           │   ├── EventTriggerEffectView.swift

@@ -8,7 +8,9 @@ import AppKit
 public final class ReminderService: ObservableObject {
     public static let shared = ReminderService()
 
-    private let eventStore = EKEventStore()
+    private var eventStore: EKEventStore {
+        CalendarService.shared.eventStore
+    }
     private let fetchSerialQueue = DispatchQueue(label: "com.nudgeline.reminderFetchSerialQueue", qos: .userInitiated)
     private var cancellables = Set<AnyCancellable>()
     private var isSleeping: Bool = false
@@ -31,6 +33,7 @@ extension ReminderService {
         let status = EKEventStore.authorizationStatus(for: .reminder)
         self.authorizationStatus = status
         if isAuthorized(status: status) {
+            eventStore.reset()
             refreshSources()
             loadReminderLists()
             fetchReminders()
@@ -174,11 +177,11 @@ extension ReminderService {
 extension ReminderService {
     private func setupEventStoreObserver() {
         // DB 변경 이벤트 폭주 방지를 위해 300ms 디바운스 후 갱신
-        NotificationCenter.default.publisher(for: .EKEventStoreChanged, object: eventStore)
+        NotificationCenter.default.publisher(for: .EKEventStoreChanged, object: nil)
             .receive(on: DispatchQueue.main)
             .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self = self, !self.isSleeping else { return }
+                guard let self = self, !self.isSleeping, AppSettings.shared.enableReminders else { return }
                 self.loadReminderLists()
                 self.fetchReminders()
             }
@@ -205,7 +208,7 @@ extension ReminderService {
             .map { _ in () }
             .debounce(for: .milliseconds(150), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self = self, !self.isSleeping else { return }
+                guard let self = self, !self.isSleeping, AppSettings.shared.enableReminders else { return }
                 self.fetchReminders()
             }
             .store(in: &cancellables)
@@ -214,7 +217,7 @@ extension ReminderService {
         NotificationCenter.default.publisher(for: .NSCalendarDayChanged, object: nil)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self = self, !self.isSleeping else { return }
+                guard let self = self, !self.isSleeping, AppSettings.shared.enableReminders else { return }
                 self.refreshSources()
                 self.loadReminderLists()
                 self.fetchReminders()
@@ -241,7 +244,9 @@ extension ReminderService {
         .sink { [weak self] _ in
             guard let self = self else { return }
             self.isSleeping = false
-            self.fetchReminders()
+            if AppSettings.shared.enableReminders {
+                self.fetchReminders()
+            }
         }
         .store(in: &cancellables)
 

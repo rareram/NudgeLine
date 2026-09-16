@@ -23,7 +23,7 @@ public struct CalendarSourceGroup: Identifiable, Sendable {
 public final class CalendarService: ObservableObject {
     public static let shared = CalendarService()
 
-    private let eventStore = EKEventStore()
+    internal let eventStore = EKEventStore()
     private let fetchSerialQueue = DispatchQueue(label: "com.nudgeline.fetchSerialQueue", qos: .userInitiated)
     private var cancellables = Set<AnyCancellable>()
     private var isSleeping: Bool = false
@@ -52,6 +52,7 @@ extension CalendarService {
         let status = EKEventStore.authorizationStatus(for: .event)
         self.authorizationStatus = status
         if isAuthorized(status: status) {
+            eventStore.reset()
             refreshSources()
             loadCalendars()
             fetchEvents()
