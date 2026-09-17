@@ -67,6 +67,10 @@ struct RemindersTab: View {
                             Spacer()
                         }
                     }
+
+                    Toggle(L10n.tr(.reminderMarkerGlowLabel, lang: settings.language), isOn: $settings.enableReminderMarkerGlow)
+                        .toggleStyle(.checkbox)
+                        .padding(.top, 4)
                 }
                 .disabled(!settings.enableReminders)
                 .opacity(settings.enableReminders ? 1.0 : 0.45)

@@ -97,6 +97,7 @@ public struct L10n {
         case reminderStyleHeart
         case reminderStyleStar
         case reminderStylePetItem
+        case reminderMarkerGlowLabel
         case visibleReminderListsSection
         case noReminderLists
         case openRemindersApp
@@ -297,6 +298,7 @@ extension L10n.Key {
         case .reminderStyleHeart: return "하트 심볼"
         case .reminderStyleStar: return "별 심볼"
         case .reminderStylePetItem: return "펫 먹이·간식"
+        case .reminderMarkerGlowLabel: return "마커 네온 효과 및 테두리 강조"
         case .visibleReminderListsSection: return "표시할 미리알림 목록"
         case .noReminderLists: return "등록된 미리알림 목록이 없습니다."
         case .openRemindersApp: return "미리알림 앱 열기"
@@ -490,6 +492,7 @@ extension L10n.Key {
         case .reminderStyleHeart: return "Heart Symbol"
         case .reminderStyleStar: return "Star Symbol"
         case .reminderStylePetItem: return "Pet Snack"
+        case .reminderMarkerGlowLabel: return "Marker neon glow & border accent"
         case .visibleReminderListsSection: return "Visible Reminder Lists"
         case .noReminderLists: return "No reminder lists found."
         case .openRemindersApp: return "Open Reminders"

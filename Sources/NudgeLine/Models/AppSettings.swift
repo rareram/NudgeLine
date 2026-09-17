@@ -312,6 +312,7 @@ public final class AppSettings: ObservableObject {
         static let enableReminders = "settings_enable_reminders"
         static let reminderProximityMinutes = "settings_reminder_proximity_minutes"
         static let reminderMarkerStyle = "settings_reminder_marker_style"
+        static let enableReminderMarkerGlow = "settings_enable_reminder_marker_glow"
         static let reminderVisibility = "settings_reminder_visibility"
     }
 
@@ -508,6 +509,10 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(reminderMarkerStyle.rawValue, forKey: Keys.reminderMarkerStyle) }
     }
 
+    @Published public var enableReminderMarkerGlow: Bool {
+        didSet { defaults.set(enableReminderMarkerGlow, forKey: Keys.enableReminderMarkerGlow) }
+    }
+
     @Published public var reminderVisibility: [String: Bool] {
         didSet { defaults.set(reminderVisibility, forKey: Keys.reminderVisibility) }
     }
@@ -622,6 +627,7 @@ public final class AppSettings: ObservableObject {
         self.reminderProximityMinutes = savedReminderProximity > 0 ? savedReminderProximity : 60
         let savedMarkerStyle = defaults.string(forKey: Keys.reminderMarkerStyle) ?? ReminderMarkerStyle.flag.rawValue
         self.reminderMarkerStyle = ReminderMarkerStyle(rawValue: savedMarkerStyle) ?? .flag
+        self.enableReminderMarkerGlow = defaults.object(forKey: Keys.enableReminderMarkerGlow) != nil ? defaults.bool(forKey: Keys.enableReminderMarkerGlow) : true
         self.reminderVisibility = (defaults.dictionary(forKey: Keys.reminderVisibility) as? [String: Bool]) ?? [:]
     }
 }

@@ -96,6 +96,8 @@ struct LocalizationTests {
         #expect(L10n.tr(.installingAndRestarting, lang: .en) == "Installing update & restarting...")
         #expect(L10n.tr(.preferredMapServiceLabel, lang: .ko) == "일정 위치 열기:")
         #expect(L10n.tr(.preferredMapServiceLabel, lang: .en) == "Open Location with:")
+        #expect(L10n.tr(.reminderMarkerGlowLabel, lang: .ko) == "마커 네온 효과 및 테두리 강조")
+        #expect(L10n.tr(.reminderMarkerGlowLabel, lang: .en) == "Marker neon glow & border accent")
     }
 }
 
@@ -109,6 +111,7 @@ struct AppSettingsTests {
         #expect(settings.barWidth >= 1.0 && settings.barWidth <= 10.0)
         #expect(settings.hoverWidth >= settings.barWidth)
         #expect(settings.preEventAlertMinutes >= 5 && settings.preEventAlertMinutes <= 20)
+        #expect(settings.enableReminderMarkerGlow == true)
     }
 
     @Test("테마 다크모드 판별 검증")
