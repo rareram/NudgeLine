@@ -44,21 +44,17 @@ public struct SimpleInfoPopoverView: View {
         .padding(.bottom, direction == .bottom ? 14 : 8)
         .frame(minWidth: 130, maxWidth: 280, alignment: .leading)
         .fixedSize(horizontal: true, vertical: false)
+        // 1단계: 순정 머티리얼 글래스 블러 (사용자 cardOpacity 투명도 반영)
+        .background(.ultraThinMaterial.opacity(settings.cardOpacity), in: bubbleShape)
         .background(
-            VisualEffectBlur(
-                material: .popover,
-                blendingMode: .behindWindow,
-                state: .active
-            )
-            .clipShape(bubbleShape)
-            .allowsHitTesting(false)
-        )
-        .background(
+            // 2단계: 테마 투명 틴트 레이어 (다크/라이트 모드 대비 보강)
             bubbleShape
-                .fill(isDarkTheme ? Color.black.opacity(settings.cardOpacity) : Color.white.opacity(max(0.60, settings.cardOpacity)))
+                .fill(isDarkTheme ? Color.black.opacity(settings.cardOpacity * 0.40) : Color.white.opacity(settings.cardOpacity * 0.35))
                 .allowsHitTesting(false)
         )
+        .clipShape(bubbleShape)
         .overlay(
+            // 3단계: 외곽선 스트로크 (라이트 모드 듀얼 톤 경계선 가시성 확보)
             bubbleShape
                 .stroke(
                     LinearGradient(
@@ -66,8 +62,8 @@ public struct SimpleInfoPopoverView: View {
                             Color.white.opacity(0.35),
                             Color.white.opacity(0.10)
                         ] : [
-                            Color.black.opacity(0.16),
-                            Color.black.opacity(0.08)
+                            Color.black.opacity(0.20),
+                            Color.black.opacity(0.10)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -76,7 +72,8 @@ public struct SimpleInfoPopoverView: View {
                 )
                 .allowsHitTesting(false)
         )
-        .shadow(color: .black.opacity(isDarkTheme ? 0.28 : 0.18), radius: 8, x: 0, y: 4)
+        // 4단계: 순정 부드러운 그림자 (밝은 배경 플로팅 입체감 보강)
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.30 : 0.16), radius: 6, x: 0, y: 3)
     }
 
     @ViewBuilder

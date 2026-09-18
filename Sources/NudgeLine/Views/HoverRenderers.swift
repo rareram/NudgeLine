@@ -1,45 +1,8 @@
-// 팝오버 렌더링 스킨 프로토콜, 공통 블러/말풍선 Shape 및 구현체
+// 팝오버 렌더링 스킨 프로토콜, 공통 말풍선 Shape 및 구현체
 import SwiftUI
 import AppKit
 
-// MARK: - 1. macOS 네이티브 블러 래퍼 뷰 (VisualEffectBlur)
-public struct VisualEffectBlur: NSViewRepresentable {
-    public var material: NSVisualEffectView.Material
-    public var blendingMode: NSVisualEffectView.BlendingMode
-    public var state: NSVisualEffectView.State
-    public var appearance: NSAppearance?
-
-    public init(
-        material: NSVisualEffectView.Material = .popover,
-        blendingMode: NSVisualEffectView.BlendingMode = .behindWindow,
-        state: NSVisualEffectView.State = .active,
-        appearance: NSAppearance? = nil
-    ) {
-        self.material = material
-        self.blendingMode = blendingMode
-        self.state = state
-        self.appearance = appearance
-    }
-
-    public func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = blendingMode
-        view.state = state
-        view.appearance = appearance
-        view.autoresizingMask = [.width, .height]
-        return view
-    }
-
-    public func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = material
-        nsView.blendingMode = blendingMode
-        nsView.state = state
-        nsView.appearance = appearance
-    }
-}
-
-// MARK: - 2. 팝오버 말풍선 꼬리 방향 및 기하 Shape (SpeechBubbleShape)
+// MARK: - 1. 팝오버 말풍선 꼬리 방향 및 기하 Shape (SpeechBubbleShape)
 public enum BubbleArrowDirection: Sendable {
     case left
     case right
@@ -147,7 +110,7 @@ public struct SpeechBubbleShape: Shape {
     }
 }
 
-// MARK: - 3. 팝오버 호버 스타일 렌더러 인터페이스 (EventHoverStyleRenderer)
+// MARK: - 2. 팝오버 호버 스타일 렌더러 인터페이스 (EventHoverStyleRenderer)
 public protocol EventHoverStyleRenderer {
     func makeView(
         events: [CalendarEvent],
@@ -180,7 +143,7 @@ extension EventHoverStyleRenderer {
     }
 }
 
-// MARK: - 4. 상세 액션 카드 렌더러 구현체
+// MARK: - 3. 상세 액션 카드 렌더러 구현체
 public struct DetailCardHoverRenderer: EventHoverStyleRenderer {
     public init() {}
 
@@ -216,7 +179,7 @@ public struct DetailCardHoverRenderer: EventHoverStyleRenderer {
     public var allowsTransitBridge: Bool { true }
 }
 
-// MARK: - 5. 초경량 요약 툴팁 렌더러 구현체
+// MARK: - 4. 초경량 요약 툴팁 렌더러 구현체
 public struct SimpleInfoHoverRenderer: EventHoverStyleRenderer {
     public init() {}
 

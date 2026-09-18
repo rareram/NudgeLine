@@ -133,6 +133,40 @@ public final class PopoverPanel: NSPanel {
 
 // MARK: - 3. 일정 호버 팝오버 표시 및 좌표 애니메이션
 extension PopoverPanel {
+    // MARK: - 방향별 그림자 안전 여백 연산
+    // [원인/배경: 균일 여백 부여 시 윈도우 프레임이 타임라인 바 영역(폭 2~3pt)을 덮어 호버 깜빡임(진자 루프) 유발 -> 해결 방법: 바를 향하는 방향은 여백 0pt로 물리적 경계를 엄격히 유지하고, 개방된 바깥 방향에만 10pt 여백을 부여하여 순정 그림자 클리핑 방지 -> 기대 효과: 타임라인 바 호버 간섭 0% 보장 및 흰색 배경에서의 부드러운 순정 그림자 보존]
+    private func shadowPadding(for barPosition: BarPosition, isHorizontal: Bool) -> EdgeInsets {
+        let margin: CGFloat = 10.0
+        if isHorizontal {
+            return EdgeInsets(top: margin, leading: margin, bottom: 0, trailing: margin)
+        }
+        switch barPosition {
+        case .left:
+            return EdgeInsets(top: margin, leading: 0, bottom: margin, trailing: margin)
+        case .right:
+            return EdgeInsets(top: margin, leading: margin, bottom: margin, trailing: 0)
+        case .bottom:
+            return EdgeInsets(top: margin, leading: margin, bottom: 0, trailing: margin)
+        }
+    }
+
+    // [원인/배경: 비대칭 여백 추가 시 윈도우 원점과 크기 보정이 어긋나면 카드의 화면상 시각적 위치가 이동함 -> 해결 방법: 카드 본체 목표 좌표(cardX, cardY)에서 패딩을 차감/가산하여 윈도우 프레임을 역산 -> 기대 효과: 카드의 시각적 렌더링 위치는 이전과 100% 동일하게 유지하면서 여백만 안전하게 확장]
+    private func computePanelFrame(
+        cardX: CGFloat,
+        cardY: CGFloat,
+        cardWidth: CGFloat,
+        cardHeight: CGFloat,
+        barPosition: BarPosition,
+        isHorizontal: Bool
+    ) -> NSRect {
+        let pad = shadowPadding(for: barPosition, isHorizontal: isHorizontal)
+        let winX = cardX - pad.leading
+        let winY = cardY - pad.bottom
+        let winW = cardWidth + pad.leading + pad.trailing
+        let winH = cardHeight + pad.top + pad.bottom
+        return NSRect(x: winX, y: winY, width: winW, height: winH)
+    }
+
     public func show(
         events: [CalendarEvent],
         allDayEvents: [CalendarEvent] = [],
@@ -167,10 +201,14 @@ extension PopoverPanel {
         let targetWidth = targetDimensions.width
         let targetHeight = targetDimensions.height
 
-        let anyView = renderer.makeView(
-            events: events,
-            allDayEvents: allDayEvents,
-            settings: settings
+        let pad = shadowPadding(for: barPosition, isHorizontal: isHorizontal)
+        let anyView = AnyView(
+            renderer.makeView(
+                events: events,
+                allDayEvents: allDayEvents,
+                settings: settings
+            )
+            .padding(pad)
         )
 
         if let hosting = hostingView {
@@ -184,15 +222,11 @@ extension PopoverPanel {
 
         var finalX: CGFloat
         var finalY: CGFloat
-        var startX: CGFloat
-        var startY: CGFloat
 
         if isHorizontal {
             let idealFinalX = visibleFrame.minX + blockOffset + (blockLength / 2) - (targetWidth / 2)
             finalX = max(visibleFrame.minX + 8, min(visibleFrame.maxX - targetWidth - 8, idealFinalX))
             finalY = visibleFrame.minY + thickness + 6
-            startX = finalX
-            startY = finalY - 8
         } else {
             let idealFinalY = visibleFrame.maxY - blockOffset - (blockLength / 2) - (targetHeight / 2)
             finalY = max(visibleFrame.minY + 8, min(visibleFrame.maxY - targetHeight - 8, idealFinalY))
@@ -200,35 +234,34 @@ extension PopoverPanel {
             switch barPosition {
             case .left:
                 finalX = fullFrame.minX + thickness + 6
-                startX = finalX - 8
-                startY = finalY
             case .right:
                 finalX = fullFrame.maxX - thickness - targetWidth - 6
-                startX = finalX + 8
-                startY = finalY
             case .bottom:
                 let idealFinalX = visibleFrame.minX + blockOffset + (blockLength / 2) - (targetWidth / 2)
                 finalX = max(visibleFrame.minX + 8, min(visibleFrame.maxX - targetWidth - 8, idealFinalX))
                 finalY = visibleFrame.minY + thickness + 6
-                startX = finalX
-                startY = finalY - 8
             }
         }
 
         let isNewCluster = currentClusterId != clusterId || !self.isVisible
         currentClusterId = clusterId
 
-        let finalFrame = NSRect(x: finalX, y: finalY, width: targetWidth, height: targetHeight)
-        let startFrame = NSRect(x: startX, y: startY, width: targetWidth, height: targetHeight)
+        let finalFrame = computePanelFrame(
+            cardX: finalX,
+            cardY: finalY,
+            cardWidth: targetWidth,
+            cardHeight: targetHeight,
+            barPosition: barPosition,
+            isHorizontal: isHorizontal
+        )
 
         if !self.isVisible {
-            self.setFrame(startFrame, display: true, animate: false)
+            self.setFrame(finalFrame, display: true, animate: false)
             self.alphaValue = 0.0
             self.orderFrontRegardless()
             NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.15
+                ctx.duration = 0.12
                 ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                self.animator().setFrame(finalFrame, display: true)
                 self.animator().alphaValue = 1.0
             }
         } else if isNewCluster {
@@ -460,10 +493,14 @@ extension PopoverPanel {
         let targetWidth = targetDimensions.width
         let targetHeight = targetDimensions.height
 
-        let anyView = renderer.makeView(
-            events: events,
-            allDayEvents: [],
-            settings: context.settings
+        let pad = shadowPadding(for: context.barPosition, isHorizontal: context.isHorizontal)
+        let anyView = AnyView(
+            renderer.makeView(
+                events: events,
+                allDayEvents: [],
+                settings: context.settings
+            )
+            .padding(pad)
         )
 
         if let hosting = hostingView {
@@ -501,7 +538,14 @@ extension PopoverPanel {
             }
         }
 
-        let expandedFrame = NSRect(x: finalX, y: finalY, width: targetWidth, height: targetHeight)
+        let expandedFrame = computePanelFrame(
+            cardX: finalX,
+            cardY: finalY,
+            cardWidth: targetWidth,
+            cardHeight: targetHeight,
+            barPosition: context.barPosition,
+            isHorizontal: context.isHorizontal
+        )
 
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.16
@@ -522,7 +566,7 @@ extension PopoverPanel {
         let finalFrame = calculateTooltipFrame(
             offset: cursorOffset,
             targetWidth: targetWidth,
-            targetHeight: 28.0,
+            targetHeight: 24.0,
             isHorizontal: isHorizontal,
             barPosition: barPosition,
             settings: settings,
@@ -812,18 +856,15 @@ private struct CurrentTimeTooltipView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .background(
-            VisualEffectBlur(
-                material: .popover,
-                blendingMode: .behindWindow,
-                state: .active
-            )
-            .clipShape(Capsule())
-        )
+        // 1단계: 순정 머티리얼 글래스 블러 (사각 잔상 없는 벡터 캡슐 마스킹)
+        .background(.ultraThinMaterial, in: Capsule())
+        // 2단계: 텍스트 가독성 확보용 캡슐 틴트 레이어
         .background(
             Capsule()
-                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.75))
+                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.78))
         )
+        .clipShape(Capsule())
+        // 3단계: 캡슐 외곽선 스트로크
         .overlay(
             Capsule()
                 .stroke(
@@ -845,7 +886,6 @@ private struct CurrentTimeTooltipView: View {
                     lineWidth: 0.8
                 )
         )
-        .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
         .contentShape(Capsule())
         .onTapGesture {
             settings.togglePetSnooze()
@@ -900,19 +940,15 @@ private struct ReminderTooltipView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            VisualEffectBlur(
-                material: .popover,
-                blendingMode: .behindWindow,
-                state: .active
-            )
-            .clipShape(Capsule())
-        )
+        // 1단계: 순정 머티리얼 글래스 블러 (사각 잔상 없는 벡터 캡슐 마스킹)
+        .background(.ultraThinMaterial, in: Capsule())
+        // 2단계: 텍스트 가독성 확보용 캡슐 틴트 레이어
         .background(
             Capsule()
-                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.75))
+                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.78))
         )
+        .clipShape(Capsule())
+        // 3단계: 캡슐 외곽선 스트로크
         .overlay(
             Capsule()
                 .stroke(
@@ -930,7 +966,6 @@ private struct ReminderTooltipView: View {
                     lineWidth: 0.8
                 )
         )
-        .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
     }
 }
 
@@ -1056,19 +1091,15 @@ private struct EmptyScheduleTooltipView: View {
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            VisualEffectBlur(
-                material: .popover,
-                blendingMode: .behindWindow,
-                state: .active
-            )
-            .clipShape(Capsule())
-        )
+        // 1단계: 순정 머티리얼 글래스 블러 (사각 잔상 없는 벡터 캡슐 마스킹)
+        .background(.ultraThinMaterial, in: Capsule())
+        // 2단계: 텍스트 가독성 확보용 캡슐 틴트 레이어
         .background(
             Capsule()
-                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.75))
+                .fill(isDarkTheme ? Color.black.opacity(0.85) : Color.white.opacity(0.78))
         )
+        .clipShape(Capsule())
+        // 3단계: 캡슐 외곽선 스트로크
         .overlay(
             Capsule()
                 .stroke(
@@ -1086,7 +1117,6 @@ private struct EmptyScheduleTooltipView: View {
                     lineWidth: 0.8
                 )
         )
-        .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
     }
 }
 
@@ -1126,19 +1156,15 @@ private struct PermissionNoticeTooltipView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            VisualEffectBlur(
-                material: .popover,
-                blendingMode: .behindWindow,
-                state: .active
-            )
-            .clipShape(Capsule())
-        )
+        // 1단계: 순정 머티리얼 글래스 블러 (사각 잔상 없는 벡터 캡슐 마스킹)
+        .background(.ultraThinMaterial, in: Capsule())
+        // 2단계: 텍스트 가독성 확보용 캡슐 틴트 레이어
         .background(
             Capsule()
                 .fill(isDarkTheme ? Color.black.opacity(0.88) : Color.white.opacity(0.80))
         )
+        .clipShape(Capsule())
+        // 3단계: 캡슐 외곽선 스트로크
         .overlay(
             Capsule()
                 .stroke(
@@ -1156,7 +1182,6 @@ private struct PermissionNoticeTooltipView: View {
                     lineWidth: 0.8
                 )
         )
-        .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
     }
 }
 
