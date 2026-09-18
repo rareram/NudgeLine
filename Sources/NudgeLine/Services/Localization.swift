@@ -197,6 +197,11 @@ public struct L10n {
         case hideStyleVortex
         case hideStyleSquish
         case hideStyleSmoke
+        case petSnoozeLabel
+        case petSnoozeDescription
+        case petSnoozedTooltip(Int)
+        case minutesDuration(Int)
+        case hoursDuration(Int)
 
         // 커스텀 펫 편집기
         case customPetSection
@@ -403,6 +408,11 @@ extension L10n.Key {
         case .hideStyleVortex: return "사라지기 (빙글빙글)"
         case .hideStyleSquish: return "사라지기 (쫀득)"
         case .hideStyleSmoke: return "사라지기 (스르륵)"
+        case .petSnoozeLabel: return "클릭 시 펫 일시 숨김:"
+        case .petSnoozeDescription: return "시간 표시자나 말풍선을 클릭하면 지정된 시간 동안 펫이 숨어있습니다. (재클릭 시 즉시 복귀)"
+        case .petSnoozedTooltip(let min): return "펫 숨김 \(min)분 남음 · 클릭 시 복귀"
+        case .minutesDuration(let min): return "\(min)분"
+        case .hoursDuration(let hr): return "\(hr)시간"
 
         case .customPetSection: return "사용자 설정 펫"
         case .addCustomPet: return "사용자 설정 펫 추가"
@@ -597,6 +607,11 @@ extension L10n.Key {
         case .hideStyleVortex: return "Disappear (Swirl)"
         case .hideStyleSquish: return "Disappear (Squish)"
         case .hideStyleSmoke: return "Disappear (Smoke)"
+        case .petSnoozeLabel: return "Pause Pet on Click:"
+        case .petSnoozeDescription: return "Click the time indicator or tooltip to pause the pet for the set duration. (Click again to resume)"
+        case .petSnoozedTooltip(let min): return "Pet paused for \(min)m · Click to resume"
+        case .minutesDuration(let min): return "\(min) min"
+        case .hoursDuration(let hr): return "\(hr) hr"
 
         case .customPetSection: return "Custom Pets"
         case .addCustomPet: return "Add Custom Pet"

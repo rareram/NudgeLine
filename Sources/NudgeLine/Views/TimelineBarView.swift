@@ -118,7 +118,7 @@ public struct TimelineBarView: View {
                         isHorizontal: isHorizontal,
                         isBarHovered: isBarHovered,
                         isPetProximityHovered: panelState.isPetProximityHovered,
-                        accentColor: settings.effectiveCurrentTimeColor(),
+                        accentColor: settings.isPetSnoozed ? Color(red: 0.35, green: 0.55, blue: 0.95) : settings.effectiveCurrentTimeColor(),
                         activeEffectType: activeEffectType,
                         activeEffectId: activeEffectId,
                         onEffectComplete: {
@@ -130,6 +130,30 @@ public struct TimelineBarView: View {
                         x: isHorizontal ? pos : 0,
                         y: isHorizontal ? 0 : pos
                     )
+
+                    // 3-1. 인디케이터 클릭 히트 타깃 (펫 스누즈 토글)
+                    Color.clear
+                        .frame(
+                            width: isHorizontal ? 28 : currentThickness + 8,
+                            height: isHorizontal ? currentThickness + 8 : 28
+                        )
+                        .contentShape(Rectangle())
+                        .offset(
+                            x: isHorizontal ? pos - 14 : 0,
+                            y: isHorizontal ? 0 : pos - 14
+                        )
+                        .onTapGesture {
+                            if settings.enablePetSnooze {
+                                settings.togglePetSnooze()
+                                PopoverPanel.shared.showTimeTooltip(
+                                    currentTime: currentTime,
+                                    timeOffset: pos,
+                                    isHorizontal: isHorizontal,
+                                    barPosition: settings.barPosition,
+                                    settings: settings
+                                )
+                            }
+                        }
                 }
             }
             .frame(
@@ -339,8 +363,11 @@ public struct TimelineBarView: View {
                 updateSegments()
             }
 
+            // 스누즈 만료 자동 확인
+            settings.checkSnoozeExpiration(at: input)
+
             // 마우스 호버 중이 아닐 때는 15초마다 시간을 갱신해 유휴 상태의 렌더링 부하를 줄입니다.
-            let isHovered = isBarHovered || panelState.isPetProximityHovered
+            let isHovered = isBarHovered || panelState.isPetProximityHovered || settings.isPetSnoozed
             let currentSec = Int(currentTime.timeIntervalSince1970)
             let inputSec = Int(input.timeIntervalSince1970)
             if isHovered || (inputSec / 15 != currentSec / 15) || !wasSameDay {
@@ -1010,6 +1037,7 @@ private struct CurrentTimeIndicatorView: View {
     let activeEffectId: UUID
     let onEffectComplete: @MainActor () -> Void
     let isDark: Bool
+    @State private var isBreathing: Bool = false
 
     var body: some View {
         ZStack(alignment: alignmentForPosition) {
@@ -1143,6 +1171,21 @@ private struct CurrentTimeIndicatorView: View {
                         y: isHorizontal ? (-thickness / 2 - 4.5) : -4.5
                     )
             }
+        }
+        .opacity(settings.isPetSnoozed ? (isBreathing ? 1.0 : 0.4) : 1.0)
+        .animation(
+            settings.isPetSnoozed
+                ? .easeInOut(duration: 2.0).repeatForever(autoreverses: true)
+                : .easeOut(duration: 0.2),
+            value: isBreathing
+        )
+        .onAppear {
+            if settings.isPetSnoozed {
+                isBreathing = true
+            }
+        }
+        .onChange(of: settings.isPetSnoozed) { _, snoozed in
+            isBreathing = snoozed
         }
     }
 

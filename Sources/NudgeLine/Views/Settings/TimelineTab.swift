@@ -53,19 +53,16 @@ struct TimelineTab: View {
                     }
                     .disabled(!settings.expandOnHover)
 
-                    // 2단 체크박스 그리드
-                    HStack(alignment: .top, spacing: 32) {
-                        VStack(alignment: .leading, spacing: 8) {
+                    // 체크박스 그룹 (블록 장식 효과 한 줄 통합)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 24) {
                             Toggle(L10n.tr(.enableSegmentRimLabel, lang: settings.language), isOn: $settings.enableSegmentRim)
                                 .toggleStyle(.checkbox)
                             Toggle(L10n.tr(.enableSegmentGlowLabel, lang: settings.language), isOn: $settings.enableSegmentGlow)
                                 .toggleStyle(.checkbox)
                         }
-                        VStack(alignment: .leading, spacing: 8) {
-                            Toggle(L10n.tr(.dimPastEventsLabel, lang: settings.language), isOn: $settings.dimPastEvents)
-                                .toggleStyle(.checkbox)
-                        }
-                        Spacer()
+                        Toggle(L10n.tr(.dimPastEventsLabel, lang: settings.language), isOn: $settings.dimPastEvents)
+                            .toggleStyle(.checkbox)
                     }
                     .padding(.top, 4)
                 }

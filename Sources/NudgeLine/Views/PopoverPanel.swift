@@ -291,10 +291,34 @@ extension PopoverPanel {
     ) {
         guard let screen = currentTargetScreen() else { return }
 
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "M.d (E) HH:mm"
+        let timeString = timeFormatter.string(from: currentTime)
+
+        let targetWidth: CGFloat
+        let targetHeight: CGFloat
+        if settings.isPetSnoozed {
+            let fontRow1 = NSFont.systemFont(ofSize: 10.5, weight: .semibold)
+            let row1Width = (timeString as NSString).size(withAttributes: [.font: fontRow1]).width + 9.0
+
+            let subText = L10n.tr(.petSnoozedTooltip(settings.remainingSnoozeMinutes), lang: settings.language)
+            let fontRow2 = NSFont.systemFont(ofSize: 9.0, weight: .medium)
+            let row2Width = (subText as NSString).size(withAttributes: [.font: fontRow2]).width
+
+            let contentWidth = max(row1Width, row2Width)
+            targetWidth = ceil(contentWidth + 30.0)
+            targetHeight = 38.0
+        } else {
+            let font = NSFont.systemFont(ofSize: 10.0, weight: .semibold)
+            let textWidth = (timeString as NSString).size(withAttributes: [.font: font]).width
+            targetWidth = ceil(textWidth + 28.0)
+            targetHeight = 24.0
+        }
+
         let finalFrame = calculateTooltipFrame(
             offset: timeOffset,
-            targetWidth: 110.0,
-            targetHeight: 24.0,
+            targetWidth: targetWidth,
+            targetHeight: targetHeight,
             isHorizontal: isHorizontal,
             barPosition: barPosition,
             settings: settings,
@@ -302,7 +326,13 @@ extension PopoverPanel {
         )
 
         presentTooltip(
-            content: AnyView(CurrentTimeTooltipView(currentTime: currentTime, settings: settings)),
+            content: AnyView(CurrentTimeTooltipView(
+                currentTime: currentTime,
+                timeOffset: timeOffset,
+                isHorizontal: isHorizontal,
+                barPosition: barPosition,
+                settings: settings
+            )),
             frame: finalFrame,
             clusterId: "__CURRENT_TIME_TOOLTIP__",
             isDetailMode: false,
@@ -595,10 +625,91 @@ extension PopoverPanel {
     }
 }
 
+// MARK: - 5-3. 수면 잔물결 액체 셰이프 (다중 조화파 합성 유체 파동)
+private struct LiquidWaveShape: Shape {
+    var fillWidth: CGFloat
+    var time: Double
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        guard fillWidth > 0 else { return path }
+
+        let clampedWidth = min(rect.width, fillWidth)
+        let phase1 = time * 1.7
+        let phase2 = time * 2.3
+        let phase3 = time * 0.9
+
+        func waveOffset(at y: CGFloat) -> CGFloat {
+            let w1 = sin((y / 28.0) * 2.0 * .pi + phase1) * 0.9
+            let w2 = sin((y / 18.0) * 2.0 * .pi - phase2) * 0.4
+            let w3 = cos((y / 40.0) * 2.0 * .pi + phase3) * 0.3
+            return w1 + w2 + w3
+        }
+
+        path.move(to: CGPoint(x: 0, y: 0))
+        let startX = max(0, min(rect.width, clampedWidth + waveOffset(at: 0)))
+        path.addLine(to: CGPoint(x: startX, y: 0))
+
+        let step: CGFloat = 1.5
+        var y: CGFloat = step
+        while y <= rect.height {
+            let currentX = max(0, min(rect.width, clampedWidth + waveOffset(at: y)))
+            path.addLine(to: CGPoint(x: currentX, y: y))
+            y += step
+        }
+
+        path.addLine(to: CGPoint(x: 0, y: rect.height))
+        path.closeSubpath()
+        return path
+    }
+}
+
+// MARK: - 5-4. 수면 잔물결 하이라이트 셰이프 (LiquidWaveCrestShape)
+private struct LiquidWaveCrestShape: Shape {
+    var fillWidth: CGFloat
+    var time: Double
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        guard fillWidth > 2 else { return path }
+
+        let clampedWidth = min(rect.width, fillWidth)
+        let phase1 = time * 1.7
+        let phase2 = time * 2.3
+        let phase3 = time * 0.9
+
+        func waveOffset(at y: CGFloat) -> CGFloat {
+            let w1 = sin((y / 28.0) * 2.0 * .pi + phase1) * 0.9
+            let w2 = sin((y / 18.0) * 2.0 * .pi - phase2) * 0.4
+            let w3 = cos((y / 40.0) * 2.0 * .pi + phase3) * 0.3
+            return w1 + w2 + w3
+        }
+
+        let step: CGFloat = 1.5
+        var y: CGFloat = 0
+        var isFirst = true
+
+        while y <= rect.height {
+            let currentX = max(0, min(rect.width, clampedWidth + waveOffset(at: y)))
+            if isFirst {
+                path.move(to: CGPoint(x: currentX, y: y))
+                isFirst = false
+            } else {
+                path.addLine(to: CGPoint(x: currentX, y: y))
+            }
+            y += step
+        }
+        return path
+    }
+}
+
 // MARK: - 6. 현재 시각 미니 툴팁 뷰 (CurrentTimeTooltipView)
 private struct CurrentTimeTooltipView: View {
     let currentTime: Date
-    let settings: AppSettings
+    var timeOffset: CGFloat = 0
+    var isHorizontal: Bool = false
+    var barPosition: BarPosition = .left
+    @ObservedObject var settings: AppSettings
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -611,21 +722,96 @@ private struct CurrentTimeTooltipView: View {
         settings.eventCardTheme.isDark(for: colorScheme)
     }
 
-    var body: some View {
-        HStack(spacing: 3.5) {
-            Circle()
-                .fill(settings.effectiveCurrentTimeColor())
-                .frame(width: 5, height: 5)
-                .shadow(color: settings.effectiveCurrentTimeColor().opacity(0.6), radius: 2)
+    private var indicatorColor: Color {
+        settings.isPetSnoozed
+            ? Color(red: 0.35, green: 0.55, blue: 0.95)
+            : settings.effectiveCurrentTimeColor()
+    }
 
-            Text(Self.timeFormatter.string(from: currentTime))
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .foregroundStyle(isDarkTheme ? Color.white : Color.black.opacity(0.9))
-                .lineLimit(1)
+    var body: some View {
+        ZStack {
+            // 1. 원통형 물 채움 (Liquid Wave Fill) 배경 게이지
+            if settings.isPetSnoozed {
+                TimelineView(.animation) { timeline in
+                    let time = timeline.date.timeIntervalSinceReferenceDate
+
+                    GeometryReader { geo in
+                        let fillWidth = geo.size.width * CGFloat(settings.remainingSnoozeRatio)
+                        ZStack(alignment: .leading) {
+                            // 물 본체 웨이브 (다중 조화파 합성)
+                            LiquidWaveShape(fillWidth: fillWidth, time: time)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(red: 0.35, green: 0.55, blue: 0.95).opacity(isDarkTheme ? 0.38 : 0.28),
+                                            Color(red: 0.35, green: 0.55, blue: 0.95).opacity(isDarkTheme ? 0.22 : 0.14)
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+
+                            // 수면 잔물결 하이라이트
+                            if fillWidth > 2 {
+                                LiquidWaveCrestShape(fillWidth: fillWidth, time: time)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [
+                                                Color.white.opacity(isDarkTheme ? 0.70 : 0.85),
+                                                Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.90)
+                                            ],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        ),
+                                        lineWidth: 1.1
+                                    )
+                            }
+                        }
+                    }
+                    .clipShape(Capsule())
+                }
+            }
+
+            // 2. 텍스트 콘텐츠 (스누즈 여부에 따라 1행 또는 2행 구성)
+            if settings.isPetSnoozed {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(indicatorColor)
+                            .frame(width: 5, height: 5)
+                            .shadow(color: indicatorColor.opacity(0.6), radius: 2)
+
+                        Text(Self.timeFormatter.string(from: currentTime))
+                            .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                            .foregroundStyle(isDarkTheme ? Color.white : Color.black.opacity(0.9))
+                            .lineLimit(1)
+                    }
+
+                    Text(L10n.tr(.petSnoozedTooltip(settings.remainingSnoozeMinutes), lang: settings.language))
+                        .font(.system(size: 9.0, weight: .medium, design: .rounded))
+                        .foregroundStyle(isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.62))
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            } else {
+                HStack(spacing: 3.5) {
+                    Circle()
+                        .fill(indicatorColor)
+                        .frame(width: 5, height: 5)
+                        .shadow(color: indicatorColor.opacity(0.6), radius: 2)
+
+                    Text(Self.timeFormatter.string(from: currentTime))
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundStyle(isDarkTheme ? Color.white : Color.black.opacity(0.9))
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             VisualEffectBlur(
                 material: .popover,
@@ -641,21 +827,36 @@ private struct CurrentTimeTooltipView: View {
         .overlay(
             Capsule()
                 .stroke(
-                    LinearGradient(
-                        colors: isDarkTheme ? [
-                            Color.white.opacity(0.35),
-                            Color.white.opacity(0.10)
-                        ] : [
-                            Color.black.opacity(0.18),
-                            Color.black.opacity(0.08)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
+                    settings.isPetSnoozed
+                        ? AnyShapeStyle(Color(red: 0.35, green: 0.55, blue: 0.95).opacity(isDarkTheme ? 0.45 : 0.35))
+                        : AnyShapeStyle(
+                            LinearGradient(
+                                colors: isDarkTheme ? [
+                                    Color.white.opacity(0.35),
+                                    Color.white.opacity(0.10)
+                                ] : [
+                                    Color.black.opacity(0.18),
+                                    Color.black.opacity(0.08)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        ),
                     lineWidth: 0.8
                 )
         )
         .shadow(color: Color.black.opacity(isDarkTheme ? 0.25 : 0.15), radius: 6, x: 0, y: 3)
+        .contentShape(Capsule())
+        .onTapGesture {
+            settings.togglePetSnooze()
+            PopoverPanel.shared.showTimeTooltip(
+                currentTime: currentTime,
+                timeOffset: timeOffset,
+                isHorizontal: isHorizontal,
+                barPosition: barPosition,
+                settings: settings
+            )
+        }
     }
 }
 

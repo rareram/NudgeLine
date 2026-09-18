@@ -12,7 +12,7 @@ struct InteractivePetView: View {
     let accentColor: Color
 
     var body: some View {
-        let isHovered = isBarHovered || isPetProximityHovered
+        let isHovered = isBarHovered || isPetProximityHovered || settings.isPetSnoozed
         let hideStyle = settings.petHideStyle
 
         HangingPetIndicatorView(

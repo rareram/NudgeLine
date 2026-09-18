@@ -314,6 +314,8 @@ public final class AppSettings: ObservableObject {
         static let reminderMarkerStyle = "settings_reminder_marker_style"
         static let enableReminderMarkerGlow = "settings_enable_reminder_marker_glow"
         static let reminderVisibility = "settings_reminder_visibility"
+        static let enablePetSnooze = "settings_enable_pet_snooze"
+        static let petSnoozeDurationMinutes = "settings_pet_snooze_duration_minutes"
     }
 
     private let defaults = UserDefaults.standard
@@ -517,6 +519,52 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(reminderVisibility, forKey: Keys.reminderVisibility) }
     }
 
+    @Published public var enablePetSnooze: Bool {
+        didSet { defaults.set(enablePetSnooze, forKey: Keys.enablePetSnooze) }
+    }
+
+    @Published public var petSnoozeDurationMinutes: Int {
+        didSet { defaults.set(petSnoozeDurationMinutes, forKey: Keys.petSnoozeDurationMinutes) }
+    }
+
+    @Published public var snoozeUntil: Date? = nil
+
+    public var isPetSnoozed: Bool {
+        guard enablePetSnooze, let until = snoozeUntil else { return false }
+        return until > Date()
+    }
+
+    public var remainingSnoozeMinutes: Int {
+        guard let until = snoozeUntil else { return 0 }
+        let remainingSec = until.timeIntervalSinceNow
+        guard remainingSec > 0 else { return 0 }
+        return max(1, Int(ceil(remainingSec / 60.0)))
+    }
+
+    public var remainingSnoozeRatio: Double {
+        guard let until = snoozeUntil else { return 0.0 }
+        let totalSec = Double(max(1, petSnoozeDurationMinutes)) * 60.0
+        let remainingSec = until.timeIntervalSinceNow
+        guard remainingSec > 0 else { return 0.0 }
+        return min(1.0, max(0.0, remainingSec / totalSec))
+    }
+
+    public func togglePetSnooze() {
+        guard enablePetSnooze else { return }
+        if isPetSnoozed {
+            snoozeUntil = nil
+        } else {
+            snoozeUntil = Date().addingTimeInterval(Double(petSnoozeDurationMinutes) * 60.0)
+        }
+    }
+
+    public func checkSnoozeExpiration(at date: Date = Date()) {
+        guard let until = snoozeUntil else { return }
+        if date >= until {
+            snoozeUntil = nil
+        }
+    }
+
     // MARK: 2-3. 초기화 (UserDefaults 영속 데이터 로드 및 마이그레이션)
     private init() {
         let savedLang = defaults.string(forKey: Keys.language) ?? AppLanguage.system.rawValue
@@ -629,6 +677,10 @@ public final class AppSettings: ObservableObject {
         self.reminderMarkerStyle = ReminderMarkerStyle(rawValue: savedMarkerStyle) ?? .flag
         self.enableReminderMarkerGlow = defaults.object(forKey: Keys.enableReminderMarkerGlow) != nil ? defaults.bool(forKey: Keys.enableReminderMarkerGlow) : true
         self.reminderVisibility = (defaults.dictionary(forKey: Keys.reminderVisibility) as? [String: Bool]) ?? [:]
+
+        self.enablePetSnooze = defaults.object(forKey: Keys.enablePetSnooze) != nil ? defaults.bool(forKey: Keys.enablePetSnooze) : true
+        let savedSnoozeDuration = defaults.integer(forKey: Keys.petSnoozeDurationMinutes)
+        self.petSnoozeDurationMinutes = savedSnoozeDuration > 0 ? savedSnoozeDuration : 10
     }
 }
 

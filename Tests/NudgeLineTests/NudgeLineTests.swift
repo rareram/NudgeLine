@@ -98,6 +98,12 @@ struct LocalizationTests {
         #expect(L10n.tr(.preferredMapServiceLabel, lang: .en) == "Open Location with:")
         #expect(L10n.tr(.reminderMarkerGlowLabel, lang: .ko) == "마커 네온 효과 및 테두리 강조")
         #expect(L10n.tr(.reminderMarkerGlowLabel, lang: .en) == "Marker neon glow & border accent")
+
+        // 펫 일시 숨김(스누즈) 다국어 키
+        #expect(L10n.tr(.petSnoozeLabel, lang: .ko) == "클릭 시 펫 일시 숨김:")
+        #expect(L10n.tr(.petSnoozeLabel, lang: .en) == "Pause Pet on Click:")
+        #expect(L10n.tr(.petSnoozedTooltip(10), lang: .ko) == "펫 숨김 10분 남음 · 클릭 시 복귀")
+        #expect(L10n.tr(.petSnoozedTooltip(10), lang: .en) == "Pet paused for 10m · Click to resume")
     }
 }
 
@@ -122,6 +128,36 @@ struct AppSettingsTests {
         #expect(EventCardTheme.light.isDark(for: .dark) == false)
         #expect(EventCardTheme.adaptive.isDark(for: .dark) == true)
         #expect(EventCardTheme.adaptive.isDark(for: .light) == false)
+    }
+
+    @Test("펫 일시 숨김(스누즈) 토글 및 상태 정합성 검증")
+    func testPetSnooze() {
+        let settings = AppSettings.shared
+        #expect(settings.enablePetSnooze == true)
+        #expect(settings.petSnoozeDurationMinutes >= 5)
+
+        // 초기 상태: 스누즈 비활성
+        settings.snoozeUntil = nil
+        #expect(settings.isPetSnoozed == false)
+        #expect(settings.remainingSnoozeMinutes == 0)
+        #expect(settings.remainingSnoozeRatio == 0.0)
+
+        // 스누즈 발동
+        settings.togglePetSnooze()
+        #expect(settings.isPetSnoozed == true)
+        #expect(settings.remainingSnoozeMinutes > 0)
+        #expect(settings.remainingSnoozeRatio > 0.0)
+
+        // 재토글 시 복귀
+        settings.togglePetSnooze()
+        #expect(settings.isPetSnoozed == false)
+        #expect(settings.snoozeUntil == nil)
+
+        // 만료 체크 메서드 검증
+        settings.snoozeUntil = Date().addingTimeInterval(-10) // 과거 시점
+        #expect(settings.isPetSnoozed == false)
+        settings.checkSnoozeExpiration()
+        #expect(settings.snoozeUntil == nil)
     }
 }
 

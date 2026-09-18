@@ -97,8 +97,10 @@ struct AppearanceTab: View {
                         }
                     }
 
-                    Toggle(L10n.tr(.indicatorRimLabel, lang: settings.language), isOn: $settings.enableIndicatorRim)
-                    Toggle(L10n.tr(.indicatorGlowLabel, lang: settings.language), isOn: $settings.enableIndicatorGlow)
+                    HStack(spacing: 24) {
+                        Toggle(L10n.tr(.indicatorRimLabel, lang: settings.language), isOn: $settings.enableIndicatorRim)
+                        Toggle(L10n.tr(.indicatorGlowLabel, lang: settings.language), isOn: $settings.enableIndicatorGlow)
+                    }
                 }
 
                 Divider().opacity(0.4).padding(.vertical, 4)
@@ -211,6 +213,37 @@ struct AppearanceTab: View {
                             .pickerStyle(.menu)
                             .fixedSize()
                             Spacer()
+                        }
+                    }
+                    .disabled(!settings.isPetEnabled)
+
+                    LabeledContent(L10n.tr(.petSnoozeLabel, lang: settings.language)) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 8) {
+                                Toggle("", isOn: $settings.enablePetSnooze)
+                                    .labelsHidden()
+                                    .toggleStyle(.switch)
+
+                                Picker("", selection: $settings.petSnoozeDurationMinutes) {
+                                    Text(L10n.tr(.minutesDuration(5), lang: settings.language)).tag(5)
+                                    Text(L10n.tr(.minutesDuration(10), lang: settings.language)).tag(10)
+                                    Text(L10n.tr(.minutesDuration(15), lang: settings.language)).tag(15)
+                                    Text(L10n.tr(.minutesDuration(30), lang: settings.language)).tag(30)
+                                    Text(L10n.tr(.hoursDuration(1), lang: settings.language)).tag(60)
+                                }
+                                .labelsHidden()
+                                .pickerStyle(.menu)
+                                .fixedSize()
+                                .disabled(!settings.enablePetSnooze)
+
+                                Spacer()
+                            }
+
+                            if settings.enablePetSnooze {
+                                Text(L10n.tr(.petSnoozeDescription, lang: settings.language))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                     .disabled(!settings.isPetEnabled)

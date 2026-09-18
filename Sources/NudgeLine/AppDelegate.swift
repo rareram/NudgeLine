@@ -73,22 +73,34 @@ extension AppDelegate {
         }
         guard let button = statusItem?.button else { return }
 
-        let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
-        if let img = NSImage(systemSymbolName: "calendar.day.timeline.leading", accessibilityDescription: "NudgeLine")?.withSymbolConfiguration(config) {
-            img.isTemplate = true
-            button.image = img
+        #if !APP_STORE
+        let hasUpdate: Bool
+        let updateVersion: String?
+        if case .remoteAvailable(let version, _, _) = UpdateService.shared.updateState {
+            hasUpdate = true
+            updateVersion = version
         } else {
+            hasUpdate = false
+            updateVersion = nil
+        }
+        #else
+        let hasUpdate = false
+        let updateVersion: String? = nil
+        #endif
+
+        if let img = createStatusItemImage(hasUpdate: hasUpdate) {
+            button.image = img
+            button.title = ""
+        } else {
+            button.image = nil
             button.title = "NudgeLine"
         }
-        #if !APP_STORE
-        if case .remoteAvailable(let version, _, _) = UpdateService.shared.updateState {
+
+        if let version = updateVersion {
             button.toolTip = (settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine") + " - \(L10n.tr(.newVersionAvailable(version), lang: settings.language))"
         } else {
             button.toolTip = settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine"
         }
-        #else
-        button.toolTip = settings.isDevBuild ? "NudgeLine (Dev)" : "NudgeLine"
-        #endif
 
         let menu = NSMenu()
         menu.delegate = self
@@ -123,6 +135,72 @@ extension AppDelegate {
         menu.addItem(quitItem)
 
         statusItem?.menu = menu
+    }
+
+    // MARK: - 메뉴바 상태 아이콘 생성 (새 버전 감지 시 우상단 파란색 다이아몬드 뱃지 합성)
+    private func createStatusItemImage(hasUpdate: Bool) -> NSImage? {
+        let baseConfig = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
+        guard let baseSymbol = NSImage(systemSymbolName: "calendar.day.timeline.leading", accessibilityDescription: "NudgeLine")?.withSymbolConfiguration(baseConfig) else {
+            return nil
+        }
+
+        guard hasUpdate else {
+            baseSymbol.isTemplate = true
+            return baseSymbol
+        }
+
+        let symbolSize = baseSymbol.size
+        let canvasWidth = symbolSize.width + 3.0
+        let canvasHeight = max(18.0, symbolSize.height)
+        let canvasSize = NSSize(width: canvasWidth, height: canvasHeight)
+
+        let composite = NSImage(size: canvasSize, flipped: false) { _ in
+            let isDarkMenu = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            let symbolColor: NSColor = isDarkMenu ? .white : NSColor(white: 0.15, alpha: 1.0)
+            let tintedConfig = baseConfig.applying(NSImage.SymbolConfiguration(paletteColors: [symbolColor]))
+            let tintedSymbol = NSImage(systemSymbolName: "calendar.day.timeline.leading", accessibilityDescription: "NudgeLine")?.withSymbolConfiguration(tintedConfig) ?? baseSymbol
+
+            // 1. 기본 캘린더 심볼 렌더링
+            let symbolY = round((canvasHeight - symbolSize.height) / 2.0)
+            let symbolRect = NSRect(x: 0, y: symbolY, width: symbolSize.width, height: symbolSize.height)
+            tintedSymbol.draw(in: symbolRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+
+            // 2. 우상단 다이아몬드(마름모) 뱃지 패스 생성 (대각선 크기: 5.6px)
+            let diamondRadius: CGFloat = 2.8
+            let centerX = canvasWidth - diamondRadius - 0.5
+            let centerY = canvasHeight - diamondRadius - 1.0
+
+            let diamondPath = NSBezierPath()
+            diamondPath.move(to: NSPoint(x: centerX, y: centerY + diamondRadius))
+            diamondPath.line(to: NSPoint(x: centerX + diamondRadius, y: centerY))
+            diamondPath.line(to: NSPoint(x: centerX, y: centerY - diamondRadius))
+            diamondPath.line(to: NSPoint(x: centerX - diamondRadius, y: centerY))
+            diamondPath.close()
+
+            // 3. 베이스 심볼과의 시각적 구분을 위한 녹아웃 클리어링 (1.2px 폭으로 뒤쪽 심볼 투명 처리)
+            if let ctx = NSGraphicsContext.current {
+                ctx.saveGraphicsState()
+                ctx.compositingOperation = .clear
+                diamondPath.lineWidth = 2.4
+                diamondPath.stroke()
+                ctx.restoreGraphicsState()
+            }
+
+            // 4. 파란색 다이아몬드 본체 채우기 (systemBlue)
+            NSColor.systemBlue.setFill()
+            diamondPath.fill()
+
+            // 5. 외곽 테두리 하이라이트 스트로크 (0.6px)
+            let strokeColor = isDarkMenu ? NSColor.white.withAlphaComponent(0.7) : NSColor.white.withAlphaComponent(0.9)
+            strokeColor.setStroke()
+            diamondPath.lineWidth = 0.6
+            diamondPath.stroke()
+
+            return true
+        }
+
+        composite.isTemplate = false
+        return composite
     }
 }
 
