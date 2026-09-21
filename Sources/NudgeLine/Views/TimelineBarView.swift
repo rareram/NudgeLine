@@ -38,7 +38,7 @@ public struct TimelineBarView: View {
         colorScheme == .dark
     }
 
-    private static let clockPublisher = Timer.publish(every: 1, on: .main, in: .default).autoconnect()
+    private static let clockPublisher = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     public init(
         settings: AppSettings = .shared,
@@ -762,8 +762,7 @@ public struct TimelineBarView: View {
         dayStart: Date,
         totalSec: TimeInterval
     ) {
-        let proximity = settings.reminderProximityMinutes
-        let proximityHours = max(1, proximity / 60)
+        let proximitySec = Double(settings.reminderProximityMinutes * 60)
         var positions: [PreviewMarkerPoint] = []
 
         if totalSec > 0 {
@@ -774,7 +773,7 @@ public struct TimelineBarView: View {
                 guard secFromStart >= 0 && secFromStart <= totalSec else { break }
 
                 let pos = round(CGFloat(secFromStart / totalSec) * totalLength)
-                let isApproaching = hour <= proximityHours
+                let isApproaching = targetDate.timeIntervalSince(currentTime) <= proximitySec
                 positions.append(PreviewMarkerPoint(id: hour, pos: pos, isApproaching: isApproaching))
             }
         }

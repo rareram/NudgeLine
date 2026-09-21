@@ -8,8 +8,26 @@ echo "=========================================="
 echo "NudgeLine 보안 및 정적 점검 시작"
 echo "=========================================="
 
+# Xcode 및 CLT 환경 빌드 시스템 및 SDK 보정
+BUILD_SYSTEM_ARGS=()
+if [[ ! -d "/Applications/Xcode.app" ]]; then
+    BUILD_SYSTEM_ARGS+=(--build-system native)
+    if [[ -z "${SDKROOT:-}" ]]; then
+        if [[ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk" ]]; then
+            export SDKROOT="/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
+        elif [[ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk" ]]; then
+            export SDKROOT="/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk"
+        else
+            DETECTED_SDK="$(xcrun --show-sdk-path 2>/dev/null || true)"
+            if [[ -n "${DETECTED_SDK}" && -d "${DETECTED_SDK}" ]]; then
+                export SDKROOT="${DETECTED_SDK}"
+            fi
+        fi
+    fi
+fi
+
 echo ">> 1. Swift Package 컴파일 검증..."
-swift build -c release
+swift build ${BUILD_SYSTEM_ARGS[@]+"${BUILD_SYSTEM_ARGS[@]}"} -c release
 
 echo ">> 2. 민감한 키 / 비밀번호 / 토큰 유출 패턴 검사..."
 if command -v gitleaks &> /dev/null; then

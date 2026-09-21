@@ -24,7 +24,7 @@ public final class CalendarService: ObservableObject {
     public static let shared = CalendarService()
 
     internal let eventStore = EKEventStore()
-    private let fetchSerialQueue = DispatchQueue(label: "com.nudgeline.fetchSerialQueue", qos: .userInitiated)
+    internal let eventStoreQueue = DispatchQueue(label: "com.nudgeline.eventStoreQueue", qos: .userInitiated)
     private var cancellables = Set<AnyCancellable>()
     private var isSleeping: Bool = false
 
@@ -49,13 +49,27 @@ public final class CalendarService: ObservableObject {
 extension CalendarService {
     // 캘린더 TCC 권한 상태 갱신 (권한 획득 시 데이터 자동 로드 및 원격 동기화)
     public func checkAuthorizationStatus() {
-        let status = EKEventStore.authorizationStatus(for: .event)
-        self.authorizationStatus = status
-        if isAuthorized(status: status) {
-            eventStore.reset()
-            refreshSources()
-            loadCalendars()
-            fetchEvents()
+        let previousStatus = self.authorizationStatus
+        let currentStatus = EKEventStore.authorizationStatus(for: .event)
+        self.authorizationStatus = currentStatus
+
+        let wasAuthorized = (previousStatus == .fullAccess || previousStatus.rawValue == 3)
+        let isNowAuthorized = (currentStatus == .fullAccess || currentStatus.rawValue == 3)
+
+        // 권한이 새로 부여된 경우에만 캐시 리셋 및 전체 데이터 초기 로드
+        if isNowAuthorized && !wasAuthorized {
+            eventStoreQueue.async { [weak self] in
+                guard let self = self else { return }
+                self.eventStore.reset()
+                self.refreshSources()
+                self.loadCalendars()
+                self.fetchEvents()
+            }
+        } else if !isNowAuthorized && wasAuthorized {
+            DispatchQueue.main.async { [weak self] in
+                self?.events = []
+                self?.sourceGroups = []
+            }
         }
     }
 
@@ -95,7 +109,7 @@ extension CalendarService {
     // 원격 캘린더 계정(iCloud, Google, Exchange 등) 동기화 요청 (백그라운드 비동기)
     public func refreshSources() {
         guard isAuthorized() else { return }
-        fetchSerialQueue.async { [weak self] in
+        eventStoreQueue.async { [weak self] in
             guard let self = self else { return }
             self.eventStore.refreshSourcesIfNecessary()
         }
@@ -105,14 +119,20 @@ extension CalendarService {
     public func loadCalendars() {
         guard isAuthorized() else { return }
 
-        fetchSerialQueue.async { [weak self] in
+        eventStoreQueue.async { [weak self] in
             guard let self = self else { return }
             let allCalendars = self.eventStore.calendars(for: .event)
             var grouped: [String: (sourceTitle: String, calendars: [CalendarInfo])] = [:]
 
             for cal in allCalendars {
                 let srcId = cal.source?.sourceIdentifier ?? "local"
-                let srcTitle = (cal.source?.title.isEmpty == false) ? (cal.source?.title ?? L10n.tr(.otherSource)) : L10n.tr(.otherSource)
+                let rawTitle = cal.source?.title
+                let srcTitle: String
+                if let raw = rawTitle, !raw.isEmpty {
+                    srcTitle = raw
+                } else {
+                    srcTitle = L10n.tr(.otherSource)
+                }
 
                 let color: Color
                 if let cg = cal.cgColor {
@@ -157,7 +177,7 @@ extension CalendarService {
         let visibilitySnapshot = settings.calendarVisibility
         let showDeclined = settings.showDeclinedEvents
 
-        fetchSerialQueue.async { [weak self] in
+        eventStoreQueue.async { [weak self] in
             guard let self = self else { return }
             let calendar = Calendar.current
             let startOfDay = calendar.startOfDay(for: baseDate)

@@ -11,7 +11,9 @@ public final class ReminderService: ObservableObject {
     private var eventStore: EKEventStore {
         CalendarService.shared.eventStore
     }
-    private let fetchSerialQueue = DispatchQueue(label: "com.nudgeline.reminderFetchSerialQueue", qos: .userInitiated)
+    private var eventStoreQueue: DispatchQueue {
+        CalendarService.shared.eventStoreQueue
+    }
     private var cancellables = Set<AnyCancellable>()
     private var isSleeping: Bool = false
     private var fetchGeneration: Int = 0
@@ -30,13 +32,27 @@ public final class ReminderService: ObservableObject {
 // MARK: - 1. 미리알림 접근 권한(TCC) 관리
 extension ReminderService {
     public func checkAuthorizationStatus() {
-        let status = EKEventStore.authorizationStatus(for: .reminder)
-        self.authorizationStatus = status
-        if isAuthorized(status: status) {
-            eventStore.reset()
-            refreshSources()
-            loadReminderLists()
-            fetchReminders()
+        let previousStatus = self.authorizationStatus
+        let currentStatus = EKEventStore.authorizationStatus(for: .reminder)
+        self.authorizationStatus = currentStatus
+
+        let wasAuthorized = (previousStatus == .fullAccess || previousStatus.rawValue == 3)
+        let isNowAuthorized = (currentStatus == .fullAccess || currentStatus.rawValue == 3)
+
+        // 권한이 새로 부여된 경우에만 캐시 리셋 및 전체 데이터 초기 로드
+        if isNowAuthorized && !wasAuthorized {
+            eventStoreQueue.async { [weak self] in
+                guard let self = self else { return }
+                self.eventStore.reset()
+                self.refreshSources()
+                self.loadReminderLists()
+                self.fetchReminders()
+            }
+        } else if !isNowAuthorized && wasAuthorized {
+            DispatchQueue.main.async { [weak self] in
+                self?.reminders = []
+                self?.reminderLists = []
+            }
         }
     }
 
@@ -78,7 +94,7 @@ extension ReminderService {
 extension ReminderService {
     public func refreshSources() {
         guard isAuthorized() else { return }
-        fetchSerialQueue.async { [weak self] in
+        eventStoreQueue.async { [weak self] in
             guard let self = self else { return }
             self.eventStore.refreshSourcesIfNecessary()
         }
@@ -87,7 +103,7 @@ extension ReminderService {
     public func loadReminderLists() {
         guard isAuthorized() else { return }
 
-        fetchSerialQueue.async { [weak self] in
+        eventStoreQueue.async { [weak self] in
             guard let self = self else { return }
             let calendars = self.eventStore.calendars(for: .reminder)
             let listInfos = calendars.map { cal -> ReminderListInfo in
@@ -132,7 +148,7 @@ extension ReminderService {
 
         let visibilitySnapshot = settings.reminderVisibility
 
-        fetchSerialQueue.async { [weak self] in
+        eventStoreQueue.async { [weak self] in
             guard let self = self else { return }
             let calendar = Calendar.current
             let startOfDay = calendar.startOfDay(for: baseDate)

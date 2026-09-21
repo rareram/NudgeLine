@@ -39,6 +39,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
         // 미리알림 설정 활성화 시 초기 권한 상태 확인 및 데이터 로드
         if settings.enableReminders {
             reminderService.checkAuthorizationStatus()
+            if reminderService.isAuthorized() {
+                reminderService.loadReminderLists()
+                reminderService.fetchReminders()
+            }
         }
 
         // 백그라운드에서 최신 릴리스 존재 여부를 조용히 확인합니다.
@@ -150,25 +154,41 @@ extension AppDelegate {
         }
 
         let symbolSize = baseSymbol.size
-        let canvasWidth = symbolSize.width + 3.0
-        let canvasHeight = max(18.0, symbolSize.height)
+        let plateWidth = symbolSize.width + 5.0
+        let plateHeight: CGFloat = 18.0
+        let canvasWidth = plateWidth + 3.0
+        let canvasHeight: CGFloat = 20.0
         let canvasSize = NSSize(width: canvasWidth, height: canvasHeight)
 
         let composite = NSImage(size: canvasSize, flipped: false) { _ in
-            let isDarkMenu = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            let symbolColor: NSColor = isDarkMenu ? .white : NSColor(white: 0.15, alpha: 1.0)
-            let tintedConfig = baseConfig.applying(NSImage.SymbolConfiguration(paletteColors: [symbolColor]))
-            let tintedSymbol = NSImage(systemSymbolName: "calendar.day.timeline.leading", accessibilityDescription: "NudgeLine")?.withSymbolConfiguration(tintedConfig) ?? baseSymbol
+            // [원인/배경: 평상시 선형 심볼은 메뉴바 배경에 묻히기 쉬움 -> 해결 방법: 심볼 뒤에 둥근 사각형 다크 칩 플레이트를 배치하여 배경 반전 구현 -> 기대 효과: 새 버전 존재 시 시각적 덩어리감과 존재감 극대화]
+            let plateRect = NSRect(
+                x: 1.0,
+                y: round((canvasHeight - plateHeight) / 2.0),
+                width: plateWidth,
+                height: plateHeight
+            )
+            let platePath = NSBezierPath(roundedRect: plateRect, xRadius: 4.0, yRadius: 4.0)
+            NSColor(white: 0.16, alpha: 0.96).setFill()
+            platePath.fill()
 
-            // 1. 기본 캘린더 심볼 렌더링
-            let symbolY = round((canvasHeight - symbolSize.height) / 2.0)
-            let symbolRect = NSRect(x: 0, y: symbolY, width: symbolSize.width, height: symbolSize.height)
-            tintedSymbol.draw(in: symbolRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+            // 1-1. 다크 칩 플레이트 외곽 미세 림 라이트 (0.5px)
+            NSColor(white: 1.0, alpha: 0.18).setStroke()
+            platePath.lineWidth = 0.5
+            platePath.stroke()
 
-            // 2. 우상단 다이아몬드(마름모) 뱃지 패스 생성 (대각선 크기: 5.6px)
-            let diamondRadius: CGFloat = 2.8
-            let centerX = canvasWidth - diamondRadius - 0.5
-            let centerY = canvasHeight - diamondRadius - 1.0
+            // 1-2. 다크 칩 플레이트 내부 캘린더 심볼 반전 렌더링 (순백색)
+            let whiteConfig = baseConfig.applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
+            let whiteSymbol = NSImage(systemSymbolName: "calendar.day.timeline.leading", accessibilityDescription: "NudgeLine")?.withSymbolConfiguration(whiteConfig) ?? baseSymbol
+            let symbolX = plateRect.minX + round((plateWidth - symbolSize.width) / 2.0)
+            let symbolY = plateRect.minY + round((plateHeight - symbolSize.height) / 2.0)
+            let symbolRect = NSRect(x: symbolX, y: symbolY, width: symbolSize.width, height: symbolSize.height)
+            whiteSymbol.draw(in: symbolRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+
+            // 2. 우상단 대형 다이아몬드(마름모) 뱃지 패스 생성 (대각선 길이: 8.8px, 기존 5.6px 대비 157% 확대)
+            let diamondRadius: CGFloat = 4.4
+            let centerX = canvasWidth - diamondRadius - 0.8
+            let centerY = canvasHeight - diamondRadius - 0.8
 
             let diamondPath = NSBezierPath()
             diamondPath.move(to: NSPoint(x: centerX, y: centerY + diamondRadius))
@@ -177,23 +197,23 @@ extension AppDelegate {
             diamondPath.line(to: NSPoint(x: centerX - diamondRadius, y: centerY))
             diamondPath.close()
 
-            // 3. 베이스 심볼과의 시각적 구분을 위한 녹아웃 클리어링 (1.2px 폭으로 뒤쪽 심볼 투명 처리)
+            // 3. 베이스 플레이트 및 심볼과의 분리를 위한 녹아웃 클리어링 (3.6px 폭으로 뒤쪽 칩 투명 처리)
             if let ctx = NSGraphicsContext.current {
                 ctx.saveGraphicsState()
                 ctx.compositingOperation = .clear
-                diamondPath.lineWidth = 2.4
+                diamondPath.lineWidth = 3.6
                 diamondPath.stroke()
                 ctx.restoreGraphicsState()
             }
 
-            // 4. 파란색 다이아몬드 본체 채우기 (systemBlue)
-            NSColor.systemBlue.setFill()
+            // 4. 고채도 밝은 네온 스카이블루 본체 채우기 (Electric Sky Blue)
+            let vibrantBlue = NSColor(displayP3Red: 0.12, green: 0.68, blue: 1.0, alpha: 1.0)
+            vibrantBlue.setFill()
             diamondPath.fill()
 
-            // 5. 외곽 테두리 하이라이트 스트로크 (0.6px)
-            let strokeColor = isDarkMenu ? NSColor.white.withAlphaComponent(0.7) : NSColor.white.withAlphaComponent(0.9)
-            strokeColor.setStroke()
-            diamondPath.lineWidth = 0.6
+            // 5. BTT 스타일 굵은 순백색 외곽 테두리 스트로크 (1.5px)
+            NSColor.white.setStroke()
+            diamondPath.lineWidth = 1.5
             diamondPath.stroke()
 
             return true
@@ -331,11 +351,16 @@ extension AppDelegate {
 
 // MARK: - 5. 메뉴바 및 단축키 액션 핸들러 (Actions)
 extension AppDelegate {
-    // 원격 캘린더 동기화 신호 전송 및 로컬 일정 즉시 새로고침
+    // 원격 캘린더 및 미리알림 동기화 신호 전송 및 로컬 일정 즉시 새로고침
     @objc public func refreshAction() {
         CalendarService.shared.refreshSources()
         CalendarService.shared.loadCalendars()
         CalendarService.shared.fetchEvents()
+        if settings.enableReminders {
+            ReminderService.shared.refreshSources()
+            ReminderService.shared.loadReminderLists()
+            ReminderService.shared.fetchReminders()
+        }
     }
 
     // 환경설정 단일 윈도우 인스턴스 오픈

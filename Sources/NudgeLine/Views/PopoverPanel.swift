@@ -135,11 +135,8 @@ public final class PopoverPanel: NSPanel {
 extension PopoverPanel {
     // MARK: - 방향별 그림자 안전 여백 연산
     // [원인/배경: 균일 여백 부여 시 윈도우 프레임이 타임라인 바 영역(폭 2~3pt)을 덮어 호버 깜빡임(진자 루프) 유발 -> 해결 방법: 바를 향하는 방향은 여백 0pt로 물리적 경계를 엄격히 유지하고, 개방된 바깥 방향에만 10pt 여백을 부여하여 순정 그림자 클리핑 방지 -> 기대 효과: 타임라인 바 호버 간섭 0% 보장 및 흰색 배경에서의 부드러운 순정 그림자 보존]
-    private func shadowPadding(for barPosition: BarPosition, isHorizontal: Bool) -> EdgeInsets {
+    private func shadowPadding(for barPosition: BarPosition) -> EdgeInsets {
         let margin: CGFloat = 10.0
-        if isHorizontal {
-            return EdgeInsets(top: margin, leading: margin, bottom: 0, trailing: margin)
-        }
         switch barPosition {
         case .left:
             return EdgeInsets(top: margin, leading: 0, bottom: margin, trailing: margin)
@@ -156,10 +153,9 @@ extension PopoverPanel {
         cardY: CGFloat,
         cardWidth: CGFloat,
         cardHeight: CGFloat,
-        barPosition: BarPosition,
-        isHorizontal: Bool
+        barPosition: BarPosition
     ) -> NSRect {
-        let pad = shadowPadding(for: barPosition, isHorizontal: isHorizontal)
+        let pad = shadowPadding(for: barPosition)
         let winX = cardX - pad.leading
         let winY = cardY - pad.bottom
         let winW = cardWidth + pad.leading + pad.trailing
@@ -201,7 +197,7 @@ extension PopoverPanel {
         let targetWidth = targetDimensions.width
         let targetHeight = targetDimensions.height
 
-        let pad = shadowPadding(for: barPosition, isHorizontal: isHorizontal)
+        let pad = shadowPadding(for: barPosition)
         let anyView = AnyView(
             renderer.makeView(
                 events: events,
@@ -251,8 +247,7 @@ extension PopoverPanel {
             cardY: finalY,
             cardWidth: targetWidth,
             cardHeight: targetHeight,
-            barPosition: barPosition,
-            isHorizontal: isHorizontal
+            barPosition: barPosition
         )
 
         if !self.isVisible {
@@ -283,7 +278,6 @@ extension PopoverPanel {
         offset: CGFloat,
         targetWidth: CGFloat,
         targetHeight: CGFloat,
-        isHorizontal: Bool,
         barPosition: BarPosition,
         settings: AppSettings,
         screen: NSScreen
@@ -295,22 +289,19 @@ extension PopoverPanel {
         var finalX: CGFloat
         var finalY: CGFloat
 
-        if isHorizontal {
-            finalX = visibleFrame.minX + offset - (targetWidth / 2)
+        switch barPosition {
+        case .bottom:
+            let idealX = visibleFrame.minX + offset - (targetWidth / 2)
+            finalX = max(visibleFrame.minX + 4, min(visibleFrame.maxX - targetWidth - 4, idealX))
             finalY = visibleFrame.minY + thickness + 4
-            finalX = max(visibleFrame.minX + 4, min(visibleFrame.maxX - targetWidth - 4, finalX))
-        } else {
-            finalY = visibleFrame.maxY - offset - (targetHeight / 2)
-            finalY = max(visibleFrame.minY + 4, min(visibleFrame.maxY - targetHeight - 4, finalY))
-
-            switch barPosition {
-            case .left:
-                finalX = fullFrame.minX + thickness + 4
-            case .right:
-                finalX = fullFrame.maxX - thickness - targetWidth - 4
-            case .bottom:
-                finalX = visibleFrame.minX + offset - (targetWidth / 2)
-            }
+        case .left:
+            let idealY = visibleFrame.maxY - offset - (targetHeight / 2)
+            finalY = max(visibleFrame.minY + 4, min(visibleFrame.maxY - targetHeight - 4, idealY))
+            finalX = fullFrame.minX + thickness + 4
+        case .right:
+            let idealY = visibleFrame.maxY - offset - (targetHeight / 2)
+            finalY = max(visibleFrame.minY + 4, min(visibleFrame.maxY - targetHeight - 4, idealY))
+            finalX = fullFrame.maxX - thickness - targetWidth - 4
         }
         return NSRect(x: finalX, y: finalY, width: targetWidth, height: targetHeight)
     }
@@ -352,7 +343,6 @@ extension PopoverPanel {
             offset: timeOffset,
             targetWidth: targetWidth,
             targetHeight: targetHeight,
-            isHorizontal: isHorizontal,
             barPosition: barPosition,
             settings: settings,
             screen: screen
@@ -392,7 +382,6 @@ extension PopoverPanel {
             offset: offset,
             targetWidth: targetWidth,
             targetHeight: targetHeight,
-            isHorizontal: isHorizontal,
             barPosition: barPosition,
             settings: settings,
             screen: screen
@@ -437,7 +426,6 @@ extension PopoverPanel {
             offset: cursorOffset,
             targetWidth: targetWidth,
             targetHeight: 24.0,
-            isHorizontal: isHorizontal,
             barPosition: barPosition,
             settings: settings,
             screen: screen
@@ -493,7 +481,7 @@ extension PopoverPanel {
         let targetWidth = targetDimensions.width
         let targetHeight = targetDimensions.height
 
-        let pad = shadowPadding(for: context.barPosition, isHorizontal: context.isHorizontal)
+        let pad = shadowPadding(for: context.barPosition)
         let anyView = AnyView(
             renderer.makeView(
                 events: events,
@@ -543,8 +531,7 @@ extension PopoverPanel {
             cardY: finalY,
             cardWidth: targetWidth,
             cardHeight: targetHeight,
-            barPosition: context.barPosition,
-            isHorizontal: context.isHorizontal
+            barPosition: context.barPosition
         )
 
         NSAnimationContext.runAnimationGroup { ctx in
@@ -567,7 +554,6 @@ extension PopoverPanel {
             offset: cursorOffset,
             targetWidth: targetWidth,
             targetHeight: 24.0,
-            isHorizontal: isHorizontal,
             barPosition: barPosition,
             settings: settings,
             screen: screen
