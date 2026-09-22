@@ -103,6 +103,7 @@ brew install rareram/tap/nudgeline
   - `squish`: Squishes and disappears.
   - `smoke`: Blurs and disappears.
   - **Custom Pets**: Import PNG frame sequences, adjust FPS, configure hide offsets with live preview.
+- **Pet Snooze**: Click the current time indicator or tooltip bubble to temporarily snooze the mascot. The indicator shows a subtle breathing animation, and the tooltip displays a live wave gauge with the remaining snooze countdown.
 
 ### 5. Event Popovers
 - **Action Card**: Schedule details, 1-click meeting join (supports unwrapping MS SafeLinks & Google Redirects), preferred map shortcuts (Apple, Google, Naver, Kakao), and Apple Calendar shortcut.
@@ -120,6 +121,7 @@ brew install rareram/tap/nudgeline
 - **Interactive Popovers**: View reminder details, toggle completion status directly from the popover, and open the Apple Reminders app.
 
 ### 7. Shortcuts & Menu Controls
+- **Menu Bar Controls**: Quick access to Settings, Instant Refresh, Check for Updates, App Info (About NudgeLine), and Quit directly from the menu bar status icon.
 - **Instant Refresh**: Re-fetch today's calendar events via the timeline bar context menu or menu bar [Refresh] item.
 - **AppIntents Integration**:
   - `Refresh Schedule` / `NudgeLine 새로고침`: Refetch today's calendar events.

@@ -134,7 +134,12 @@ extension AppDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        // 4. 종료
+        // 4. 앱 정보
+        let aboutTitle = L10n.tr(.aboutApp, lang: settings.language)
+        let aboutItem = NSMenuItem(title: aboutTitle, action: #selector(openAboutPanel), keyEquivalent: "")
+        menu.addItem(aboutItem)
+
+        // 5. 종료
         let quitItem = NSMenuItem(title: L10n.tr(.quit, lang: settings.language), action: #selector(quitApp), keyEquivalent: "q")
         menu.addItem(quitItem)
 
@@ -161,7 +166,9 @@ extension AppDelegate {
         let canvasSize = NSSize(width: canvasWidth, height: canvasHeight)
 
         let composite = NSImage(size: canvasSize, flipped: false) { _ in
-            // [원인/배경: 평상시 선형 심볼은 메뉴바 배경에 묻히기 쉬움 -> 해결 방법: 심볼 뒤에 둥근 사각형 다크 칩 플레이트를 배치하여 배경 반전 구현 -> 기대 효과: 새 버전 존재 시 시각적 덩어리감과 존재감 극대화]
+            let isDarkMenu = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+
+            // 메뉴바 테마(라이트/다크)에 맞춰 칩 플레이트와 심볼 색상을 적응형으로 렌더링
             let plateRect = NSRect(
                 x: 1.0,
                 y: round((canvasHeight - plateHeight) / 2.0),
@@ -169,21 +176,33 @@ extension AppDelegate {
                 height: plateHeight
             )
             let platePath = NSBezierPath(roundedRect: plateRect, xRadius: 4.0, yRadius: 4.0)
-            NSColor(white: 0.16, alpha: 0.96).setFill()
-            platePath.fill()
 
-            // 1-1. 다크 칩 플레이트 외곽 미세 림 라이트 (0.5px)
-            NSColor(white: 1.0, alpha: 0.18).setStroke()
-            platePath.lineWidth = 0.5
-            platePath.stroke()
+            if isDarkMenu {
+                NSColor(white: 0.16, alpha: 0.96).setFill()
+                platePath.fill()
 
-            // 1-2. 다크 칩 플레이트 내부 캘린더 심볼 반전 렌더링 (순백색)
-            let whiteConfig = baseConfig.applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
-            let whiteSymbol = NSImage(systemSymbolName: "calendar.day.timeline.leading", accessibilityDescription: "NudgeLine")?.withSymbolConfiguration(whiteConfig) ?? baseSymbol
+                // 1-1. 다크 모드: 칩 플레이트 외곽 미세 림 라이트 (0.5px)
+                NSColor(white: 1.0, alpha: 0.18).setStroke()
+                platePath.lineWidth = 0.5
+                platePath.stroke()
+            } else {
+                // 1-1. 라이트 모드: 은은한 라이트 그레이 칩 플레이트 및 외곽 림 (0.5px)
+                NSColor(white: 0.88, alpha: 0.96).setFill()
+                platePath.fill()
+
+                NSColor(white: 0.0, alpha: 0.12).setStroke()
+                platePath.lineWidth = 0.5
+                platePath.stroke()
+            }
+
+            // 1-2. 칩 플레이트 내부 캘린더 심볼 반전 렌더링 (다크: 순백색, 라이트: 진회색)
+            let symbolColor: NSColor = isDarkMenu ? .white : NSColor(white: 0.15, alpha: 1.0)
+            let tintedConfig = baseConfig.applying(NSImage.SymbolConfiguration(paletteColors: [symbolColor]))
+            let tintedSymbol = NSImage(systemSymbolName: "calendar.day.timeline.leading", accessibilityDescription: "NudgeLine")?.withSymbolConfiguration(tintedConfig) ?? baseSymbol
             let symbolX = plateRect.minX + round((plateWidth - symbolSize.width) / 2.0)
             let symbolY = plateRect.minY + round((plateHeight - symbolSize.height) / 2.0)
             let symbolRect = NSRect(x: symbolX, y: symbolY, width: symbolSize.width, height: symbolSize.height)
-            whiteSymbol.draw(in: symbolRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+            tintedSymbol.draw(in: symbolRect, from: .zero, operation: .sourceOver, fraction: 1.0)
 
             // 2. 우상단 대형 다이아몬드(마름모) 뱃지 패스 생성 (대각선 길이: 8.8px, 기존 5.6px 대비 157% 확대)
             let diamondRadius: CGFloat = 4.4
@@ -366,6 +385,12 @@ extension AppDelegate {
     // 환경설정 단일 윈도우 인스턴스 오픈
     @objc public func openSettings() {
         SettingsWindowController.shared.showSettings()
+    }
+
+    // 앱 정보(About) 표준 패널 표시
+    @objc public func openAboutPanel() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(nil)
     }
 
     #if !APP_STORE

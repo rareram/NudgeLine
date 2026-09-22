@@ -100,16 +100,16 @@ public struct SimpleInfoPopoverView: View {
 
             HStack(spacing: 4) {
                 Text(event.formattedTimeRange(lang: settings.language))
-                    .font(.system(size: 9.5, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(textSecondary)
 
                 if let loc = event.location, !loc.isEmpty {
                     Text("•")
-                        .font(.system(size: 9))
+                        .font(.system(size: 10))
                         .foregroundStyle(textSecondary)
 
                     Text(loc)
-                        .font(.system(size: 9))
+                        .font(.system(size: 10))
                         .foregroundStyle(textSecondary)
                         .lineLimit(1)
                 }

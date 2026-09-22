@@ -43,6 +43,7 @@ public struct L10n {
         case refresh
         case settings
         case settingsWindowTitle
+        case aboutApp
         case quit
         case checkForUpdates
         case restart
@@ -255,19 +256,20 @@ extension L10n.Key {
     var ko: String {
         switch self {
         case .refresh: return "새로 고침"
-        case .settings: return "설정..."
+        case .settings: return "설정…"
         case .settingsWindowTitle: return "NudgeLine 설정"
+        case .aboutApp: return "NudgeLine 정보"
         case .quit: return "NudgeLine 종료"
-        case .checkForUpdates: return "업데이트 확인..."
+        case .checkForUpdates: return "업데이트 확인…"
         case .restart: return "재시작"
-        case .checkingForUpdates: return "업데이트 확인 중..."
+        case .checkingForUpdates: return "업데이트 확인 중…"
         case .upToDate: return "현재 최신 버전을 사용 중입니다."
         case .newVersionAvailable(let v): return "새로운 버전(\(v))을 사용할 수 있습니다."
         case .newVersionAvailableMenu(let v): return "새 버전 업데이트 가능 (v\(v)) →"
         case .checkUpdateFailed: return "업데이트 확인 실패"
         case .viewRelease: return "릴리스 보기"
-        case .downloadingUpdate(let v): return "NudgeLine v\(v) 다운로드 중..."
-        case .installingAndRestarting: return "업데이트 설치 및 재시작 중..."
+        case .downloadingUpdate(let v): return "NudgeLine v\(v) 다운로드 중…"
+        case .installingAndRestarting: return "업데이트 설치 및 재시작 중…"
         case .updateNowInApp: return "지금 업데이트"
         case .inAppUpdateFailed: return "인앱 업데이트 실패"
 
@@ -336,7 +338,7 @@ extension L10n.Key {
         case .noEventsShort: return "일정 없음"
         case .allDayNotice(let title): return "하루 종일: \(title)"
         case .allDayNoticeWithCount(let title, let others): return "하루 종일: \(title) 외 \(others)건"
-        case .moreEventsNotice(let count): return "외 \(count)건의 일정 더 보기..."
+        case .moreEventsNotice(let count): return "외 \(count)건의 일정 더 보기…"
         case .noTimedEventsWithAllDayCard(let title): return "시간 일정 없음 · 종일: \(title)"
         case .noTimedEventsWithAllDayCountCard(let title, let others): return "시간 일정 없음 · 종일: \(title) 외 \(others)건"
         case .outOfRangeSingleCard(let time, let title): return "표시 범위 외 1건 (\(time) \(title))"
@@ -344,7 +346,7 @@ extension L10n.Key {
         case .outOfRangeSimple(let count, let time): return "범위 외 \(count)건 (\(time))"
         case .allDayWithOutOfRangeCard(let title, let count, let time): return "종일: \(title) · 범위 외 \(count)건 (\(time))"
         case .allDayWithOutOfRangeSimple(let title, let count): return "종일: \(title) · 외 \(count)건"
-        case .manageAccountsButton: return "시스템 계정 관리..."
+        case .manageAccountsButton: return "시스템 계정 관리…"
         case .openCalendarApp: return "캘린더 앱 열기"
         case .resetDefault: return "기본값"
 
@@ -454,19 +456,20 @@ extension L10n.Key {
     var en: String {
         switch self {
         case .refresh: return "Refresh"
-        case .settings: return "Settings..."
+        case .settings: return "Settings…"
         case .settingsWindowTitle: return "NudgeLine Settings"
+        case .aboutApp: return "About NudgeLine"
         case .quit: return "Quit NudgeLine"
-        case .checkForUpdates: return "Check for Updates..."
+        case .checkForUpdates: return "Check for Updates…"
         case .restart: return "Restart"
-        case .checkingForUpdates: return "Checking for updates..."
+        case .checkingForUpdates: return "Checking for updates…"
         case .upToDate: return "You are using the latest version."
         case .newVersionAvailable(let v): return "A new version (\(v)) is available."
         case .newVersionAvailableMenu(let v): return "Update Available (v\(v)) →"
         case .checkUpdateFailed: return "Failed to check for updates"
         case .viewRelease: return "View Release"
-        case .downloadingUpdate(let v): return "Downloading NudgeLine v\(v)..."
-        case .installingAndRestarting: return "Installing update & restarting..."
+        case .downloadingUpdate(let v): return "Downloading NudgeLine v\(v)…"
+        case .installingAndRestarting: return "Installing update & restarting…"
         case .updateNowInApp: return "Update Now"
         case .inAppUpdateFailed: return "In-App Update Failed"
 
@@ -535,15 +538,15 @@ extension L10n.Key {
         case .noEventsShort: return "No events"
         case .allDayNotice(let title): return "All Day: \(title)"
         case .allDayNoticeWithCount(let title, let others): return "All Day: \(title) +\(others)"
-        case .moreEventsNotice(let count): return "+\(count) more events..."
+        case .moreEventsNotice(let count): return "+\(count) more events…"
         case .noTimedEventsWithAllDayCard(let title): return "No timed events · All-Day: \(title)"
         case .noTimedEventsWithAllDayCountCard(let title, let others): return "No timed events · All-Day: \(title) +\(others)"
         case .outOfRangeSingleCard(let time, let title): return "1 event outside range (\(time) \(title))"
-        case .outOfRangeMultipleCard(let count, let time, let title): return "\(count) events outside range (\(time) \(title)...)"
+        case .outOfRangeMultipleCard(let count, let time, let title): return "\(count) events outside range (\(time) \(title)…)"
         case .outOfRangeSimple(let count, let time): return "Outside range: \(count) (\(time))"
         case .allDayWithOutOfRangeCard(let title, let count, let time): return "All-Day: \(title) · \(count) outside range (\(time))"
         case .allDayWithOutOfRangeSimple(let title, let count): return "All-Day: \(title) · +\(count) more"
-        case .manageAccountsButton: return "Accounts..."
+        case .manageAccountsButton: return "Accounts…"
         case .openCalendarApp: return "Open Calendar"
         case .resetDefault: return "Default"
 

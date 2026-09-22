@@ -155,7 +155,7 @@ public struct EventPopoverView: View {
                     )
 
                 Text("\(event.sourceTitle(lang: settings.language)) • \(event.calendarTitle)")
-                    .font(.system(size: 9.5, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(textMuted)
                     .lineLimit(1)
             }
@@ -181,7 +181,7 @@ public struct EventPopoverView: View {
 
                 if event.isCanceled {
                     Text(L10n.tr(.eventStatusCanceled, lang: settings.language))
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1.5)
                         .background(Color.red.opacity(0.18))
@@ -189,7 +189,7 @@ public struct EventPopoverView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 3))
                 } else if event.isDeclined {
                     Text(L10n.tr(.eventStatusDeclined, lang: settings.language))
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1.5)
                         .background(Color.gray.opacity(0.20))

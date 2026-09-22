@@ -1103,7 +1103,7 @@ private struct CurrentTimeIndicatorView: View {
         let rimColor = Color.white.opacity(0.95)
         let ringRimColor = Color.white.opacity(0.9)
 
-        Group {
+        let baseShape = Group {
             switch settings.currentTimeIndicatorStyle {
             case .triangleTick:
                 // 타입 3: 삼각 틱
@@ -1171,20 +1171,20 @@ private struct CurrentTimeIndicatorView: View {
                     )
             }
         }
-        .opacity(settings.isPetSnoozed ? (isBreathing ? 1.0 : 0.4) : 1.0)
-        .animation(
-            settings.isPetSnoozed
-                ? .easeInOut(duration: 2.0).repeatForever(autoreverses: true)
-                : .easeOut(duration: 0.2),
-            value: isBreathing
-        )
-        .onAppear {
-            if settings.isPetSnoozed {
-                isBreathing = true
-            }
-        }
-        .onChange(of: settings.isPetSnoozed) { _, snoozed in
-            isBreathing = snoozed
+
+        // 스누즈 해제 후 애니메이션 잔류로 인한 투명도 간섭을 방지하기 위해 뷰 ID 및 렌더링 분기 분리
+        if settings.isPetSnoozed {
+            baseShape
+                .opacity(isBreathing ? 1.0 : 0.4)
+                .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: isBreathing)
+                .id("indicator_snoozed_breathing")
+                .onAppear {
+                    isBreathing = true
+                }
+        } else {
+            baseShape
+                .opacity(1.0)
+                .id("indicator_normal_static")
         }
     }
 

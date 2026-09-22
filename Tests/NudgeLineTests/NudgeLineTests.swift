@@ -44,8 +44,8 @@ struct LocalizationTests {
         #expect(L10n.tr(.dimPastEventsLabel, lang: .en) == "Dim past events")
 
         // 캘린더 계정 및 앱 열기 버튼 키
-        #expect(L10n.tr(.manageAccountsButton, lang: .ko) == "시스템 계정 관리...")
-        #expect(L10n.tr(.manageAccountsButton, lang: .en) == "Accounts...")
+        #expect(L10n.tr(.manageAccountsButton, lang: .ko) == "시스템 계정 관리…")
+        #expect(L10n.tr(.manageAccountsButton, lang: .en) == "Accounts…")
         #expect(L10n.tr(.openCalendarApp, lang: .ko) == "캘린더 앱 열기")
         #expect(L10n.tr(.openCalendarApp, lang: .en) == "Open Calendar")
         #expect(L10n.tr(.openRemindersApp, lang: .ko) == "미리알림 앱 열기")
@@ -68,8 +68,8 @@ struct LocalizationTests {
         #expect(SettingsTab.general.title(lang: .en) == "General")
 
         // 업데이트 확인, 재시작, 새로 고침 및 새 버전 알림 키
-        #expect(L10n.tr(.checkForUpdates, lang: .ko) == "업데이트 확인...")
-        #expect(L10n.tr(.checkForUpdates, lang: .en) == "Check for Updates...")
+        #expect(L10n.tr(.checkForUpdates, lang: .ko) == "업데이트 확인…")
+        #expect(L10n.tr(.checkForUpdates, lang: .en) == "Check for Updates…")
         #expect(L10n.tr(.restart, lang: .ko) == "재시작")
         #expect(L10n.tr(.restart, lang: .en) == "Restart")
         #expect(L10n.tr(.refresh, lang: .ko) == "새로 고침")
@@ -92,8 +92,8 @@ struct LocalizationTests {
         // 인앱 업데이트 및 지도 서비스 다국어 키
         #expect(L10n.tr(.updateNowInApp, lang: .ko) == "지금 업데이트")
         #expect(L10n.tr(.updateNowInApp, lang: .en) == "Update Now")
-        #expect(L10n.tr(.installingAndRestarting, lang: .ko) == "업데이트 설치 및 재시작 중...")
-        #expect(L10n.tr(.installingAndRestarting, lang: .en) == "Installing update & restarting...")
+        #expect(L10n.tr(.installingAndRestarting, lang: .ko) == "업데이트 설치 및 재시작 중…")
+        #expect(L10n.tr(.installingAndRestarting, lang: .en) == "Installing update & restarting…")
         #expect(L10n.tr(.preferredMapServiceLabel, lang: .ko) == "일정 위치 열기:")
         #expect(L10n.tr(.preferredMapServiceLabel, lang: .en) == "Open Location with:")
         #expect(L10n.tr(.reminderMarkerGlowLabel, lang: .ko) == "마커 네온 효과 및 테두리 강조")
@@ -711,8 +711,8 @@ struct ReminderIntegrationTests {
 
     @Test("초과 일정 더 보기 L10n 포맷 검증")
     func testMoreEventsNoticeLocalization() {
-        #expect(L10n.tr(.moreEventsNotice(3), lang: .ko) == "외 3건의 일정 더 보기...")
-        #expect(L10n.tr(.moreEventsNotice(3), lang: .en) == "+3 more events...")
+        #expect(L10n.tr(.moreEventsNotice(3), lang: .ko) == "외 3건의 일정 더 보기…")
+        #expect(L10n.tr(.moreEventsNotice(3), lang: .en) == "+3 more events…")
     }
 
     @Test("빈 제목 미리알림 생성 방어 검증")
