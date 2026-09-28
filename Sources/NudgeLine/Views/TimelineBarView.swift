@@ -62,100 +62,20 @@ public struct TimelineBarView: View {
             let dayEnd = settings.endDate(for: currentTime)
             let totalSec = max(60, dayEnd.timeIntervalSince(dayStart))
 
-            let segments = cachedSegments
             let timeOffset = calculateCurrentTimeOffset(
                 dayStart: dayStart,
                 totalSec: totalSec,
                 totalLength: totalLength
             )
 
-            ZStack(alignment: alignmentForPosition) {
-                // 1. 타임라인 배경 트랙
-                backgroundTrack(
-                    thickness: settings.barWidth,
-                    length: totalLength,
-                    isHorizontal: isHorizontal,
-                    isDark: isDark
-                )
-
-                // 2. 일정 세그먼트 렌더링
-                ForEach(segments) { segment in
-                    renderSegment(
-                        segment: segment,
-                        dayStart: dayStart,
-                        totalSec: totalSec,
-                        totalLength: totalLength,
-                        isHorizontal: isHorizontal
-                    )
-                }
-
-                // 2-1. 미리알림 시점 마커 렌더링: 날짜 전용 항목 배제 및 시간 지정 마커만 표시 (초슬림 바 무간섭성 보장)
-                if settings.enableReminders {
-                    ForEach(reminderService.timedReminders) { reminder in
-                        renderReminder(
-                            reminder: reminder,
-                            dayStart: dayStart,
-                            totalSec: totalSec,
-                            totalLength: totalLength,
-                            isHorizontal: isHorizontal
-                        )
-                    }
-
-                    // 마커 미리보기 활성화 시 팝업 마커 렌더링
-                    if isPreviewingMarker {
-                        renderPreviewMarker(
-                            totalLength: totalLength,
-                            isHorizontal: isHorizontal
-                        )
-                    }
-                }
-
-                // 3. 현재 시각 인디케이터
-                if let pos = timeOffset {
-                    CurrentTimeIndicatorView(
-                        settings: settings,
-                        thickness: currentThickness,
-                        isHorizontal: isHorizontal,
-                        isBarHovered: isBarHovered,
-                        isPetProximityHovered: panelState.isPetProximityHovered,
-                        accentColor: settings.isPetSnoozed ? Color(red: 0.35, green: 0.55, blue: 0.95) : settings.effectiveCurrentTimeColor(),
-                        activeEffectType: activeEffectType,
-                        activeEffectId: activeEffectId,
-                        onEffectComplete: {
-                            activeEffectType = nil
-                        },
-                        isDark: isDark
-                    )
-                    .offset(
-                        x: isHorizontal ? pos : 0,
-                        y: isHorizontal ? 0 : pos
-                    )
-
-                    // 3-1. 인디케이터 클릭 히트 타깃 (펫 스누즈 토글)
-                    Color.clear
-                        .frame(
-                            width: isHorizontal ? 28 : currentThickness + 8,
-                            height: isHorizontal ? currentThickness + 8 : 28
-                        )
-                        .contentShape(Rectangle())
-                        .offset(
-                            x: isHorizontal ? pos - 14 : 0,
-                            y: isHorizontal ? 0 : pos - 14
-                        )
-                        .onTapGesture {
-                            if settings.enablePetSnooze {
-                                settings.togglePetSnooze()
-                                PopoverPanel.shared.showTimeTooltip(
-                                    currentTime: currentTime,
-                                    timeOffset: pos,
-                                    isHorizontal: isHorizontal,
-                                    barPosition: settings.barPosition,
-                                    settings: settings
-                                )
-                            }
-                        }
-                }
-            }
+            timelineLayers(
+                totalLength: totalLength,
+                currentThickness: currentThickness,
+                isHorizontal: isHorizontal,
+                dayStart: dayStart,
+                totalSec: totalSec,
+                timeOffset: timeOffset
+            )
             .frame(
                 maxWidth: .infinity,
                 maxHeight: .infinity,
@@ -171,183 +91,24 @@ public struct TimelineBarView: View {
                     totalSec: totalSec
                 )
             }
-            // 4. 단일 마우스 좌표 센서
             .onContinuousHover { phase in
-                switch phase {
-                case .active(let location):
-                    // 물리 바 두께 범위 검사
-                    let effectiveThickness = isBarHovered && settings.expandOnHover ? settings.hoverWidth : settings.barWidth
-                    let isWithinPhysicalBar: Bool
-                    switch settings.barPosition {
-                    case .left:
-                        isWithinPhysicalBar = location.x >= 0 && location.x <= effectiveThickness
-                    case .right:
-                        isWithinPhysicalBar = location.x >= (geometry.size.width - effectiveThickness) && location.x <= geometry.size.width
-                    case .bottom:
-                        isWithinPhysicalBar = location.y >= (geometry.size.height - effectiveThickness) && location.y <= geometry.size.height
-                    }
-
-                    guard isWithinPhysicalBar else {
-                        if isBarHovered {
-                            isBarHovered = false
-                            hoveredActiveId = nil
-                            hoveredFocusId = nil
-                            PopoverPanel.shared.hide(delayed: true)
-                        }
-                        return
-                    }
-
-                    isBarHovered = true
-                    let cursorCoord = isHorizontal ? location.x : location.y
-
-                    // 현재 시각 인디케이터 인접 감지 (12px 이내)
-                    if let timePos = timeOffset, abs(cursorCoord - timePos) <= 12 {
-                        if hoveredActiveId != "__TIME_TOOLTIP__" {
-                            hoveredActiveId = "__TIME_TOOLTIP__"
-                            hoveredFocusId = nil
-                            PopoverPanel.shared.showTimeTooltip(
-                                currentTime: currentTime,
-                                timeOffset: timePos,
-                                isHorizontal: isHorizontal,
-                                barPosition: settings.barPosition,
-                                settings: settings
-                            )
-                        }
-                    } else if settings.enableReminders, let reminderMatch = resolveHoveredReminder(
-                        at: cursorCoord,
-                        dayStart: dayStart,
-                        totalSec: totalSec,
-                        totalLength: totalLength
-                    ) {
-                        let markerId = "__REMINDER_\(reminderMatch.reminder.id)__"
-                        if hoveredActiveId != markerId {
-                            hoveredActiveId = markerId
-                            hoveredFocusId = nil
-                            PopoverPanel.shared.showReminderTooltip(
-                                reminder: reminderMatch.reminder,
-                                offset: reminderMatch.pos,
-                                isHorizontal: isHorizontal,
-                                barPosition: settings.barPosition,
-                                settings: settings
-                            )
-                        }
-                    } else if !calendarService.isAuthorized() {
-                        // 캘린더 접근 권한이 없는 경우 설정 안내 팝오버를 띄웁니다.
-                        if hoveredActiveId != "__PERMISSION_NOTICE__" {
-                            hoveredActiveId = "__PERMISSION_NOTICE__"
-                            hoveredFocusId = nil
-                            PopoverPanel.shared.showPermissionNotice(
-                                cursorOffset: cursorCoord,
-                                isHorizontal: isHorizontal,
-                                barPosition: settings.barPosition,
-                                settings: settings
-                            )
-                        }
-                    } else if calendarService.events.isEmpty {
-                        // 일정 미등록 또는 날짜 전용 미리알림 존재 시 빈 상태/할 일 툴팁 표출
-                        let hasCalendars = calendarService.isAuthorized() && !calendarService.allCalendars.isEmpty
-                        let allDayReminders = settings.enableReminders ? reminderService.allDayReminders : []
-                        let baseClusterId = hasCalendars ? "__EMPTY_SCHEDULE_TOOLTIP__" : "__NO_CALENDARS_TOOLTIP__"
-                        let clusterId = baseClusterId + "_" + allDayReminders.map(\.id).sorted().joined(separator: "_")
-                        if hoveredActiveId != clusterId {
-                            hoveredActiveId = clusterId
-                            hoveredFocusId = nil
-                            PopoverPanel.shared.showEmptyScheduleTooltip(
-                                cursorOffset: cursorCoord,
-                                allDayEvents: [],
-                                allDayReminders: allDayReminders,
-                                outOfRangeEvents: [],
-                                hasTimedEventsInRange: false,
-                                hasConnectedCalendars: hasCalendars,
-                                isHorizontal: isHorizontal,
-                                barPosition: settings.barPosition,
-                                settings: settings
-                            )
-                        }
-                    } else if let resolved = resolveHoveredEvents(
-                        at: cursorCoord,
-                        allEvents: calendarService.events,
-                        dayStart: dayStart,
-                        totalSec: totalSec,
-                        totalLength: totalLength
-                    ) {
-                        if hoveredActiveId != resolved.activeId {
-                            hoveredActiveId = resolved.activeId
-                            hoveredFocusId = resolved.focusId
-                            PopoverPanel.shared.show(
-                                events: resolved.events,
-                                allDayEvents: resolved.allDayEvents,
-                                clusterId: resolved.activeId,
-                                blockOffset: resolved.startOffset,
-                                blockLength: resolved.length,
-                                isHorizontal: isHorizontal,
-                                barPosition: settings.barPosition,
-                                settings: settings
-                            )
-                        }
-                    } else {
-                        // 일정 블록 외부 호버: 종일 일정 및 날짜 전용 미리알림 상태 표시
-                        let allDayEvents = calendarService.events.filter { $0.isAllDay }
-                        let timedEvents = calendarService.events.filter { !$0.isAllDay }
-                        let hasTimedEventsInRange = timedEvents.contains { $0.endDate > dayStart && $0.startDate < dayEnd }
-                        let outOfRangeEvents = timedEvents.filter { $0.endDate <= dayStart || $0.startDate >= dayEnd }
-                        let allDayReminders = settings.enableReminders ? reminderService.allDayReminders : []
-
-                        if !allDayEvents.isEmpty || !allDayReminders.isEmpty || (!hasTimedEventsInRange && !outOfRangeEvents.isEmpty) {
-                            let clusterId = "__SCHEDULE_STATUS_TOOLTIP__" +
-                                allDayEvents.map(\.id).sorted().joined(separator: "_") +
-                                "_" + allDayReminders.map(\.id).sorted().joined(separator: "_") +
-                                "_" + outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
-                                "_\(hasTimedEventsInRange)_\(settings.eventHoverStyle.rawValue)"
-
-                            if hoveredActiveId != clusterId {
-                                hoveredActiveId = clusterId
-                                hoveredFocusId = nil
-                                PopoverPanel.shared.showEmptyScheduleTooltip(
-                                    cursorOffset: cursorCoord,
-                                    allDayEvents: allDayEvents,
-                                    allDayReminders: allDayReminders,
-                                    outOfRangeEvents: outOfRangeEvents,
-                                    hasTimedEventsInRange: hasTimedEventsInRange,
-                                    isHorizontal: isHorizontal,
-                                    barPosition: settings.barPosition,
-                                    settings: settings
-                                )
-                            }
-                        } else if hoveredActiveId != nil {
-                            hoveredActiveId = nil
-                            hoveredFocusId = nil
-                            PopoverPanel.shared.hide(delayed: true)
-                        }
-                    }
-
-                case .ended:
-                    isBarHovered = false
-                    hoveredActiveId = nil
-                    hoveredFocusId = nil
-                    PopoverPanel.shared.hide(delayed: true)
-                }
+                handleHoverPhase(
+                    phase,
+                    geometry: geometry,
+                    isHorizontal: isHorizontal,
+                    timeOffset: timeOffset,
+                    dayStart: dayStart,
+                    dayEnd: dayEnd,
+                    totalSec: totalSec,
+                    totalLength: totalLength
+                )
             }
             .animation(.spring(response: 0.18, dampingFraction: 0.85), value: isBarHovered)
             .onTapGesture(count: 2) {
                 openSettingsWindow()
             }
             .contextMenu {
-                Button(L10n.tr(.settings, lang: settings.language)) {
-                    openSettingsWindow()
-                }
-
-                Button(L10n.tr(.refresh, lang: settings.language)) {
-                    calendarService.refreshSources()
-                    calendarService.loadCalendars()
-                    calendarService.fetchEvents(settings: settings)
-                }
-
-                Divider()
-
-                Button(L10n.tr(.quit, lang: settings.language)) {
-                    NSApplication.shared.terminate(nil)
-                }
+                barContextMenu
             }
         }
         .onAppear {
@@ -401,6 +162,293 @@ public struct TimelineBarView: View {
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)) { _ in
             // 스페이스 전환 / 미션컨트롤 발생 시 재생 중이던 이펙트 즉시 소멸
             activeEffectType = nil
+        }
+    }
+
+    // MARK: - 1. 타임라인 레이어 렌더링 (배경, 세그먼트, 마커, 인디케이터)
+    @ViewBuilder
+    private func timelineLayers(
+        totalLength: CGFloat,
+        currentThickness: CGFloat,
+        isHorizontal: Bool,
+        dayStart: Date,
+        totalSec: Double,
+        timeOffset: CGFloat?
+    ) -> some View {
+        ZStack(alignment: alignmentForPosition) {
+            // 1. 타임라인 배경 트랙
+            backgroundTrack(
+                thickness: settings.barWidth,
+                length: totalLength,
+                isHorizontal: isHorizontal,
+                isDark: isDark
+            )
+
+            // 2. 일정 세그먼트 렌더링
+            ForEach(cachedSegments) { segment in
+                renderSegment(
+                    segment: segment,
+                    dayStart: dayStart,
+                    totalSec: totalSec,
+                    totalLength: totalLength,
+                    isHorizontal: isHorizontal
+                )
+            }
+
+            // 2-1. 미리알림 시점 마커 렌더링: 날짜 전용 항목 배제 및 시간 지정 마커만 표시 (초슬림 바 무간섭성 보장)
+            if settings.enableReminders {
+                ForEach(reminderService.timedReminders) { reminder in
+                    renderReminder(
+                        reminder: reminder,
+                        dayStart: dayStart,
+                        totalSec: totalSec,
+                        totalLength: totalLength,
+                        isHorizontal: isHorizontal
+                    )
+                }
+
+                // 마커 미리보기 활성화 시 팝업 마커 렌더링
+                if isPreviewingMarker {
+                    renderPreviewMarker(
+                        totalLength: totalLength,
+                        isHorizontal: isHorizontal
+                    )
+                }
+            }
+
+            // 3. 현재 시각 인디케이터
+            if let pos = timeOffset {
+                CurrentTimeIndicatorView(
+                    settings: settings,
+                    thickness: currentThickness,
+                    isHorizontal: isHorizontal,
+                    isBarHovered: isBarHovered,
+                    isPetProximityHovered: panelState.isPetProximityHovered,
+                    accentColor: settings.isPetSnoozed ? Color(red: 0.35, green: 0.55, blue: 0.95) : settings.effectiveCurrentTimeColor(),
+                    activeEffectType: activeEffectType,
+                    activeEffectId: activeEffectId,
+                    onEffectComplete: {
+                        activeEffectType = nil
+                    },
+                    isDark: isDark
+                )
+                .offset(
+                    x: isHorizontal ? pos : 0,
+                    y: isHorizontal ? 0 : pos
+                )
+
+                // 3-1. 인디케이터 클릭 히트 타깃 (펫 스누즈 토글)
+                Color.clear
+                    .frame(
+                        width: isHorizontal ? 28 : currentThickness + 8,
+                        height: isHorizontal ? currentThickness + 8 : 28
+                    )
+                    .contentShape(Rectangle())
+                    .offset(
+                        x: isHorizontal ? pos - 14 : 0,
+                        y: isHorizontal ? 0 : pos - 14
+                    )
+                    .onTapGesture {
+                        if settings.enablePetSnooze {
+                            settings.togglePetSnooze()
+                            PopoverPanel.shared.showTimeTooltip(
+                                currentTime: currentTime,
+                                timeOffset: pos,
+                                isHorizontal: isHorizontal,
+                                barPosition: settings.barPosition,
+                                settings: settings
+                            )
+                        }
+                    }
+            }
+        }
+    }
+
+    // MARK: - 2. 단일 마우스 좌표 센서 호버 이벤트 처리
+    private func handleHoverPhase(
+        _ phase: HoverPhase,
+        geometry: GeometryProxy,
+        isHorizontal: Bool,
+        timeOffset: CGFloat?,
+        dayStart: Date,
+        dayEnd: Date,
+        totalSec: Double,
+        totalLength: CGFloat
+    ) {
+        switch phase {
+        case .active(let location):
+            // 물리 바 두께 범위 검사
+            let effectiveThickness = isBarHovered && settings.expandOnHover ? settings.hoverWidth : settings.barWidth
+            let isWithinPhysicalBar: Bool
+            switch settings.barPosition {
+            case .left:
+                isWithinPhysicalBar = location.x >= 0 && location.x <= effectiveThickness
+            case .right:
+                isWithinPhysicalBar = location.x >= (geometry.size.width - effectiveThickness) && location.x <= geometry.size.width
+            case .bottom:
+                isWithinPhysicalBar = location.y >= (geometry.size.height - effectiveThickness) && location.y <= geometry.size.height
+            }
+
+            guard isWithinPhysicalBar else {
+                if isBarHovered {
+                    isBarHovered = false
+                    hoveredActiveId = nil
+                    hoveredFocusId = nil
+                    PopoverPanel.shared.hide(delayed: true)
+                }
+                return
+            }
+
+            isBarHovered = true
+            let cursorCoord = isHorizontal ? location.x : location.y
+
+            // 현재 시각 인디케이터 인접 감지 (12px 이내)
+            if let timePos = timeOffset, abs(cursorCoord - timePos) <= 12 {
+                if hoveredActiveId != "__TIME_TOOLTIP__" {
+                    hoveredActiveId = "__TIME_TOOLTIP__"
+                    hoveredFocusId = nil
+                    PopoverPanel.shared.showTimeTooltip(
+                        currentTime: currentTime,
+                        timeOffset: timePos,
+                        isHorizontal: isHorizontal,
+                        barPosition: settings.barPosition,
+                        settings: settings
+                    )
+                }
+            } else if settings.enableReminders, let reminderMatch = resolveHoveredReminder(
+                at: cursorCoord,
+                dayStart: dayStart,
+                totalSec: totalSec,
+                totalLength: totalLength
+            ) {
+                let markerId = "__REMINDER_\(reminderMatch.reminder.id)__"
+                if hoveredActiveId != markerId {
+                    hoveredActiveId = markerId
+                    hoveredFocusId = nil
+                    PopoverPanel.shared.showReminderTooltip(
+                        reminder: reminderMatch.reminder,
+                        offset: reminderMatch.pos,
+                        isHorizontal: isHorizontal,
+                        barPosition: settings.barPosition,
+                        settings: settings
+                    )
+                }
+            } else if !calendarService.isAuthorized() {
+                // 캘린더 접근 권한이 없는 경우 설정 안내 팝오버를 띄웁니다.
+                if hoveredActiveId != "__PERMISSION_NOTICE__" {
+                    hoveredActiveId = "__PERMISSION_NOTICE__"
+                    hoveredFocusId = nil
+                    PopoverPanel.shared.showPermissionNotice(
+                        cursorOffset: cursorCoord,
+                        isHorizontal: isHorizontal,
+                        barPosition: settings.barPosition,
+                        settings: settings
+                    )
+                }
+            } else if calendarService.events.isEmpty {
+                // 일정 미등록 또는 날짜 전용 미리알림 존재 시 빈 상태/할 일 툴팁 표출
+                let hasCalendars = calendarService.isAuthorized() && !calendarService.allCalendars.isEmpty
+                let allDayReminders = settings.enableReminders ? reminderService.allDayReminders : []
+                let baseClusterId = hasCalendars ? "__EMPTY_SCHEDULE_TOOLTIP__" : "__NO_CALENDARS_TOOLTIP__"
+                let reminderKeys = allDayReminders.map(\.id).sorted().joined(separator: "_")
+                let clusterId = "\(baseClusterId)_\(reminderKeys)"
+                if hoveredActiveId != clusterId {
+                    hoveredActiveId = clusterId
+                    hoveredFocusId = nil
+                    PopoverPanel.shared.showEmptyScheduleTooltip(
+                        cursorOffset: cursorCoord,
+                        allDayEvents: [],
+                        allDayReminders: allDayReminders,
+                        outOfRangeEvents: [],
+                        hasTimedEventsInRange: false,
+                        hasConnectedCalendars: hasCalendars,
+                        isHorizontal: isHorizontal,
+                        barPosition: settings.barPosition,
+                        settings: settings
+                    )
+                }
+            } else if let resolved = resolveHoveredEvents(
+                at: cursorCoord,
+                allEvents: calendarService.events,
+                dayStart: dayStart,
+                totalSec: totalSec,
+                totalLength: totalLength
+            ) {
+                if hoveredActiveId != resolved.activeId {
+                    hoveredActiveId = resolved.activeId
+                    hoveredFocusId = resolved.focusId
+                    PopoverPanel.shared.show(
+                        events: resolved.events,
+                        allDayEvents: resolved.allDayEvents,
+                        clusterId: resolved.activeId,
+                        blockOffset: resolved.startOffset,
+                        blockLength: resolved.length,
+                        isHorizontal: isHorizontal,
+                        barPosition: settings.barPosition,
+                        settings: settings
+                    )
+                }
+            } else {
+                // 일정 블록 외부 호버: 종일 일정 및 날짜 전용 미리알림 상태 표시
+                let allDayEvents = calendarService.events.filter { $0.isAllDay }
+                let timedEvents = calendarService.events.filter { !$0.isAllDay }
+                let hasTimedEventsInRange = timedEvents.contains { $0.endDate > dayStart && $0.startDate < dayEnd }
+                let outOfRangeEvents = timedEvents.filter { $0.endDate <= dayStart || $0.startDate >= dayEnd }
+                let allDayReminders = settings.enableReminders ? reminderService.allDayReminders : []
+
+                if !allDayEvents.isEmpty || !allDayReminders.isEmpty || (!hasTimedEventsInRange && !outOfRangeEvents.isEmpty) {
+                    let allDayKeys = allDayEvents.map(\.id).sorted().joined(separator: "_")
+                    let reminderKeys = allDayReminders.map(\.id).sorted().joined(separator: "_")
+                    let outOfRangeKeys = outOfRangeEvents.map(\.id).sorted().joined(separator: "_")
+                    let styleKey = settings.eventHoverStyle.rawValue
+                    let clusterId = "__SCHEDULE_STATUS_TOOLTIP___\(allDayKeys)_\(reminderKeys)_\(outOfRangeKeys)_\(hasTimedEventsInRange)_\(styleKey)"
+
+                    if hoveredActiveId != clusterId {
+                        hoveredActiveId = clusterId
+                        hoveredFocusId = nil
+                        PopoverPanel.shared.showEmptyScheduleTooltip(
+                            cursorOffset: cursorCoord,
+                            allDayEvents: allDayEvents,
+                            allDayReminders: allDayReminders,
+                            outOfRangeEvents: outOfRangeEvents,
+                            hasTimedEventsInRange: hasTimedEventsInRange,
+                            isHorizontal: isHorizontal,
+                            barPosition: settings.barPosition,
+                            settings: settings
+                        )
+                    }
+                } else if hoveredActiveId != nil {
+                    hoveredActiveId = nil
+                    hoveredFocusId = nil
+                    PopoverPanel.shared.hide(delayed: true)
+                }
+            }
+
+        case .ended:
+            isBarHovered = false
+            hoveredActiveId = nil
+            hoveredFocusId = nil
+            PopoverPanel.shared.hide(delayed: true)
+        }
+    }
+
+    // MARK: - 3. 타임라인 우클릭 컨텍스트 메뉴
+    @ViewBuilder
+    private var barContextMenu: some View {
+        Button(L10n.tr(.settings, lang: settings.language)) {
+            openSettingsWindow()
+        }
+
+        Button(L10n.tr(.refresh, lang: settings.language)) {
+            calendarService.refreshSources()
+            calendarService.loadCalendars()
+            calendarService.fetchEvents(settings: settings)
+        }
+
+        Divider()
+
+        Button(L10n.tr(.quit, lang: settings.language)) {
+            NSApplication.shared.terminate(nil)
         }
     }
 
