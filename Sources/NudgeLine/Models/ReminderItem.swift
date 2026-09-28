@@ -15,7 +15,9 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
     public let url: URL?
     public let priority: Int
     public let isCompleted: Bool
+    public let isAllDay: Bool
 
+    // 당일 마감 할 일 누락 방지: hour/minute 필수 검사 완화 및 isAllDay 분기
     public init?(from ekReminder: EKReminder, calendar: Calendar = .current) {
         let itemID = ekReminder.calendarItemIdentifier
         let rawTitle = (ekReminder.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -23,15 +25,15 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
               !rawTitle.isEmpty,
               !ekReminder.isCompleted,
               let dueComponents = ekReminder.dueDateComponents,
-              dueComponents.hour != nil,
-              dueComponents.minute != nil,
               let date = calendar.date(from: dueComponents) else {
             return nil
         }
 
+        let hasTime = (dueComponents.hour != nil && dueComponents.minute != nil)
         self.id = itemID
         self.title = rawTitle
-        self.dueDate = date
+        self.dueDate = hasTime ? date : calendar.startOfDay(for: date)
+        self.isAllDay = !hasTime
         self.listIdentifier = ekReminder.calendar?.calendarIdentifier ?? "unknown"
         self.listTitle = ekReminder.calendar?.title ?? ""
         if let cgColor = ekReminder.calendar?.cgColor {
@@ -55,7 +57,8 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
         notes: String? = nil,
         url: URL? = nil,
         priority: Int = 0,
-        isCompleted: Bool = false
+        isCompleted: Bool = false,
+        isAllDay: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -67,14 +70,15 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
         self.url = url
         self.priority = priority
         self.isCompleted = isCompleted
+        self.isAllDay = isAllDay
     }
 
-    // MARK: - 가시 범위 판정
-    // 렌더링과 호버 감지에 동일한 표시 기준을 유지하기 위한 범위 확인
+    // 타임라인 바 간섭 차단: isAllDay 항목 가시 범위 판정에서 제외 (바 위 마커 노출 억제)
     public func isWithinVisibilityWindow(
         currentTime: Date,
         proximityMinutes: Int
     ) -> Bool {
+        guard !isAllDay else { return false }
         guard proximityMinutes < 1440 else { return true }
         let diffMinutes = dueDate.timeIntervalSince(currentTime) / 60.0
         return diffMinutes <= Double(proximityMinutes) && diffMinutes >= -10.0

@@ -22,6 +22,14 @@ public final class ReminderService: ObservableObject {
     @Published public private(set) var reminders: [ReminderItem] = []
     @Published public private(set) var reminderLists: [ReminderListInfo] = []
 
+    public var timedReminders: [ReminderItem] {
+        reminders.filter { !$0.isAllDay }
+    }
+
+    public var allDayReminders: [ReminderItem] {
+        reminders.filter { $0.isAllDay }
+    }
+
     private init() {
         let initialStatus = EKEventStore.authorizationStatus(for: .reminder)
         self.authorizationStatus = initialStatus
@@ -46,7 +54,10 @@ extension ReminderService {
                 self.eventStore.reset()
                 self.refreshSources()
                 self.loadReminderLists()
-                self.fetchReminders()
+                // fetchGeneration 동시성 데이터 레이스 방어: 메인 스레드 호출 일원화
+                DispatchQueue.main.async {
+                    self.fetchReminders()
+                }
             }
         } else if !isNowAuthorized && wasAuthorized {
             DispatchQueue.main.async { [weak self] in
@@ -184,6 +195,30 @@ extension ReminderService {
                     guard self.fetchGeneration == currentGeneration, settings.enableReminders else { return }
                     self.reminders = items
                 }
+            }
+        }
+    }
+
+    // 원클릭 완료 처리: 낙관적 UI 갱신 및 EventKit DB 비동기 커밋 (실패 시 원복 재동기화)
+    public func completeReminder(id: String) {
+        DispatchQueue.main.async { [weak self] in
+            self?.reminders.removeAll { $0.id == id }
+        }
+
+        eventStoreQueue.async { [weak self] in
+            guard let self = self else { return }
+            guard let item = self.eventStore.calendarItem(withIdentifier: id) as? EKReminder else {
+                // 식별자 조회 실패 시 UI 롤백: 로컬 리스트 재동기화로 유실 항목 복구
+                DispatchQueue.main.async { self.fetchReminders() }
+                return
+            }
+            item.isCompleted = true
+            item.completionDate = Date()
+            do {
+                try self.eventStore.save(item, commit: true)
+            } catch {
+                // EventKit DB 저장 실패 시 UI 복구: 최신 DB 상태 재조회로 낙관적 삭제 원복
+                DispatchQueue.main.async { self.fetchReminders() }
             }
         }
     }

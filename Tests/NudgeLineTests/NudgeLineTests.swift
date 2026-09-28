@@ -728,4 +728,57 @@ struct ReminderIntegrationTests {
         let item = ReminderItem(from: ekReminder, calendar: calendar)
         #expect(item == nil)
     }
+
+    @Test("날짜 전용 미리알림 파싱 및 타임라인 바 마커 차단 검증")
+    func testAllDayReminderParsingAndMarkerExclusion() {
+        let store = EKEventStore()
+        let ekReminder = EKReminder(eventStore: store)
+        ekReminder.title = "재활용 분리수거"
+
+        let calendar = Calendar.current
+        let comps = calendar.dateComponents([.year, .month, .day], from: Date())
+        ekReminder.dueDateComponents = comps
+
+        let item = ReminderItem(from: ekReminder, calendar: calendar)
+        #expect(item != nil)
+        #expect(item?.isAllDay == true)
+        #expect(item?.title == "재활용 분리수거")
+
+        // 바 마커 노출 차단: 날짜 전용 항목은 시간 범위 관계없이 false 반환 검증
+        let now = Date()
+        #expect(item?.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 1440) == false)
+        #expect(item?.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 60) == false)
+    }
+
+    @Test("시간 지정 미리알림 정상 식별 검증")
+    func testTimedReminderParsing() {
+        let store = EKEventStore()
+        let ekReminder = EKReminder(eventStore: store)
+        ekReminder.title = "디자인 싱크"
+
+        let calendar = Calendar.current
+        var comps = calendar.dateComponents([.year, .month, .day], from: Date())
+        comps.hour = 15
+        comps.minute = 30
+        ekReminder.dueDateComponents = comps
+
+        let item = ReminderItem(from: ekReminder, calendar: calendar)
+        #expect(item != nil)
+        #expect(item?.isAllDay == false)
+        #expect(item?.title == "디자인 싱크")
+    }
+
+    @Test("날짜 전용 미리알림 관련 다국어 키 검증")
+    func testAllDayRemindersLocalizationKeys() {
+        #expect(L10n.tr(.allDayRemindersNotice(3), lang: .ko) == "할 일 3건")
+        #expect(L10n.tr(.allDayRemindersNotice(3), lang: .en) == "3 tasks")
+        #expect(L10n.tr(.allDayRemindersSectionTitle, lang: .ko) == "오늘의 미리알림")
+        #expect(L10n.tr(.allDayRemindersSectionTitle, lang: .en) == "Today's Reminders")
+        #expect(L10n.tr(.moreRemindersCount(2), lang: .ko) == "외 2개 더보기…")
+        #expect(L10n.tr(.moreRemindersCount(2), lang: .en) == "+2 more…")
+        #expect(L10n.tr(.todayRemindersOnlyNotice("재활용 분리수거", 0), lang: .ko) == "오늘 할 일: 재활용 분리수거")
+        #expect(L10n.tr(.todayRemindersOnlyNotice("재활용 분리수거", 2), lang: .ko) == "오늘 할 일: 재활용 분리수거 외 2건")
+        #expect(L10n.tr(.todayRemindersOnlyNotice("Recycling", 0), lang: .en) == "Today's Task: Recycling")
+        #expect(L10n.tr(.todayRemindersOnlyNotice("Recycling", 2), lang: .en) == "Today's Tasks: Recycling +2")
+    }
 }

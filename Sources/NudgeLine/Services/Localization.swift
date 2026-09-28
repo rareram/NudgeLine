@@ -130,6 +130,10 @@ public struct L10n {
         case outOfRangeSimple(Int, String)
         case allDayWithOutOfRangeCard(String, Int, String)
         case allDayWithOutOfRangeSimple(String, Int)
+        case allDayRemindersNotice(Int)
+        case allDayRemindersSectionTitle
+        case moreRemindersCount(Int)
+        case todayRemindersOnlyNotice(String, Int)
         case manageAccountsButton
         case openCalendarApp
         case resetDefault
@@ -346,6 +350,11 @@ extension L10n.Key {
         case .outOfRangeSimple(let count, let time): return "범위 외 \(count)건 (\(time))"
         case .allDayWithOutOfRangeCard(let title, let count, let time): return "종일: \(title) · 범위 외 \(count)건 (\(time))"
         case .allDayWithOutOfRangeSimple(let title, let count): return "종일: \(title) · 외 \(count)건"
+        case .allDayRemindersNotice(let count): return "할 일 \(count)건"
+        case .allDayRemindersSectionTitle: return "오늘의 미리알림"
+        case .moreRemindersCount(let count): return "외 \(count)개 더보기…"
+        case .todayRemindersOnlyNotice(let title, let others):
+            return others == 0 ? "오늘 할 일: \(title)" : "오늘 할 일: \(title) 외 \(others)건"
         case .manageAccountsButton: return "시스템 계정 관리…"
         case .openCalendarApp: return "캘린더 앱 열기"
         case .resetDefault: return "기본값"
@@ -546,6 +555,11 @@ extension L10n.Key {
         case .outOfRangeSimple(let count, let time): return "Outside range: \(count) (\(time))"
         case .allDayWithOutOfRangeCard(let title, let count, let time): return "All-Day: \(title) · \(count) outside range (\(time))"
         case .allDayWithOutOfRangeSimple(let title, let count): return "All-Day: \(title) · +\(count) more"
+        case .allDayRemindersNotice(let count): return "\(count) tasks"
+        case .allDayRemindersSectionTitle: return "Today's Reminders"
+        case .moreRemindersCount(let count): return "+\(count) more…"
+        case .todayRemindersOnlyNotice(let title, let others):
+            return others == 0 ? "Today's Task: \(title)" : "Today's Tasks: \(title) +\(others)"
         case .manageAccountsButton: return "Accounts…"
         case .openCalendarApp: return "Open Calendar"
         case .resetDefault: return "Default"

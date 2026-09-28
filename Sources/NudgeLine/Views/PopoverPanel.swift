@@ -47,8 +47,9 @@ public final class PopoverPanel: NSPanel {
     private var showGeneration: Int = 0
     private var cancellables = Set<AnyCancellable>()
 
-    // 빈 영역 종일 일정 툴팁 -> 상세 카드 확장용 상태
+    // 빈 영역 툴팁 -> 상세 카드 확장용 상태 (종일 일정 및 당일 미리알림)
     private var pendingAllDayEvents: [CalendarEvent] = []
+    private var pendingAllDayReminders: [ReminderItem] = []
     private var pendingTooltipContext: (cursorOffset: CGFloat, isHorizontal: Bool, barPosition: BarPosition, settings: AppSettings)? = nil
 
     private init() {
@@ -113,10 +114,11 @@ public final class PopoverPanel: NSPanel {
             hideTimer?.invalidate()
             hideTimer = nil
 
-            // [종일 일정 툴팁 -> 상세 액션 카드 자동 확장]
-            if !pendingAllDayEvents.isEmpty, let context = pendingTooltipContext {
-                expandToAllDayCard(events: pendingAllDayEvents, context: context)
+            // 당일 종일 일정 및 할 일 툴팁 -> 상세 액션 카드 자동 확장
+            if (!pendingAllDayEvents.isEmpty || !pendingAllDayReminders.isEmpty), let context = pendingTooltipContext {
+                expandToAllDayCard(events: pendingAllDayEvents, reminders: pendingAllDayReminders, context: context)
                 self.pendingAllDayEvents = []
+                self.pendingAllDayReminders = []
                 self.pendingTooltipContext = nil
             }
         } else {
@@ -178,6 +180,7 @@ extension PopoverPanel {
         hideTimer?.invalidate()
         hideTimer = nil
         self.pendingAllDayEvents = []
+        self.pendingAllDayReminders = []
         self.pendingTooltipContext = nil
 
         guard let screen = currentTargetScreen(), !events.isEmpty else { return }
@@ -401,6 +404,7 @@ extension PopoverPanel {
     public func showEmptyScheduleTooltip(
         cursorOffset: CGFloat,
         allDayEvents: [CalendarEvent] = [],
+        allDayReminders: [ReminderItem] = [],
         outOfRangeEvents: [CalendarEvent] = [],
         hasTimedEventsInRange: Bool = false,
         hasConnectedCalendars: Bool = true,
@@ -410,9 +414,9 @@ extension PopoverPanel {
     ) {
         guard let screen = currentTargetScreen() else { return }
 
-        // 텍스트 길이에 맞춰 툴팁 너비를 자연스럽게 조절합니다.
         let text = EmptyScheduleTooltipView.tooltipText(
             for: allDayEvents,
+            allDayReminders: allDayReminders,
             outOfRangeEvents: outOfRangeEvents,
             hasTimedEventsInRange: hasTimedEventsInRange,
             hasConnectedCalendars: hasConnectedCalendars,
@@ -420,7 +424,8 @@ extension PopoverPanel {
         )
         let font = NSFont.systemFont(ofSize: 10, weight: .medium)
         let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
-        let targetWidth = min(340.0, max(80.0, ceil(textWidth + 30.0)))
+        let hasBoth = !allDayEvents.isEmpty && !allDayReminders.isEmpty
+        let targetWidth = min(360.0, max(80.0, ceil(textWidth + (hasBoth ? 42.0 : 30.0))))
 
         let finalFrame = calculateTooltipFrame(
             offset: cursorOffset,
@@ -433,21 +438,25 @@ extension PopoverPanel {
 
         let clusterId = "__SCHEDULE_STATUS_TOOLTIP__" +
             allDayEvents.map(\.id).sorted().joined(separator: "_") +
+            allDayReminders.map(\.id).sorted().joined(separator: "_") +
             outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
             "_\(hasTimedEventsInRange)_\(hasConnectedCalendars)_\(settings.eventHoverStyle.rawValue)"
 
-        // 당일 종일 일정이 있는 경우 마우스 호버 브릿지 활성화 및 확장 컨텍스트 보관
-        if !allDayEvents.isEmpty {
+        let hasItems = (!allDayEvents.isEmpty || !allDayReminders.isEmpty)
+        if hasItems {
             self.pendingAllDayEvents = allDayEvents
+            self.pendingAllDayReminders = allDayReminders
             self.pendingTooltipContext = (cursorOffset, isHorizontal, barPosition, settings)
         } else {
             self.pendingAllDayEvents = []
+            self.pendingAllDayReminders = []
             self.pendingTooltipContext = nil
         }
 
         presentTooltip(
             content: AnyView(EmptyScheduleTooltipView(
                 allDayEvents: allDayEvents,
+                allDayReminders: allDayReminders,
                 outOfRangeEvents: outOfRangeEvents,
                 hasTimedEventsInRange: hasTimedEventsInRange,
                 hasConnectedCalendars: hasConnectedCalendars,
@@ -455,41 +464,63 @@ extension PopoverPanel {
             )),
             frame: finalFrame,
             clusterId: clusterId,
-            isDetailMode: !allDayEvents.isEmpty, // 종일 일정이 있을 때는 마우스가 툴팁으로 건너올 수 있도록 브릿지 활성화
+            isDetailMode: hasItems,
             settings: settings
         )
     }
 
-    // MARK: - 종일 일정 미니 툴팁 -> 상세 액션 카드 자동 확장
-    // [원인/배경: 시간 일정과의 구분을 위해 24px 미니 툴팁으로 시작하되, 마우스가 툴팁에 올라가면 전체 상세 정보(링크/메모)를 확인 가능해야 함 -> 해결 방법: mouseEntered 시점에 종일 일정을 상세 카드로 교체하고 부드러운 스프링 프레임 확장 애니메이션 적용 -> 기대 효과: 시간 블록과 빈 공간의 리듬감 보존 및 종일 일정 정보 손실 없는 완벽한 UX 달성]
+    // 당일 종일 일정 및 할 일 미니 툴팁 -> 상세 액션 카드 자동 확장
     private func expandToAllDayCard(
         events: [CalendarEvent],
+        reminders: [ReminderItem] = [],
         context: (cursorOffset: CGFloat, isHorizontal: Bool, barPosition: BarPosition, settings: AppSettings)
     ) {
-        guard let screen = currentTargetScreen(), !events.isEmpty else { return }
+        guard let screen = currentTargetScreen(), (!events.isEmpty || !reminders.isEmpty) else { return }
         self.currentClusterId = "__ALL_DAY_CARD_EXPANDED__"
         updatePanelAppearance(settings: context.settings)
-
-        let renderer = context.settings.eventHoverStyle.renderer()
         self.isDetailMode = true
 
-        let targetDimensions = renderer.targetSize(
-            events: events,
-            allDayEvents: [],
-            isHorizontal: context.isHorizontal
-        )
-        let targetWidth = targetDimensions.width
-        let targetHeight = targetDimensions.height
+        var targetWidth: CGFloat = 280.0
+        var targetHeight: CGFloat = 60.0
 
         let pad = shadowPadding(for: context.barPosition)
-        let anyView = AnyView(
-            renderer.makeView(
-                events: events,
-                allDayEvents: [],
-                settings: context.settings
+        let anyView: AnyView
+
+        if reminders.isEmpty {
+            // 기존 종일 일정 전용 카드 크기 복원: 활성 렌더러의 targetSize와 가로모드 패딩 완전 반영
+            let renderer = context.settings.eventHoverStyle.renderer()
+            let dims = renderer.targetSize(events: events, allDayEvents: [], isHorizontal: context.isHorizontal)
+            targetWidth = dims.width
+            targetHeight = dims.height
+            anyView = AnyView(renderer.makeView(events: events, allDayEvents: [], settings: context.settings).padding(pad))
+        } else {
+            // 신규 종일 일정+할 일 복합 카드: 280pt 표준 너비 및 동적 높이 연산
+            var contentHeight: CGFloat = 0
+            if !events.isEmpty {
+                contentHeight += CGFloat(min(3, events.count)) * 34.0 + 6.0
+                if events.count > 3 { contentHeight += 16.0 }
+            }
+            if !events.isEmpty && !reminders.isEmpty {
+                contentHeight += 10.0
+            }
+            if !reminders.isEmpty {
+                contentHeight += 22.0
+                contentHeight += CGFloat(min(4, reminders.count)) * 24.0
+                if reminders.count > 4 { contentHeight += 18.0 }
+            }
+            targetWidth = 280.0
+            targetHeight = max(60.0, ceil(contentHeight + 20.0))
+
+            anyView = AnyView(
+                AllDayWithRemindersPopoverView(
+                    events: events,
+                    reminders: reminders,
+                    barPosition: context.barPosition,
+                    settings: context.settings
+                )
+                .padding(pad)
             )
-            .padding(pad)
-        )
+        }
 
         if let hosting = hostingView {
             hosting.rootView = anyView
@@ -958,6 +989,7 @@ private struct ReminderTooltipView: View {
 // MARK: - 7. 빈 일정 및 종일 일정 안내 툴팁 뷰 (EmptyScheduleTooltipView)
 private struct EmptyScheduleTooltipView: View {
     let allDayEvents: [CalendarEvent]
+    let allDayReminders: [ReminderItem]
     let outOfRangeEvents: [CalendarEvent]
     let hasTimedEventsInRange: Bool
     let hasConnectedCalendars: Bool
@@ -976,6 +1008,7 @@ private struct EmptyScheduleTooltipView: View {
 
     static func tooltipText(
         for allDayEvents: [CalendarEvent],
+        allDayReminders: [ReminderItem] = [],
         outOfRangeEvents: [CalendarEvent] = [],
         hasTimedEventsInRange: Bool = false,
         hasConnectedCalendars: Bool = true,
@@ -983,7 +1016,22 @@ private struct EmptyScheduleTooltipView: View {
     ) -> String {
         let isCard = (settings.eventHoverStyle == .card)
 
-        // 1. 종일 일정과 범위 외 일정이 모두 있는 경우
+        // 1. 종일 일정과 당일 미리알림이 모두 있는 경우
+        if !allDayEvents.isEmpty && !allDayReminders.isEmpty {
+            let allDayTitle = allDayEvents[0].title(lang: settings.language)
+            let calText = allDayEvents.count == 1 ? allDayTitle : "\(allDayTitle) +\(allDayEvents.count - 1)"
+            let remText = L10n.tr(.allDayRemindersNotice(allDayReminders.count), lang: settings.language)
+            return "\(calText)  │  \(remText)"
+        }
+
+        // 2. 당일 미리알림만 있는 경우 (종일 일정 없음)
+        if allDayEvents.isEmpty && !allDayReminders.isEmpty {
+            let firstTitle = allDayReminders[0].title
+            let others = allDayReminders.count - 1
+            return L10n.tr(.todayRemindersOnlyNotice(firstTitle, others), lang: settings.language)
+        }
+
+        // 3. 종일 일정과 범위 외 일정이 모두 있는 경우
         if !allDayEvents.isEmpty && !outOfRangeEvents.isEmpty {
             let allDayTitle = allDayEvents[0].title(lang: settings.language)
             let firstOut = outOfRangeEvents[0]
@@ -995,18 +1043,16 @@ private struct EmptyScheduleTooltipView: View {
             }
         }
 
-        // 2. 종일 일정만 있는 경우
+        // 4. 종일 일정만 있는 경우
         if !allDayEvents.isEmpty {
             let title = allDayEvents[0].title(lang: settings.language)
             let otherCount = allDayEvents.count - 1
 
             if hasTimedEventsInRange {
-                // 바에 이미 시간 블록들이 있는 빈 공간 호버 시에는 순수 종일 일정 제목만 표출
                 return otherCount == 0
                     ? L10n.tr(.allDayNotice(title), lang: settings.language)
                     : L10n.tr(.allDayNoticeWithCount(title, otherCount), lang: settings.language)
             } else {
-                // 바에 시간 블록이 전혀 없을 때 (카드 스타일 정보 밀도 분기 적용)
                 if isCard {
                     return otherCount == 0
                         ? L10n.tr(.noTimedEventsWithAllDayCard(title), lang: settings.language)
@@ -1019,7 +1065,7 @@ private struct EmptyScheduleTooltipView: View {
             }
         }
 
-        // 3. 표시 범위 밖 시간 일정만 있는 경우 (바가 비어있는 상태)
+        // 5. 표시 범위 밖 시간 일정만 있는 경우
         if !outOfRangeEvents.isEmpty {
             let firstOut = outOfRangeEvents[0]
             let timeStr = timeFormatter.string(from: firstOut.startDate)
@@ -1034,7 +1080,7 @@ private struct EmptyScheduleTooltipView: View {
             }
         }
 
-        // 4. 하루 24시간 전체 0건인 경우
+        // 6. 하루 24시간 전체 0건인 경우
         if !hasConnectedCalendars {
             return isCard
                 ? L10n.tr(.noCalendarsWithSettings, lang: settings.language)
@@ -1046,34 +1092,70 @@ private struct EmptyScheduleTooltipView: View {
     }
 
     var body: some View {
-        let text = Self.tooltipText(
-            for: allDayEvents,
-            outOfRangeEvents: outOfRangeEvents,
-            hasTimedEventsInRange: hasTimedEventsInRange,
-            hasConnectedCalendars: hasConnectedCalendars,
-            settings: settings
-        )
-        let iconName: String = {
-            if !allDayEvents.isEmpty {
-                return "calendar.badge.clock"
-            } else if !outOfRangeEvents.isEmpty {
-                return "clock.badge.exclamationmark"
-            } else if !hasConnectedCalendars {
-                return "calendar.badge.exclamationmark"
-            } else {
-                return "calendar"
-            }
-        }()
+        let hasBoth = !allDayEvents.isEmpty && !allDayReminders.isEmpty
+        let iconColor = isDarkTheme ? Color.white.opacity(0.7) : Color.black.opacity(0.6)
+        let textColor = isDarkTheme ? Color.white.opacity(0.9) : Color.black.opacity(0.85)
 
         HStack(spacing: 4.5) {
-            Image(systemName: iconName)
-                .font(.system(size: 9.5, weight: .semibold))
-                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.7) : Color.black.opacity(0.6))
+            if hasBoth {
+                // 일정과 미리알림 병기 렌더링
+                let allDayTitle = allDayEvents[0].title(lang: settings.language)
+                let calText = allDayEvents.count == 1 ? allDayTitle : "\(allDayTitle) +\(allDayEvents.count - 1)"
+                let remText = L10n.tr(.allDayRemindersNotice(allDayReminders.count), lang: settings.language)
 
-            Text(text)
-                .font(.system(size: 10, weight: .medium, design: .rounded))
-                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.9) : Color.black.opacity(0.85))
-                .lineLimit(1)
+                Image(systemName: "calendar")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(iconColor)
+
+                Text(calText)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(textColor)
+                    .lineLimit(1)
+
+                Text("│")
+                    .font(.system(size: 9, weight: .light))
+                    .foregroundStyle(isDarkTheme ? Color.white.opacity(0.35) : Color.black.opacity(0.25))
+
+                Image(systemName: "checklist")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(Color.orange.opacity(0.9))
+
+                Text(remText)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(textColor)
+                    .lineLimit(1)
+            } else {
+                let text = Self.tooltipText(
+                    for: allDayEvents,
+                    allDayReminders: allDayReminders,
+                    outOfRangeEvents: outOfRangeEvents,
+                    hasTimedEventsInRange: hasTimedEventsInRange,
+                    hasConnectedCalendars: hasConnectedCalendars,
+                    settings: settings
+                )
+                let iconName: String = {
+                    if !allDayReminders.isEmpty {
+                        return "checklist"
+                    } else if !allDayEvents.isEmpty {
+                        return "calendar"
+                    } else if !outOfRangeEvents.isEmpty {
+                        return "clock.badge.exclamationmark"
+                    } else if !hasConnectedCalendars {
+                        return "calendar.badge.exclamationmark"
+                    } else {
+                        return "calendar"
+                    }
+                }()
+
+                Image(systemName: iconName)
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(allDayReminders.isEmpty ? iconColor : Color.orange.opacity(0.9))
+
+                Text(text)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(textColor)
+                    .lineLimit(1)
+            }
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 3)
@@ -1103,6 +1185,222 @@ private struct EmptyScheduleTooltipView: View {
                     lineWidth: 0.8
                 )
         )
+    }
+}
+
+// MARK: - 7-1. 종일 일정 및 미리알림 복합 상세 팝오버 뷰 (AllDayWithRemindersPopoverView)
+// 당일 종일 일정 및 미리알림 복합 상세 팝오버: 2단 섹션 분리 및 원클릭 체크 완료
+private struct AllDayWithRemindersPopoverView: View {
+    let events: [CalendarEvent]
+    let reminders: [ReminderItem]
+    let barPosition: BarPosition
+    @ObservedObject var settings: AppSettings
+
+    @State private var completedIds: Set<String> = []
+
+    @Environment(\.colorScheme) private var colorScheme
+    private var isDarkTheme: Bool {
+        settings.eventCardTheme.isDark(for: colorScheme)
+    }
+
+    private var bubbleDirection: BubbleArrowDirection {
+        switch barPosition {
+        case .left: return .left
+        case .right: return .right
+        case .bottom: return .bottom
+        }
+    }
+
+    private var tintColor: Color {
+        let opacity = settings.cardOpacity
+        return isDarkTheme ? Color.black.opacity(opacity * 0.40) : Color.white.opacity(opacity * 0.35)
+    }
+
+    private var textColor: Color {
+        isDarkTheme ? Color.white : Color.black.opacity(0.9)
+    }
+
+    private var textMuted: Color {
+        isDarkTheme ? Color.white.opacity(0.55) : Color.black.opacity(0.45)
+    }
+
+    var body: some View {
+        let direction = bubbleDirection
+        let bubbleShape = SpeechBubbleShape(direction: direction, arrowWidth: 8, arrowHeight: 14, cornerRadius: 10)
+
+        VStack(alignment: .leading, spacing: 8) {
+            // 1. 종일 캘린더 일정 섹션 (존재 시)
+            if !events.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(events.prefix(3)) { event in
+                        HStack(alignment: .top, spacing: 6) {
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(event.effectiveColor(settings: settings))
+                                .frame(width: 3, height: 26)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(event.title(lang: settings.language))
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(textColor)
+                                    .lineLimit(1)
+
+                                Text(event.calendarTitle)
+                                    .font(.system(size: 9.5, weight: .medium))
+                                    .foregroundStyle(textMuted)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+
+                    if events.count > 3 {
+                        Text(L10n.tr(.moreEventsNotice(events.count - 3), lang: settings.language))
+                            .font(.system(size: 9.5, weight: .regular))
+                            .foregroundStyle(textMuted)
+                    }
+                }
+            }
+
+            // 2. 구분선 (일정과 미리알림 둘 다 있을 때)
+            if !events.isEmpty && !reminders.isEmpty {
+                Divider()
+                    .opacity(isDarkTheme ? 0.25 : 0.15)
+            }
+
+            // 3. 당일 미리알림 섹션 (존재 시)
+            if !reminders.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Image(systemName: "checklist")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color.orange)
+
+                        Text("\(L10n.tr(.allDayRemindersSectionTitle, lang: settings.language)) (\(reminders.count))")
+                            .font(.system(size: 10.5, weight: .bold, design: .rounded))
+                            .foregroundStyle(textColor)
+
+                        Spacer()
+
+                        Button(action: {
+                            if let url = URL(string: "x-apple-reminderkit://") {
+                                NSWorkspace.shared.open(url)
+                            }
+                            PopoverPanel.shared.hide(delayed: false)
+                        }) {
+                            HStack(spacing: 2) {
+                                Text(L10n.tr(.openRemindersApp, lang: settings.language))
+                                    .font(.system(size: 9, weight: .medium))
+                                Image(systemName: "arrow.up.forward")
+                                    .font(.system(size: 7.5, weight: .semibold))
+                            }
+                            .foregroundStyle(Color.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    let displayReminders = Array(reminders.prefix(4))
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(displayReminders) { item in
+                            let isDone = completedIds.contains(item.id)
+                            HStack(spacing: 6) {
+                                Button(action: {
+                                    guard !completedIds.contains(item.id) else { return }
+                                    _ = withAnimation(.easeInOut(duration: 0.18)) {
+                                        completedIds.insert(item.id)
+                                    }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                        ReminderService.shared.completeReminder(id: item.id)
+                                    }
+                                }) {
+                                    Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+                                        .font(.system(size: 11, weight: isDone ? .bold : .medium))
+                                        .foregroundStyle(isDone ? Color.accentColor : item.color)
+                                }
+                                .buttonStyle(.plain)
+
+                                Text(item.title)
+                                    .font(.system(size: 10.5, weight: .medium))
+                                    .foregroundStyle(isDone ? textMuted : textColor)
+                                    .strikethrough(isDone, color: textMuted)
+                                    .lineLimit(1)
+
+                                Spacer(minLength: 4)
+
+                                if !item.listTitle.isEmpty {
+                                    Text(item.listTitle)
+                                        .font(.system(size: 8.5, weight: .medium))
+                                        .foregroundStyle(item.color.opacity(0.85))
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(item.color.opacity(isDarkTheme ? 0.18 : 0.10))
+                                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                                        .lineLimit(1)
+                                }
+                            }
+                            .frame(height: 20)
+                        }
+                    }
+
+                    if reminders.count > 4 {
+                        Button(action: {
+                            if let url = URL(string: "x-apple-reminderkit://") {
+                                NSWorkspace.shared.open(url)
+                            }
+                            PopoverPanel.shared.hide(delayed: false)
+                        }) {
+                            Text(L10n.tr(.moreRemindersCount(reminders.count - 4), lang: settings.language))
+                                .font(.system(size: 9.5, weight: .regular))
+                                .foregroundStyle(textMuted)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 1)
+                    }
+                }
+            }
+        }
+        .padding(.leading, direction == .left ? 18 : 12)
+        .padding(.trailing, direction == .right ? 18 : 12)
+        .padding(.top, 12)
+        .padding(.bottom, direction == .bottom ? 18 : 12)
+        .frame(width: 280, alignment: .leading)
+        .fixedSize(horizontal: true, vertical: false)
+        .background(.ultraThinMaterial.opacity(settings.cardOpacity), in: bubbleShape)
+        .background(
+            bubbleShape
+                .fill(tintColor)
+                .allowsHitTesting(false)
+        )
+        .clipShape(bubbleShape)
+        .overlay(
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(isDarkTheme ? 0.12 : 0.35),
+                    Color.white.opacity(0.0)
+                ],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .clipShape(bubbleShape)
+            .allowsHitTesting(false)
+        )
+        .overlay(
+            bubbleShape
+                .stroke(
+                    LinearGradient(
+                        colors: isDarkTheme ? [
+                            Color.white.opacity(0.35),
+                            Color.white.opacity(0.10)
+                        ] : [
+                            Color.black.opacity(0.20),
+                            Color.black.opacity(0.10)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.8
+                )
+                .allowsHitTesting(false)
+        )
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 7, x: 0, y: 3.5)
     }
 }
 

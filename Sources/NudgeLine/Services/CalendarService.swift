@@ -209,9 +209,10 @@ extension CalendarService {
 extension CalendarService {
     // 캘린더 데이터 변경 및 절전/복귀 이벤트를 감시합니다.
     private func setupEventStoreObserver() {
-        // 1. 시스템 캘린더 DB 변경 감지
+        // 1. 시스템 캘린더 DB 변경 감지 (연쇄 변경 알림 폭주 방어: 300ms 디바운스 적용)
         NotificationCenter.default.publisher(for: .EKEventStoreChanged, object: nil)
             .receive(on: DispatchQueue.main)
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self = self, !self.isSleeping else { return }
                 self.loadCalendars()

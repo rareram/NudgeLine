@@ -89,9 +89,9 @@ public struct TimelineBarView: View {
                     )
                 }
 
-                // 2-1. 미리알림 시점 마커 렌더링
+                // 2-1. 미리알림 시점 마커 렌더링: 날짜 전용 항목 배제 및 시간 지정 마커만 표시 (초슬림 바 무간섭성 보장)
                 if settings.enableReminders {
-                    ForEach(reminderService.reminders) { reminder in
+                    ForEach(reminderService.timedReminders) { reminder in
                         renderReminder(
                             reminder: reminder,
                             dayStart: dayStart,
@@ -244,15 +244,18 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else if calendarService.events.isEmpty {
-                        // 오늘 등록된 일정이 없을 때: 빈 상태 툴팁을 띄웁니다.
+                        // 일정 미등록 또는 날짜 전용 미리알림 존재 시 빈 상태/할 일 툴팁 표출
                         let hasCalendars = calendarService.isAuthorized() && !calendarService.allCalendars.isEmpty
-                        let clusterId = hasCalendars ? "__EMPTY_SCHEDULE_TOOLTIP__" : "__NO_CALENDARS_TOOLTIP__"
+                        let allDayReminders = settings.enableReminders ? reminderService.allDayReminders : []
+                        let baseClusterId = hasCalendars ? "__EMPTY_SCHEDULE_TOOLTIP__" : "__NO_CALENDARS_TOOLTIP__"
+                        let clusterId = baseClusterId + "_" + allDayReminders.map(\.id).sorted().joined(separator: "_")
                         if hoveredActiveId != clusterId {
                             hoveredActiveId = clusterId
                             hoveredFocusId = nil
                             PopoverPanel.shared.showEmptyScheduleTooltip(
                                 cursorOffset: cursorCoord,
                                 allDayEvents: [],
+                                allDayReminders: allDayReminders,
                                 outOfRangeEvents: [],
                                 hasTimedEventsInRange: false,
                                 hasConnectedCalendars: hasCalendars,
@@ -283,16 +286,18 @@ public struct TimelineBarView: View {
                             )
                         }
                     } else {
-                        // 마우스가 일정 블록 바깥에 있을 때는 종일 일정 또는 범위 외 일정을 표시합니다.
+                        // 일정 블록 외부 호버: 종일 일정 및 날짜 전용 미리알림 상태 표시
                         let allDayEvents = calendarService.events.filter { $0.isAllDay }
                         let timedEvents = calendarService.events.filter { !$0.isAllDay }
                         let hasTimedEventsInRange = timedEvents.contains { $0.endDate > dayStart && $0.startDate < dayEnd }
                         let outOfRangeEvents = timedEvents.filter { $0.endDate <= dayStart || $0.startDate >= dayEnd }
+                        let allDayReminders = settings.enableReminders ? reminderService.allDayReminders : []
 
-                        if !allDayEvents.isEmpty || (!hasTimedEventsInRange && !outOfRangeEvents.isEmpty) {
+                        if !allDayEvents.isEmpty || !allDayReminders.isEmpty || (!hasTimedEventsInRange && !outOfRangeEvents.isEmpty) {
                             let clusterId = "__SCHEDULE_STATUS_TOOLTIP__" +
                                 allDayEvents.map(\.id).sorted().joined(separator: "_") +
-                                outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
+                                "_" + allDayReminders.map(\.id).sorted().joined(separator: "_") +
+                                "_" + outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
                                 "_\(hasTimedEventsInRange)_\(settings.eventHoverStyle.rawValue)"
 
                             if hoveredActiveId != clusterId {
@@ -301,6 +306,7 @@ public struct TimelineBarView: View {
                                 PopoverPanel.shared.showEmptyScheduleTooltip(
                                     cursorOffset: cursorCoord,
                                     allDayEvents: allDayEvents,
+                                    allDayReminders: allDayReminders,
                                     outOfRangeEvents: outOfRangeEvents,
                                     hasTimedEventsInRange: hasTimedEventsInRange,
                                     isHorizontal: isHorizontal,
@@ -360,6 +366,10 @@ public struct TimelineBarView: View {
             let wasSameDay = Calendar.current.isDate(currentTime, inSameDayAs: input)
             if !wasSameDay {
                 calendarService.fetchEvents(settings: settings)
+                if settings.enableReminders {
+                    // 시스템 자정 알림 지연/누락 방어: 날짜 변경 감지 시 리마인더 목록 강제 동기화
+                    reminderService.fetchReminders(settings: settings)
+                }
                 updateSegments()
             }
 
@@ -880,7 +890,7 @@ public struct TimelineBarView: View {
         totalSec: TimeInterval,
         totalLength: CGFloat
     ) -> (reminder: ReminderItem, pos: CGFloat)? {
-        for reminder in reminderService.reminders {
+        for reminder in reminderService.timedReminders {
             let sec = reminder.dueDate.timeIntervalSince(dayStart)
             let diffMinutes = reminder.dueDate.timeIntervalSince(currentTime) / 60.0
             guard sec >= 0 && sec <= totalSec, diffMinutes >= -10.0 else {
