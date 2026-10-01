@@ -313,6 +313,7 @@ public final class AppSettings: ObservableObject {
         static let reminderProximityMinutes = "settings_reminder_proximity_minutes"
         static let reminderMarkerStyle = "settings_reminder_marker_style"
         static let enableReminderMarkerGlow = "settings_enable_reminder_marker_glow"
+        static let clearPastReminderMarkers = "settings_clear_past_reminder_markers"
         static let reminderVisibility = "settings_reminder_visibility"
         static let enablePetSnooze = "settings_enable_pet_snooze"
         static let petSnoozeDurationMinutes = "settings_pet_snooze_duration_minutes"
@@ -515,6 +516,10 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(enableReminderMarkerGlow, forKey: Keys.enableReminderMarkerGlow) }
     }
 
+    @Published public var clearPastReminderMarkers: Bool {
+        didSet { defaults.set(clearPastReminderMarkers, forKey: Keys.clearPastReminderMarkers) }
+    }
+
     @Published public var reminderVisibility: [String: Bool] {
         didSet { defaults.set(reminderVisibility, forKey: Keys.reminderVisibility) }
     }
@@ -676,6 +681,7 @@ public final class AppSettings: ObservableObject {
         let savedMarkerStyle = defaults.string(forKey: Keys.reminderMarkerStyle) ?? ReminderMarkerStyle.flag.rawValue
         self.reminderMarkerStyle = ReminderMarkerStyle(rawValue: savedMarkerStyle) ?? .flag
         self.enableReminderMarkerGlow = defaults.object(forKey: Keys.enableReminderMarkerGlow) != nil ? defaults.bool(forKey: Keys.enableReminderMarkerGlow) : true
+        self.clearPastReminderMarkers = defaults.object(forKey: Keys.clearPastReminderMarkers) != nil ? defaults.bool(forKey: Keys.clearPastReminderMarkers) : true
         self.reminderVisibility = (defaults.dictionary(forKey: Keys.reminderVisibility) as? [String: Bool]) ?? [:]
 
         self.enablePetSnooze = defaults.object(forKey: Keys.enablePetSnooze) != nil ? defaults.bool(forKey: Keys.enablePetSnooze) : true
@@ -806,5 +812,14 @@ public extension Color {
             // 라이트 모드: 흰 배경 위에서 날아가지 않도록 명도를 톤다운하고 채도 보존
             return Color(nsColor: NSColor(hue: h, saturation: min(1.0, s * 1.15), brightness: b * factor, alpha: a))
         }
+    }
+}
+
+// MARK: - 펫 스누즈(일시 숨김) 테마 색상 (다크 모드: 고발광 스카이블루, 라이트 모드: 고대비 딥 로열블루)
+public extension AppSettings {
+    static func petSnoozeAccentColor(isDark: Bool) -> Color {
+        isDark
+            ? Color(red: 0.35, green: 0.58, blue: 0.98) // 다크모드: 어두운 배경 위 고시인성 스카이블루
+            : Color(red: 0.08, green: 0.42, blue: 0.92) // 라이트모드: 흰색/밝은 배경 위 고대비 딥 로열블루
     }
 }

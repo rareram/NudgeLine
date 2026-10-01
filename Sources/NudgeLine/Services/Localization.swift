@@ -99,6 +99,7 @@ public struct L10n {
         case reminderStyleStar
         case reminderStylePetItem
         case reminderMarkerGlowLabel
+        case clearPastReminderMarkersLabel
         case visibleReminderListsSection
         case noReminderLists
         case openRemindersApp
@@ -132,6 +133,7 @@ public struct L10n {
         case allDayWithOutOfRangeSimple(String, Int)
         case allDayRemindersNotice(Int)
         case allDayRemindersSectionTitle
+        case allDayEventsSectionTitle
         case moreRemindersCount(Int)
         case todayRemindersOnlyNotice(String, Int)
         case manageAccountsButton
@@ -310,6 +312,7 @@ extension L10n.Key {
         case .reminderStyleStar: return "별 심볼"
         case .reminderStylePetItem: return "펫 먹이·간식"
         case .reminderMarkerGlowLabel: return "마커 네온 효과 및 테두리 강조"
+        case .clearPastReminderMarkersLabel: return "지난 흔적 지우기"
         case .visibleReminderListsSection: return "표시할 미리알림 목록"
         case .noReminderLists: return "등록된 미리알림 목록이 없습니다."
         case .openRemindersApp: return "미리알림 앱 열기"
@@ -352,6 +355,7 @@ extension L10n.Key {
         case .allDayWithOutOfRangeSimple(let title, let count): return "종일: \(title) · 외 \(count)건"
         case .allDayRemindersNotice(let count): return "할 일 \(count)건"
         case .allDayRemindersSectionTitle: return "오늘의 미리알림"
+        case .allDayEventsSectionTitle: return "오늘의 종일 일정"
         case .moreRemindersCount(let count): return "외 \(count)개 더보기…"
         case .todayRemindersOnlyNotice(let title, let others):
             return others == 0 ? "오늘 할 일: \(title)" : "오늘 할 일: \(title) 외 \(others)건"
@@ -515,6 +519,7 @@ extension L10n.Key {
         case .reminderStyleStar: return "Star Symbol"
         case .reminderStylePetItem: return "Pet Snack"
         case .reminderMarkerGlowLabel: return "Marker neon glow & border accent"
+        case .clearPastReminderMarkersLabel: return "Clear past markers"
         case .visibleReminderListsSection: return "Visible Reminder Lists"
         case .noReminderLists: return "No reminder lists found."
         case .openRemindersApp: return "Open Reminders"
@@ -557,6 +562,7 @@ extension L10n.Key {
         case .allDayWithOutOfRangeSimple(let title, let count): return "All-Day: \(title) · +\(count) more"
         case .allDayRemindersNotice(let count): return "\(count) tasks"
         case .allDayRemindersSectionTitle: return "Today's Reminders"
+        case .allDayEventsSectionTitle: return "Today's All-Day Events"
         case .moreRemindersCount(let count): return "+\(count) more…"
         case .todayRemindersOnlyNotice(let title, let others):
             return others == 0 ? "Today's Task: \(title)" : "Today's Tasks: \(title) +\(others)"

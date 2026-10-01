@@ -68,9 +68,13 @@ struct RemindersTab: View {
                         }
                     }
 
-                    Toggle(L10n.tr(.reminderMarkerGlowLabel, lang: settings.language), isOn: $settings.enableReminderMarkerGlow)
-                        .toggleStyle(.checkbox)
-                        .padding(.top, 4)
+                    HStack(spacing: 24) {
+                        Toggle(L10n.tr(.reminderMarkerGlowLabel, lang: settings.language), isOn: $settings.enableReminderMarkerGlow)
+                            .toggleStyle(.checkbox)
+                        Toggle(L10n.tr(.clearPastReminderMarkersLabel, lang: settings.language), isOn: $settings.clearPastReminderMarkers)
+                            .toggleStyle(.checkbox)
+                    }
+                    .padding(.top, 4)
                 }
                 .disabled(!settings.enableReminders)
                 .opacity(settings.enableReminders ? 1.0 : 0.45)

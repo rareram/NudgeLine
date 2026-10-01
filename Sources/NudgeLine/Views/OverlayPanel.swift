@@ -6,6 +6,7 @@ import Combine
 // MARK: - 1. 다중 디스플레이 격리 상태 모델 (OverlayPanelState)
 public final class OverlayPanelState: ObservableObject {
     @Published public var isPetProximityHovered: Bool = false
+    @Published public var isOccludedByFullScreen: Bool = false
     public init() {}
 }
 
@@ -258,6 +259,9 @@ extension OverlayPanel {
             if self.isOccludedByFullScreen {
                 self.isOccludedByFullScreen = false
             }
+            if self.panelState.isOccludedByFullScreen {
+                self.panelState.isOccludedByFullScreen = false
+            }
             if self.alphaValue != 1.0 {
                 self.alphaValue = 1.0
                 self.ignoresMouseEvents = false
@@ -317,6 +321,9 @@ extension OverlayPanel {
         let isOccluded = hasFullScreenOverlay || isFullDisplayCovered
 
         self.isOccludedByFullScreen = isOccluded
+        if self.panelState.isOccludedByFullScreen != isOccluded {
+            self.panelState.isOccludedByFullScreen = isOccluded
+        }
 
         if isOccluded {
             if self.alphaValue != 0.0 {

@@ -16,6 +16,7 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
     public let priority: Int
     public let isCompleted: Bool
     public let isAllDay: Bool
+    public let recurrenceRule: String?
 
     // 당일 마감 할 일 누락 방지: hour/minute 필수 검사 완화 및 isAllDay 분기
     public init?(from ekReminder: EKReminder, calendar: Calendar = .current) {
@@ -24,8 +25,16 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
         guard !itemID.isEmpty,
               !rawTitle.isEmpty,
               !ekReminder.isCompleted,
-              let dueComponents = ekReminder.dueDateComponents,
-              let date = calendar.date(from: dueComponents) else {
+              var dueComponents = ekReminder.dueDateComponents else {
+            return nil
+        }
+
+        // 타임존 정보가 없는 날짜 전용 이벤트(종일 미리알림 등)는 로컬 타임존 기준으로 보정
+        if dueComponents.timeZone == nil {
+            dueComponents.timeZone = calendar.timeZone
+        }
+
+        guard let date = calendar.date(from: dueComponents) else {
             return nil
         }
 
@@ -45,6 +54,18 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
         self.url = ekReminder.url
         self.priority = ekReminder.priority
         self.isCompleted = ekReminder.isCompleted
+
+        if ekReminder.hasRecurrenceRules, let rule = ekReminder.recurrenceRules?.first {
+            switch rule.frequency {
+            case .daily: self.recurrenceRule = "daily"
+            case .weekly: self.recurrenceRule = "weekly"
+            case .monthly: self.recurrenceRule = "monthly"
+            case .yearly: self.recurrenceRule = "yearly"
+            @unknown default: self.recurrenceRule = "custom"
+            }
+        } else {
+            self.recurrenceRule = nil
+        }
     }
 
     public init(
@@ -58,7 +79,8 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
         url: URL? = nil,
         priority: Int = 0,
         isCompleted: Bool = false,
-        isAllDay: Bool = false
+        isAllDay: Bool = false,
+        recurrenceRule: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -71,17 +93,31 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
         self.priority = priority
         self.isCompleted = isCompleted
         self.isAllDay = isAllDay
+        self.recurrenceRule = recurrenceRule
+    }
+
+    public func recurrenceText(isKorean: Bool) -> String? {
+        guard let rule = recurrenceRule else { return nil }
+        switch rule {
+        case "daily": return isKorean ? "매일" : "Daily"
+        case "weekly": return isKorean ? "매주" : "Weekly"
+        case "monthly": return isKorean ? "매월" : "Monthly"
+        case "yearly": return isKorean ? "매년" : "Yearly"
+        default: return isKorean ? "반복" : "Recurring"
+        }
     }
 
     // 타임라인 바 간섭 차단: isAllDay 항목 가시 범위 판정에서 제외 (바 위 마커 노출 억제)
+    // 다가오는 미래 접근 구간(0 <= diffMinutes <= proximityMinutes)에만 심볼/펫 먹이로 팝업 노출
     public func isWithinVisibilityWindow(
         currentTime: Date,
         proximityMinutes: Int
     ) -> Bool {
         guard !isAllDay else { return false }
-        guard proximityMinutes < 1440 else { return true }
         let diffMinutes = dueDate.timeIntervalSince(currentTime) / 60.0
-        return diffMinutes <= Double(proximityMinutes) && diffMinutes >= -10.0
+        guard diffMinutes >= 0 else { return false }
+        guard proximityMinutes < 1440 else { return true }
+        return diffMinutes <= Double(proximityMinutes)
     }
 }
 

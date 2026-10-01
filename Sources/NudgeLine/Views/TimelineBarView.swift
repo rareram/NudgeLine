@@ -224,7 +224,7 @@ public struct TimelineBarView: View {
                     isHorizontal: isHorizontal,
                     isBarHovered: isBarHovered,
                     isPetProximityHovered: panelState.isPetProximityHovered,
-                    accentColor: settings.isPetSnoozed ? Color(red: 0.35, green: 0.55, blue: 0.95) : settings.effectiveCurrentTimeColor(),
+                    accentColor: settings.isPetSnoozed ? AppSettings.petSnoozeAccentColor(isDark: isDark) : settings.effectiveCurrentTimeColor(),
                     activeEffectType: activeEffectType,
                     activeEffectId: activeEffectId,
                     onEffectComplete: {
@@ -455,6 +455,8 @@ public struct TimelineBarView: View {
     // 00초 정각 일정 시작 접점 및 매시간 정각 알림 감지 (1.0초 마이크로 이펙트 트리거)
     private func checkEventContactEffect(at time: Date) {
         guard settings.enableEventTriggerEffect, activeEffectType == nil else { return }
+        // 전체화면 앱(Keynote, 동영상 등) 활성화 중에는 이펙트 발동을 억제하고 1회성 트리거 소진을 방지합니다.
+        guard !panelState.isOccludedByFullScreen else { return }
 
         // 현재 시각이 타임라인 표시 범위 내에 있을 때만 이펙트를 트리거합니다 (인디케이터 미렌더 시 고착 방지).
         let dayStart = settings.startDate(for: time)
@@ -466,11 +468,11 @@ public struct TimelineBarView: View {
         let minute = calendar.component(.minute, from: time)
         let second = calendar.component(.second, from: time)
 
-        // 1. 캘린더 일정 시작 접점 알림 (최우선 순위)
+        // 1. 캘린더 일정 시작 접점 알림 (최우선 순위: -0.5초 ~ +1.5초 비대칭 윈도우로 조기 발동 억제 및 타이머 지연 누락 방어)
         for event in calendarService.events where !event.isAllDay {
-            let diff = abs(time.timeIntervalSince(event.startDate))
+            let diff = time.timeIntervalSince(event.startDate)
             let eventKey = "\(event.id)_\(Int(event.startDate.timeIntervalSince1970))"
-            guard diff <= 2.5, lastTriggeredEventKey != eventKey else { continue }
+            guard diff >= -0.5 && diff <= 1.5, lastTriggeredEventKey != eventKey else { continue }
 
             let isCoolingDown = lastTriggeredEventDate.map { time.timeIntervalSince($0) < 180 } ?? false
             guard !isCoolingDown else { continue }
@@ -737,6 +739,27 @@ public struct TimelineBarView: View {
         return round(ratio * totalLength)
     }
 
+    // MARK: - 미리알림 마커 노출 여부 판정 (과거 흔적 지우기 설정 및 전후 대칭 표시 범위 반영)
+    private func shouldShowReminder(
+        secFromStart: TimeInterval,
+        totalSec: TimeInterval,
+        diffMinutes: Double
+    ) -> Bool {
+        guard secFromStart >= 0 && secFromStart <= totalSec else { return false }
+        if diffMinutes < 0 {
+            // 마감 시각이 지난 과거 일감
+            if settings.clearPastReminderMarkers {
+                return false
+            }
+            // 전후 대칭 롤링 윈도우: 과거 proximityMinutes 이내인 경우에만 빛 꺼진 보석으로 유지
+            let proximityLimit = Double(settings.reminderProximityMinutes)
+            return diffMinutes >= -proximityLimit
+        } else {
+            // 미래 일감: 당일 범위 내이면 노출 (다가오면 심볼, 원거리면 반짝이는 다이아몬드)
+            return true
+        }
+    }
+
     // MARK: - 미리알림 마커 렌더링 헬퍼
     // 투 트랙 마커 렌더링: 가시 범위 이내는 심볼/먹이 팝업, 가시 범위 밖 당일 일정은 은은한 다이아몬드 노치
     @ViewBuilder
@@ -749,8 +772,9 @@ public struct TimelineBarView: View {
     ) -> some View {
         let secFromStart = reminder.dueDate.timeIntervalSince(dayStart)
         let diffMinutes = reminder.dueDate.timeIntervalSince(currentTime) / 60.0
-        // 당일 범위 내이고 이미 지나간 과거 10분 이전 일정이 아닌 경우
-        if secFromStart >= 0 && secFromStart <= totalSec && diffMinutes >= -10.0 {
+        let isPast = diffMinutes < 0
+
+        if shouldShowReminder(secFromStart: secFromStart, totalSec: totalSec, diffMinutes: diffMinutes) {
             let ratio = CGFloat(secFromStart / totalSec)
             let pos = round(ratio * totalLength)
             let isHovered = hoveredActiveId == "__REMINDER_\(reminder.id)__"
@@ -760,6 +784,7 @@ public struct TimelineBarView: View {
             ReminderMarkerView(
                 reminder: reminder,
                 isApproaching: isApproaching,
+                isPast: isPast,
                 isHovered: isHovered,
                 enableGlow: settings.enableReminderMarkerGlow,
                 markerStyle: settings.reminderMarkerStyle,
@@ -941,7 +966,7 @@ public struct TimelineBarView: View {
         for reminder in reminderService.timedReminders {
             let sec = reminder.dueDate.timeIntervalSince(dayStart)
             let diffMinutes = reminder.dueDate.timeIntervalSince(currentTime) / 60.0
-            guard sec >= 0 && sec <= totalSec, diffMinutes >= -10.0 else {
+            guard shouldShowReminder(secFromStart: sec, totalSec: totalSec, diffMinutes: diffMinutes) else {
                 continue
             }
 
@@ -1158,8 +1183,8 @@ private struct CurrentTimeIndicatorView: View {
         let isRight = settings.barPosition == .right
         let hasRim = settings.enableIndicatorRim
         let hasGlow = settings.enableIndicatorGlow
-        let rimColor = Color.white.opacity(0.95)
-        let ringRimColor = Color.white.opacity(0.9)
+        let rimColor = isDark ? Color.white.opacity(0.95) : Color.black.opacity(0.50)
+        let ringRimColor = isDark ? Color.white.opacity(0.90) : Color.black.opacity(0.45)
 
         let baseShape = Group {
             switch settings.currentTimeIndicatorStyle {
@@ -1233,7 +1258,7 @@ private struct CurrentTimeIndicatorView: View {
         // 스누즈 해제 후 애니메이션 잔류로 인한 투명도 간섭을 방지하기 위해 뷰 ID 및 렌더링 분기 분리
         if settings.isPetSnoozed {
             baseShape
-                .opacity(isBreathing ? 1.0 : 0.4)
+                .opacity(isBreathing ? 1.0 : (isDark ? 0.40 : 0.60))
                 .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: isBreathing)
                 .id("indicator_snoozed_breathing")
                 .onAppear {
@@ -1379,6 +1404,7 @@ private struct RoundDomeShape: Shape {
 private struct ReminderMarkerView: View {
     let reminder: ReminderItem
     let isApproaching: Bool
+    var isPast: Bool = false
     let isHovered: Bool
     let enableGlow: Bool
     let markerStyle: ReminderMarkerStyle
@@ -1426,20 +1452,27 @@ private struct ReminderMarkerView: View {
                     .allowsHitTesting(false)
             }
         } else {
-            // 평상시(잠복기): 보물처럼 은은하게 빛나는 2.5px 다이아몬드 노치
+            // 평상시(원거리 다이아몬드) 또는 지난 과거 흔적(빛 꺼진 무광 보석)
             ZStack {
-                Circle()
-                    .fill(reminder.color.opacity(enableGlow ? 0.55 : 0.2))
-                    .frame(width: enableGlow ? 5.5 : 4.0, height: enableGlow ? 5.5 : 4.0)
-                    .blur(radius: enableGlow ? 1.0 : 0.5)
+                if !isPast {
+                    Circle()
+                        .fill(reminder.color.opacity(enableGlow ? 0.55 : 0.2))
+                        .frame(width: enableGlow ? 5.5 : 4.0, height: enableGlow ? 5.5 : 4.0)
+                        .blur(radius: enableGlow ? 1.0 : 0.5)
+                }
 
                 RoundedRectangle(cornerRadius: 0.8)
-                    .fill(reminder.color)
+                    .fill(isPast ? reminder.color.opacity(isDark ? 0.40 : 0.45) : reminder.color)
                     .frame(width: 2.5, height: 2.5)
                     .rotationEffect(.degrees(45))
                     .overlay(
                         RoundedRectangle(cornerRadius: 0.8)
-                            .stroke(Color.white.opacity(enableGlow ? 0.8 : 0.4), lineWidth: 0.4)
+                            .stroke(
+                                isPast
+                                    ? (isDark ? Color.white.opacity(0.20) : Color.black.opacity(0.25))
+                                    : Color.white.opacity(enableGlow ? 0.8 : 0.4),
+                                lineWidth: 0.4
+                            )
                             .rotationEffect(.degrees(45))
                     )
             }

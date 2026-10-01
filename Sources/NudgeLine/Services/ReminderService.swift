@@ -162,8 +162,6 @@ extension ReminderService {
         eventStoreQueue.async { [weak self] in
             guard let self = self else { return }
             let calendar = Calendar.current
-            let startOfDay = calendar.startOfDay(for: baseDate)
-            guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { return }
 
             let allCalendars = self.eventStore.calendars(for: .reminder)
             let activeCalendars = allCalendars.filter { cal in
@@ -178,9 +176,11 @@ extension ReminderService {
                 return
             }
 
+            // EventKit의 날짜 범위 쿼리는 종일 미리알림(시간 컴포넌트 부재 및 UTC 간주)을 XPC 레벨에서 누락시키는 결함이 있으므로,
+            // 전체 미완료 알림을 조회한 후 로컬 타임존 기준으로 당일 항목만 정밀 필터링합니다.
             let predicate = self.eventStore.predicateForIncompleteReminders(
-                withDueDateStarting: startOfDay,
-                ending: endOfDay,
+                withDueDateStarting: nil,
+                ending: nil,
                 calendars: activeCalendars
             )
 
@@ -188,7 +188,7 @@ extension ReminderService {
                 guard let self = self else { return }
                 let items = (ekReminders ?? [])
                     .compactMap { ReminderItem(from: $0, calendar: calendar) }
-                    .filter { $0.dueDate >= startOfDay && $0.dueDate < endOfDay }
+                    .filter { calendar.isDate($0.dueDate, inSameDayAs: baseDate) }
                     .sorted { $0.dueDate < $1.dueDate }
 
                 DispatchQueue.main.async {

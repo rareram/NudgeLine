@@ -51,6 +51,17 @@ public final class PopoverPanel: NSPanel {
     private var pendingAllDayEvents: [CalendarEvent] = []
     private var pendingAllDayReminders: [ReminderItem] = []
     private var pendingTooltipContext: (cursorOffset: CGFloat, isHorizontal: Bool, barPosition: BarPosition, settings: AppSettings)? = nil
+    // 시간 지정 미리알림 툴팁 -> 상세 카드 확장용 상태
+    private var pendingReminder: ReminderItem? = nil
+    private var pendingReminderContext: (offset: CGFloat, isHorizontal: Bool, barPosition: BarPosition, settings: AppSettings)? = nil
+
+    private func clearPendingExpansionState() {
+        self.pendingAllDayEvents = []
+        self.pendingAllDayReminders = []
+        self.pendingTooltipContext = nil
+        self.pendingReminder = nil
+        self.pendingReminderContext = nil
+    }
 
     private init() {
         super.init(
@@ -114,12 +125,15 @@ public final class PopoverPanel: NSPanel {
             hideTimer?.invalidate()
             hideTimer = nil
 
-            // 당일 종일 일정 및 할 일 툴팁 -> 상세 액션 카드 자동 확장
-            if (!pendingAllDayEvents.isEmpty || !pendingAllDayReminders.isEmpty), let context = pendingTooltipContext {
+            // 1. 시간 지정 미리알림 툴팁 -> 상세 액션 카드 자동 확장
+            if let reminder = pendingReminder, let context = pendingReminderContext {
+                expandToReminderCard(reminder: reminder, context: context)
+                clearPendingExpansionState()
+            }
+            // 2. 당일 종일 일정 및 할 일 툴팁 -> 상세 액션 카드 자동 확장
+            else if (!pendingAllDayEvents.isEmpty || !pendingAllDayReminders.isEmpty), let context = pendingTooltipContext {
                 expandToAllDayCard(events: pendingAllDayEvents, reminders: pendingAllDayReminders, context: context)
-                self.pendingAllDayEvents = []
-                self.pendingAllDayReminders = []
-                self.pendingTooltipContext = nil
+                clearPendingExpansionState()
             }
         } else {
             hide(delayed: true)
@@ -179,9 +193,7 @@ extension PopoverPanel {
         hasEnteredPopover = false
         hideTimer?.invalidate()
         hideTimer = nil
-        self.pendingAllDayEvents = []
-        self.pendingAllDayReminders = []
-        self.pendingTooltipContext = nil
+        clearPendingExpansionState()
 
         guard let screen = currentTargetScreen(), !events.isEmpty else { return }
         updatePanelAppearance(settings: settings)
@@ -351,6 +363,8 @@ extension PopoverPanel {
             screen: screen
         )
 
+        clearPendingExpansionState()
+
         presentTooltip(
             content: AnyView(CurrentTimeTooltipView(
                 currentTime: currentTime,
@@ -375,6 +389,10 @@ extension PopoverPanel {
     ) {
         guard let screen = currentTargetScreen() else { return }
 
+        clearPendingExpansionState()
+        self.pendingReminder = reminder
+        self.pendingReminderContext = (offset, isHorizontal, barPosition, settings)
+
         let font = NSFont.systemFont(ofSize: 10, weight: .medium)
         let sampleText = "00:00 \(reminder.title) \(reminder.listTitle)"
         let textWidth = (sampleText as NSString).size(withAttributes: [.font: font]).width
@@ -396,7 +414,7 @@ extension PopoverPanel {
             content: AnyView(ReminderTooltipView(reminder: reminder, settings: settings)),
             frame: finalFrame,
             clusterId: clusterId,
-            isDetailMode: false,
+            isDetailMode: true,
             settings: settings
         )
     }
@@ -442,15 +460,12 @@ extension PopoverPanel {
             outOfRangeEvents.map(\.id).sorted().joined(separator: "_") +
             "_\(hasTimedEventsInRange)_\(hasConnectedCalendars)_\(settings.eventHoverStyle.rawValue)"
 
+        clearPendingExpansionState()
         let hasItems = (!allDayEvents.isEmpty || !allDayReminders.isEmpty)
         if hasItems {
             self.pendingAllDayEvents = allDayEvents
             self.pendingAllDayReminders = allDayReminders
             self.pendingTooltipContext = (cursorOffset, isHorizontal, barPosition, settings)
-        } else {
-            self.pendingAllDayEvents = []
-            self.pendingAllDayReminders = []
-            self.pendingTooltipContext = nil
         }
 
         presentTooltip(
@@ -480,47 +495,23 @@ extension PopoverPanel {
         updatePanelAppearance(settings: context.settings)
         self.isDetailMode = true
 
-        var targetWidth: CGFloat = 280.0
-        var targetHeight: CGFloat = 60.0
+        let targetWidth: CGFloat = 280.0
+        let targetHeight: CGFloat = AllDayWithRemindersPopoverView.calculateTargetHeight(
+            events: events,
+            reminders: reminders,
+            barPosition: context.barPosition
+        )
 
         let pad = shadowPadding(for: context.barPosition)
-        let anyView: AnyView
-
-        if reminders.isEmpty {
-            // 기존 종일 일정 전용 카드 크기 복원: 활성 렌더러의 targetSize와 가로모드 패딩 완전 반영
-            let renderer = context.settings.eventHoverStyle.renderer()
-            let dims = renderer.targetSize(events: events, allDayEvents: [], isHorizontal: context.isHorizontal)
-            targetWidth = dims.width
-            targetHeight = dims.height
-            anyView = AnyView(renderer.makeView(events: events, allDayEvents: [], settings: context.settings).padding(pad))
-        } else {
-            // 신규 종일 일정+할 일 복합 카드: 280pt 표준 너비 및 동적 높이 연산
-            var contentHeight: CGFloat = 0
-            if !events.isEmpty {
-                contentHeight += CGFloat(min(3, events.count)) * 34.0 + 6.0
-                if events.count > 3 { contentHeight += 16.0 }
-            }
-            if !events.isEmpty && !reminders.isEmpty {
-                contentHeight += 10.0
-            }
-            if !reminders.isEmpty {
-                contentHeight += 22.0
-                contentHeight += CGFloat(min(4, reminders.count)) * 24.0
-                if reminders.count > 4 { contentHeight += 18.0 }
-            }
-            targetWidth = 280.0
-            targetHeight = max(60.0, ceil(contentHeight + 20.0))
-
-            anyView = AnyView(
-                AllDayWithRemindersPopoverView(
-                    events: events,
-                    reminders: reminders,
-                    barPosition: context.barPosition,
-                    settings: context.settings
-                )
-                .padding(pad)
+        let anyView = AnyView(
+            AllDayWithRemindersPopoverView(
+                events: events,
+                reminders: reminders,
+                barPosition: context.barPosition,
+                settings: context.settings
             )
-        }
+            .padding(pad)
+        )
 
         if let hosting = hostingView {
             hosting.rootView = anyView
@@ -553,6 +544,87 @@ extension PopoverPanel {
                 finalX = fullFrame.maxX - thickness - targetWidth - 6
             case .bottom:
                 finalX = visibleFrame.minX + context.cursorOffset - (targetWidth / 2)
+                finalY = visibleFrame.minY + thickness + 6
+            }
+        }
+
+        let expandedFrame = computePanelFrame(
+            cardX: finalX,
+            cardY: finalY,
+            cardWidth: targetWidth,
+            cardHeight: targetHeight,
+            barPosition: context.barPosition
+        )
+
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.16
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            self.animator().setFrame(expandedFrame, display: true)
+        }
+    }
+
+    // 시간 지정 미리알림 미니 툴팁 -> 상세 액션 카드 자동 확장
+    private func expandToReminderCard(
+        reminder: ReminderItem,
+        context: (offset: CGFloat, isHorizontal: Bool, barPosition: BarPosition, settings: AppSettings)
+    ) {
+        guard let screen = currentTargetScreen() else { return }
+        self.currentClusterId = "__REMINDER_CARD_EXPANDED_\(reminder.id)__"
+        updatePanelAppearance(settings: context.settings)
+        self.isDetailMode = true
+
+        let hasWebLink = reminder.url != nil || (reminder.notes?.contains("http://") == true || reminder.notes?.contains("https://") == true)
+        let targetWidth: CGFloat = 260.0
+        var estimatedContentHeight: CGFloat = 120.0
+        if let notes = reminder.notes, !notes.isEmpty {
+            estimatedContentHeight += 32.0
+        }
+        if hasWebLink {
+            estimatedContentHeight += 28.0
+        }
+        let targetHeight = ceil(estimatedContentHeight + (context.isHorizontal ? 8.0 : 0.0))
+
+        let pad = shadowPadding(for: context.barPosition)
+        let anyView = AnyView(
+            ReminderPopoverCardView(
+                reminder: reminder,
+                barPosition: context.barPosition,
+                settings: context.settings
+            )
+            .padding(pad)
+        )
+
+        if let hosting = hostingView {
+            hosting.rootView = anyView
+        } else {
+            let hosting = FirstMouseHostingView(rootView: anyView)
+            hosting.appearance = self.appearance
+            self.contentView = hosting
+            self.hostingView = hosting
+        }
+
+        let visibleFrame = screen.visibleFrame
+        let fullFrame = screen.frame
+        let thickness = max(context.settings.barWidth, context.settings.hoverWidth)
+
+        var finalX: CGFloat
+        var finalY: CGFloat
+
+        if context.isHorizontal {
+            let idealFinalX = visibleFrame.minX + context.offset - (targetWidth / 2)
+            finalX = max(visibleFrame.minX + 8, min(visibleFrame.maxX - targetWidth - 8, idealFinalX))
+            finalY = visibleFrame.minY + thickness + 6
+        } else {
+            let idealFinalY = visibleFrame.maxY - context.offset - (targetHeight / 2)
+            finalY = max(visibleFrame.minY + 8, min(visibleFrame.maxY - targetHeight - 8, idealFinalY))
+
+            switch context.barPosition {
+            case .left:
+                finalX = fullFrame.minX + thickness + 6
+            case .right:
+                finalX = fullFrame.maxX - thickness - targetWidth - 6
+            case .bottom:
+                finalX = visibleFrame.minX + context.offset - (targetWidth / 2)
                 finalY = visibleFrame.minY + thickness + 6
             }
         }
@@ -663,6 +735,7 @@ extension PopoverPanel {
             RunLoop.main.add(timer, forMode: .common)
             hideTimer = timer
         } else {
+            clearPendingExpansionState()
             performHide()
         }
     }
@@ -681,6 +754,7 @@ extension PopoverPanel {
                 self.currentClusterId = nil
                 // self.isMouseInside = false
                 self.hasEnteredPopover = false
+                self.clearPendingExpansionState()
             }
         })
     }
@@ -785,7 +859,7 @@ private struct CurrentTimeTooltipView: View {
 
     private var indicatorColor: Color {
         settings.isPetSnoozed
-            ? Color(red: 0.35, green: 0.55, blue: 0.95)
+            ? AppSettings.petSnoozeAccentColor(isDark: isDarkTheme)
             : settings.effectiveCurrentTimeColor()
     }
 
@@ -804,8 +878,8 @@ private struct CurrentTimeTooltipView: View {
                                 .fill(
                                     LinearGradient(
                                         colors: [
-                                            Color(red: 0.35, green: 0.55, blue: 0.95).opacity(isDarkTheme ? 0.38 : 0.28),
-                                            Color(red: 0.35, green: 0.55, blue: 0.95).opacity(isDarkTheme ? 0.22 : 0.14)
+                                            indicatorColor.opacity(isDarkTheme ? 0.38 : 0.32),
+                                            indicatorColor.opacity(isDarkTheme ? 0.22 : 0.18)
                                         ],
                                         startPoint: .leading,
                                         endPoint: .trailing
@@ -818,13 +892,13 @@ private struct CurrentTimeTooltipView: View {
                                     .stroke(
                                         LinearGradient(
                                             colors: [
-                                                Color.white.opacity(isDarkTheme ? 0.70 : 0.85),
-                                                Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.90)
+                                                isDarkTheme ? Color.white.opacity(0.70) : Color.white.opacity(0.95),
+                                                indicatorColor.opacity(isDarkTheme ? 0.90 : 0.85)
                                             ],
                                             startPoint: .top,
                                             endPoint: .bottom
                                         ),
-                                        lineWidth: 1.1
+                                        lineWidth: 1.2
                                     )
                             }
                         }
@@ -850,7 +924,7 @@ private struct CurrentTimeTooltipView: View {
 
                     Text(L10n.tr(.petSnoozedTooltip(settings.remainingSnoozeMinutes), lang: settings.language))
                         .font(.system(size: 9.0, weight: .medium, design: .rounded))
-                        .foregroundStyle(isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.62))
+                        .foregroundStyle(isDarkTheme ? Color.white.opacity(0.72) : indicatorColor.opacity(0.85))
                         .lineLimit(1)
                 }
                 .padding(.horizontal, 10)
@@ -886,7 +960,7 @@ private struct CurrentTimeTooltipView: View {
             Capsule()
                 .stroke(
                     settings.isPetSnoozed
-                        ? AnyShapeStyle(Color(red: 0.35, green: 0.55, blue: 0.95).opacity(isDarkTheme ? 0.45 : 0.35))
+                        ? AnyShapeStyle(indicatorColor.opacity(isDarkTheme ? 0.45 : 0.38))
                         : AnyShapeStyle(
                             LinearGradient(
                                 colors: isDarkTheme ? [
@@ -983,6 +1057,10 @@ private struct ReminderTooltipView: View {
                     lineWidth: 0.8
                 )
         )
+        .contentShape(Capsule())
+        .onTapGesture {
+            PopoverPanel.shared.setMouseInside(true)
+        }
     }
 }
 
@@ -1213,15 +1291,15 @@ private struct AllDayWithRemindersPopoverView: View {
 
     private var tintColor: Color {
         let opacity = settings.cardOpacity
-        return isDarkTheme ? Color.black.opacity(opacity * 0.40) : Color.white.opacity(opacity * 0.35)
+        return isDarkTheme ? Color.black.opacity(opacity * 0.40) : Color.white.opacity(max(0.85, opacity * 0.90))
     }
 
     private var textColor: Color {
-        isDarkTheme ? Color.white : Color.black.opacity(0.9)
+        isDarkTheme ? Color.white : Color.black.opacity(0.95)
     }
 
     private var textMuted: Color {
-        isDarkTheme ? Color.white.opacity(0.55) : Color.black.opacity(0.45)
+        isDarkTheme ? Color.white.opacity(0.60) : Color.black.opacity(0.55)
     }
 
     var body: some View {
@@ -1232,30 +1310,187 @@ private struct AllDayWithRemindersPopoverView: View {
             // 1. 종일 캘린더 일정 섹션 (존재 시)
             if !events.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    ForEach(events.prefix(3)) { event in
-                        HStack(alignment: .top, spacing: 6) {
-                            RoundedRectangle(cornerRadius: 1.5)
-                                .fill(event.effectiveColor(settings: settings))
-                                .frame(width: 3, height: 26)
+                    // 섹션 헤더: 캘린더 아이콘 + "오늘의 종일 일정 (N)" + 우측 "캘린더 앱 열기"
+                    HStack {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color.accentColor)
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(event.title(lang: settings.language))
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(textColor)
-                                    .lineLimit(1)
+                        Text("\(L10n.tr(.allDayEventsSectionTitle, lang: settings.language)) (\(events.count))")
+                            .font(.system(size: 10.5, weight: .bold, design: .rounded))
+                            .foregroundStyle(textColor)
 
-                                Text(event.calendarTitle)
-                                    .font(.system(size: 9.5, weight: .medium))
+                        Spacer()
+
+                        Button(action: {
+                            if let first = events.first {
+                                CalendarAppLauncher.open(event: first)
+                            } else {
+                                CalendarAppLauncher.open(event: nil)
+                            }
+                            PopoverPanel.shared.hide(delayed: false)
+                        }) {
+                            HStack(spacing: 2) {
+                                Text(L10n.tr(.openCalendarApp, lang: settings.language))
+                                    .font(.system(size: 9, weight: .medium))
+                                Image(systemName: "arrow.up.forward")
+                                    .font(.system(size: 7.5, weight: .semibold))
+                            }
+                            .foregroundStyle(Color.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    let displayEvents = Array(events.prefix(3))
+                    ForEach(displayEvents) { event in
+                        let rawCalColor = settings.customColor(for: event.calendarIdentifier) ?? event.defaultColor
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            // 캘린더 색상 원형 인디케이터 + 계정/캘린더명
+                            HStack(spacing: 5) {
+                                Circle()
+                                    .fill(rawCalColor)
+                                    .frame(width: 7, height: 7)
+                                    .overlay(
+                                        Circle().stroke(Color.black.opacity(isDarkTheme ? 0.25 : 0.15), lineWidth: 0.5)
+                                    )
+
+                                Text("\(event.sourceTitle(lang: settings.language)) • \(event.calendarTitle)")
+                                    .font(.system(size: 9.5, weight: .semibold))
                                     .foregroundStyle(textMuted)
                                     .lineLimit(1)
                             }
+
+                            // 일정 제목 (취소/거절 스트라이크스루)
+                            Text(event.title(lang: settings.language))
+                                .font(.system(size: 12, weight: .bold))
+                                .strikethrough(event.isCanceledOrDeclined, color: textMuted)
+                                .foregroundStyle(event.isCanceledOrDeclined ? textMuted : textColor)
+                                .lineLimit(2)
+
+                            // "하루 종일" 캡슐 배지 + 취소/거절 배지
+                            HStack(spacing: 6) {
+                                Text(event.formattedTimeRange(lang: settings.language))
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(textMuted)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1.5)
+                                    .background(Color.secondary.opacity(isDarkTheme ? 0.20 : 0.12))
+                                    .clipShape(Capsule())
+
+                                if event.isCanceled {
+                                    Text(L10n.tr(.eventStatusCanceled, lang: settings.language))
+                                        .font(.system(size: 9.5, weight: .semibold))
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1.5)
+                                        .background(Color.red.opacity(0.18))
+                                        .foregroundStyle(Color.red)
+                                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                                } else if event.isDeclined {
+                                    Text(L10n.tr(.eventStatusDeclined, lang: settings.language))
+                                        .font(.system(size: 9.5, weight: .semibold))
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1.5)
+                                        .background(Color.gray.opacity(0.20))
+                                        .foregroundStyle(textMuted)
+                                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                                }
+                            }
+
+                            // 본문 메모 미리보기
+                            if let cleanNotes = event.displayNotes {
+                                HStack(alignment: .top, spacing: 4) {
+                                    Image(systemName: "note.text")
+                                        .font(.caption2)
+                                        .foregroundStyle(textMuted)
+                                        .padding(.top, 1)
+
+                                    Text(cleanNotes)
+                                        .font(.caption2)
+                                        .foregroundStyle(isDarkTheme ? Color.white.opacity(0.80) : Color.black.opacity(0.70))
+                                        .lineLimit(2)
+                                }
+                                .padding(.top, 1)
+                            }
+
+                            // 위치 정보
+                            if let loc = event.location, !loc.isEmpty {
+                                if loc.contains("://") {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "mappin.and.ellipse")
+                                            .font(.caption2)
+                                            .foregroundStyle(textMuted)
+
+                                        Text(loc)
+                                            .font(.caption2)
+                                            .foregroundStyle(textMuted)
+                                            .lineLimit(1)
+                                    }
+                                } else if let mapUrl = settings.effectivePreferredMapService.url(for: loc) {
+                                    actionLinkButton(icon: "mappin.and.ellipse", text: loc, url: mapUrl)
+                                }
+                            }
+
+                            // 관련 웹 링크 (웨비나, 문서 등)
+                            if let webLink = event.webLink {
+                                actionLinkButton(icon: "link", text: webLink.displayHost, url: webLink.url, isExternal: true)
+                            }
+
+                            // 화상회의 원클릭 바로가기 버튼 (Teams, Zoom, Meet 등 데스크톱 앱 우선)
+                            if let meeting = event.meetingInfo {
+                                let buttonColor = meeting.platform.brandColor.adjustedForContrast(isDark: isDarkTheme)
+                                if !event.isCanceledOrDeclined && meeting.platform != .unverified {
+                                    Button(action: {
+                                        MeetingAppLauncher.open(meeting: meeting)
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                                            PopoverPanel.shared.hide(delayed: false)
+                                        }
+                                    }) {
+                                        HStack(spacing: 5) {
+                                            Image(systemName: meeting.platform.iconName)
+                                                .font(.system(size: 11, weight: .semibold))
+                                            Text(L10n.tr(.joinMeeting(meeting.platform.rawValue), lang: settings.language))
+                                                .font(.system(size: 11, weight: .semibold))
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 4.5)
+                                        .background(buttonColor.opacity(isDarkTheme ? 0.24 : 0.14))
+                                        .foregroundStyle(buttonColor)
+                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .stroke(buttonColor.opacity(isDarkTheme ? 0.45 : 0.30), lineWidth: 0.5)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(.top, 2)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 2)
+
+                        if event.id != displayEvents.last?.id {
+                            Divider()
+                                .overlay(isDarkTheme ? Color.white.opacity(0.16) : Color.black.opacity(0.13))
+                                .padding(.vertical, 2)
                         }
                     }
 
                     if events.count > 3 {
-                        Text(L10n.tr(.moreEventsNotice(events.count - 3), lang: settings.language))
-                            .font(.system(size: 9.5, weight: .regular))
-                            .foregroundStyle(textMuted)
+                        Button(action: {
+                            if let first = events.first {
+                                CalendarAppLauncher.open(event: first)
+                            } else {
+                                CalendarAppLauncher.open(event: nil)
+                            }
+                            PopoverPanel.shared.hide(delayed: false)
+                        }) {
+                            Text(L10n.tr(.moreEventsNotice(events.count - 3), lang: settings.language))
+                                .font(.system(size: 9.5, weight: .regular))
+                                .foregroundStyle(textMuted)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 1)
                     }
                 }
             }
@@ -1263,7 +1498,8 @@ private struct AllDayWithRemindersPopoverView: View {
             // 2. 구분선 (일정과 미리알림 둘 다 있을 때)
             if !events.isEmpty && !reminders.isEmpty {
                 Divider()
-                    .opacity(isDarkTheme ? 0.25 : 0.15)
+                    .overlay(isDarkTheme ? Color.white.opacity(0.20) : Color.black.opacity(0.15))
+                    .padding(.vertical, 1)
             }
 
             // 3. 당일 미리알림 섹션 (존재 시)
@@ -1301,6 +1537,7 @@ private struct AllDayWithRemindersPopoverView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(displayReminders) { item in
                             let isDone = completedIds.contains(item.id)
+                            let effectiveColor = item.color.adjustedForContrast(isDark: isDarkTheme)
                             HStack(spacing: 6) {
                                 Button(action: {
                                     guard !completedIds.contains(item.id) else { return }
@@ -1313,7 +1550,7 @@ private struct AllDayWithRemindersPopoverView: View {
                                 }) {
                                     Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
                                         .font(.system(size: 11, weight: isDone ? .bold : .medium))
-                                        .foregroundStyle(isDone ? Color.accentColor : item.color)
+                                        .foregroundStyle(isDone ? Color.accentColor : effectiveColor)
                                 }
                                 .buttonStyle(.plain)
 
@@ -1328,10 +1565,10 @@ private struct AllDayWithRemindersPopoverView: View {
                                 if !item.listTitle.isEmpty {
                                     Text(item.listTitle)
                                         .font(.system(size: 8.5, weight: .medium))
-                                        .foregroundStyle(item.color.opacity(0.85))
+                                        .foregroundStyle(effectiveColor.opacity(0.90))
                                         .padding(.horizontal, 4)
                                         .padding(.vertical, 1)
-                                        .background(item.color.opacity(isDarkTheme ? 0.18 : 0.10))
+                                        .background(effectiveColor.opacity(isDarkTheme ? 0.18 : 0.12))
                                         .clipShape(RoundedRectangle(cornerRadius: 3))
                                         .lineLimit(1)
                                 }
@@ -1400,6 +1637,389 @@ private struct AllDayWithRemindersPopoverView: View {
                 )
                 .allowsHitTesting(false)
         )
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 7, x: 0, y: 3.5)
+    }
+
+    // ponytail: 위치 및 웹 링크 공통 액션 버튼 렌더러
+    @ViewBuilder
+    private func actionLinkButton(icon: String, text: String, url: URL, isExternal: Bool = false) -> some View {
+        Button(action: {
+            NSWorkspace.shared.open(url)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                PopoverPanel.shared.hide(delayed: false)
+            }
+        }) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                    .foregroundStyle(isDarkTheme ? Color.accentColor : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+
+                Text(text)
+                    .font(.caption2)
+                    .foregroundStyle(isDarkTheme ? Color.white.opacity(0.88) : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+                    .lineLimit(1)
+                    .underline(true, color: (isDarkTheme ? Color.white.opacity(0.35) : Color.blue.opacity(0.35)))
+
+                if isExternal {
+                    Image(systemName: "arrow.up.forward")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(isDarkTheme ? Color.accentColor : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // 종일 일정 및 미리알림 상세 카드의 정밀한 동적 높이 연산
+    static func calculateTargetHeight(
+        events: [CalendarEvent],
+        reminders: [ReminderItem],
+        barPosition: BarPosition
+    ) -> CGFloat {
+        var contentHeight: CGFloat = 0
+
+        // 1. 종일 일정 섹션 높이
+        if !events.isEmpty {
+            contentHeight += 22.0 // 섹션 헤더 (캘린더 아이콘 + 타이틀 + 앱 열기)
+            let displayEvents = Array(events.prefix(3))
+            for (idx, event) in displayEvents.enumerated() {
+                var itemHeight: CGFloat = 48.0 // 캘린더명(13) + 제목(18) + 시간배지(17)
+                if event.displayNotes != nil { itemHeight += 20.0 }
+                if let loc = event.location, !loc.isEmpty { itemHeight += 16.0 }
+                if event.webLink != nil { itemHeight += 16.0 }
+                if event.meetingInfo != nil && !event.isCanceledOrDeclined && event.meetingInfo?.platform != .unverified {
+                    itemHeight += 28.0
+                }
+                contentHeight += itemHeight
+                if idx < displayEvents.count - 1 {
+                    contentHeight += 8.0 // 아이템 간 구분선 및 간격
+                }
+            }
+            if events.count > 3 {
+                contentHeight += 18.0 // 외 N건 더보기
+            }
+        }
+
+        // 2. 섹션 간 구분선 높이
+        if !events.isEmpty && !reminders.isEmpty {
+            contentHeight += 12.0
+        }
+
+        // 3. 미리알림 섹션 높이
+        if !reminders.isEmpty {
+            contentHeight += 22.0 // 섹션 헤더
+            let displayCount = min(4, reminders.count)
+            contentHeight += CGFloat(displayCount) * 24.0 // 각 아이템 높이
+            if reminders.count > 4 {
+                contentHeight += 18.0 // 외 N개 더보기
+            }
+        }
+
+        // 4. 말풍선 위아래 내부 패딩 반영 (bottom 화살표는 30pt, 좌/우는 24pt)
+        let verticalBubblePadding: CGFloat = (barPosition == .bottom ? 30.0 : 24.0)
+        return max(60.0, ceil(contentHeight + verticalBubblePadding))
+    }
+}
+
+// MARK: - 7-2. 시간 지정 미리알림 단독 상세 팝오버 뷰 (ReminderPopoverCardView)
+// 시간 지정 미리알림 호버 시 원클릭 완료 및 앱 바로가기를 제공하는 점진적 공개 액션 카드
+private struct ReminderPopoverCardView: View {
+    let reminder: ReminderItem
+    let barPosition: BarPosition
+    @ObservedObject var settings: AppSettings
+
+    @State private var isDone: Bool = false
+
+    @Environment(\.colorScheme) private var colorScheme
+    private var isDarkTheme: Bool {
+        settings.eventCardTheme.isDark(for: colorScheme)
+    }
+
+    private var bubbleDirection: BubbleArrowDirection {
+        switch barPosition {
+        case .left: return .left
+        case .right: return .right
+        case .bottom: return .bottom
+        }
+    }
+
+    private var tintColor: Color {
+        let opacity = settings.cardOpacity
+        // 라이트 모드: 흰색 바탕 위에서 카드가 날아가지 않도록 충분한 불투명도(0.85)를 확보하여 내부 텍스트 가독성 보호
+        return isDarkTheme ? Color.black.opacity(opacity * 0.40) : Color.white.opacity(max(0.85, opacity * 0.90))
+    }
+
+    private var effectiveReminderColor: Color {
+        reminder.color.adjustedForContrast(isDark: isDarkTheme)
+    }
+
+    private var textColor: Color {
+        isDarkTheme ? Color.white : Color.black.opacity(0.95)
+    }
+
+    private var textSecondary: Color {
+        isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.70)
+    }
+
+    private var textMuted: Color {
+        isDarkTheme ? Color.white.opacity(0.60) : Color.black.opacity(0.55)
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    private var priorityInfo: (text: String, color: Color)? {
+        switch reminder.priority {
+        case 1...4:
+            return ("!!!", Color.red.adjustedForContrast(isDark: isDarkTheme))
+        case 5:
+            return ("!!", Color.orange.adjustedForContrast(isDark: isDarkTheme))
+        case 6...9:
+            return ("!", Color.blue.adjustedForContrast(isDark: isDarkTheme))
+        default:
+            return nil
+        }
+    }
+
+    private var timeStatusInfo: (isOverdue: Bool, text: String, color: Color) {
+        let now = Date()
+        let diffSeconds = reminder.dueDate.timeIntervalSince(now)
+        let diffMinutes = Int(diffSeconds / 60)
+        let timeStr = Self.timeFormatter.string(from: reminder.dueDate)
+        let isKo = settings.language.isKorean
+
+        if diffMinutes < 0 {
+            let overdueMinutes = -diffMinutes
+            let overdueText: String
+            if overdueMinutes < 60 {
+                overdueText = isKo ? "\(overdueMinutes)분 지남" : "\(overdueMinutes)m overdue"
+            } else if overdueMinutes < 1440 {
+                let hours = overdueMinutes / 60
+                overdueText = isKo ? "\(hours)시간 지남" : "\(hours)h overdue"
+            } else {
+                overdueText = isKo ? "지남" : "Overdue"
+            }
+            let warningColor = Color.red.adjustedForContrast(isDark: isDarkTheme)
+            return (true, "\(timeStr) (\(overdueText))", warningColor)
+        } else if diffMinutes <= 60 {
+            let soonText: String
+            if diffMinutes == 0 {
+                soonText = isKo ? "곧 마감" : "Due now"
+            } else {
+                soonText = isKo ? "\(diffMinutes)분 후" : "in \(diffMinutes)m"
+            }
+            return (false, "\(timeStr) (\(soonText))", effectiveReminderColor)
+        } else {
+            return (false, timeStr, effectiveReminderColor)
+        }
+    }
+
+    private var effectiveWebLink: URL? {
+        if let url = reminder.url {
+            return url
+        }
+        if let notes = reminder.notes, !notes.isEmpty {
+            let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+            let matches = detector?.matches(in: notes, options: [], range: NSRange(location: 0, length: (notes as NSString).length))
+            return matches?.first?.url
+        }
+        return nil
+    }
+
+    var body: some View {
+        let direction = bubbleDirection
+        let bubbleShape = SpeechBubbleShape(direction: direction, arrowWidth: 8, arrowHeight: 14, cornerRadius: 10)
+
+        VStack(alignment: .leading, spacing: 7) {
+            // 1. 헤더: 소속 목록 도트 + 이름 + 우측 "미리알림 열기" 액션 버튼
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(effectiveReminderColor)
+                    .frame(width: 7, height: 7)
+                    .overlay(
+                        Circle().stroke(Color.black.opacity(isDarkTheme ? 0.25 : 0.18), lineWidth: 0.5)
+                    )
+
+                Text(reminder.listTitle.isEmpty ? "Reminders" : reminder.listTitle)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(textMuted)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Button(action: {
+                    if let url = URL(string: "x-apple-reminderkit://") {
+                        NSWorkspace.shared.open(url)
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                        PopoverPanel.shared.hide(delayed: false)
+                    }
+                }) {
+                    HStack(spacing: 2) {
+                        Text(L10n.tr(.openRemindersApp, lang: settings.language))
+                            .font(.system(size: 9, weight: .medium))
+                        Image(systemName: "arrow.up.forward")
+                            .font(.system(size: 7.5, weight: .semibold))
+                    }
+                    .foregroundStyle(isDarkTheme ? Color.accentColor : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+                    .padding(.vertical, 2)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            // 2. 본문: 대형 원형 체크박스 + 할 일 제목
+            HStack(alignment: .top, spacing: 8) {
+                Button(action: {
+                    guard !isDone else { return }
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        isDone = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        ReminderService.shared.completeReminder(id: reminder.id)
+                    }
+                }) {
+                    Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 13.5, weight: isDone ? .bold : .medium))
+                        .foregroundStyle(isDone ? Color.accentColor : effectiveReminderColor)
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Text(reminder.title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .strikethrough(isDone, color: textMuted)
+                    .foregroundStyle(isDone ? textMuted : textColor)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // 3. 시간, 루틴 반복 및 우선순위 메타
+            let timeStatus = timeStatusInfo
+            HStack(spacing: 6) {
+                HStack(spacing: 3) {
+                    Image(systemName: timeStatus.isOverdue ? "exclamationmark.circle.fill" : "clock")
+                        .font(.system(size: 8.5))
+                        .foregroundStyle(timeStatus.isOverdue ? timeStatus.color : textMuted)
+
+                    Text(timeStatus.text)
+                        .font(.system(size: 10, weight: timeStatus.isOverdue ? .semibold : .medium, design: .rounded))
+                        .foregroundStyle(timeStatus.color)
+                }
+
+                if let recurrence = reminder.recurrenceText(isKorean: settings.language.isKorean) {
+                    HStack(spacing: 2.5) {
+                        Image(systemName: "arrow.2.squarepath")
+                            .font(.system(size: 7.5, weight: .semibold))
+                        Text(recurrence)
+                            .font(.system(size: 8.5, weight: .medium))
+                    }
+                    .foregroundStyle(textSecondary)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1.5)
+                    .background(isDarkTheme ? Color.white.opacity(0.08) : Color.black.opacity(0.05))
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                }
+
+                if let prio = priorityInfo {
+                    Text(prio.text)
+                        .font(.system(size: 9.5, weight: .black, design: .rounded))
+                        .foregroundStyle(prio.color)
+                }
+            }
+
+            // 4. 본문 메모 미리보기 (존재 시)
+            if let notes = reminder.notes, !notes.isEmpty {
+                HStack(alignment: .top, spacing: 4) {
+                    Image(systemName: "note.text")
+                        .font(.system(size: 9))
+                        .foregroundStyle(textMuted)
+                        .padding(.top, 1)
+
+                    Text(notes)
+                        .font(.system(size: 9.5, weight: .regular))
+                        .foregroundStyle(textSecondary)
+                        .lineLimit(2)
+                }
+            }
+
+            // 5. 웹 링크 (명시적 URL 또는 본문 링크 존재 시)
+            if let targetUrl = effectiveWebLink {
+                Button(action: {
+                    NSWorkspace.shared.open(targetUrl)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                        PopoverPanel.shared.hide(delayed: false)
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "link")
+                            .font(.system(size: 8.5))
+                        Text(targetUrl.host ?? targetUrl.absoluteString)
+                            .font(.system(size: 9.5, weight: .medium))
+                            .lineLimit(1)
+                            .underline(true, color: (isDarkTheme ? Color.white.opacity(0.35) : Color.blue.opacity(0.35)))
+                        Image(systemName: "arrow.up.forward")
+                            .font(.system(size: 7.5, weight: .semibold))
+                    }
+                    .foregroundStyle(isDarkTheme ? Color.accentColor : Color.blue.adjustedForContrast(isDark: false, factor: 0.78))
+                    .padding(.vertical, 2)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.leading, direction == .left ? 18 : 12)
+        .padding(.trailing, direction == .right ? 18 : 12)
+        .padding(.top, 12)
+        .padding(.bottom, direction == .bottom ? 18 : 12)
+        .frame(width: 260, alignment: .leading)
+        .fixedSize(horizontal: true, vertical: false)
+        // 1단계: 순정 머티리얼 글래스 블러
+        .background(.ultraThinMaterial.opacity(settings.cardOpacity), in: bubbleShape)
+        .background(
+            // 2단계: 테마 투명 틴트 레이어
+            bubbleShape
+                .fill(tintColor)
+                .allowsHitTesting(false)
+        )
+        .clipShape(bubbleShape)
+        .overlay(
+            // 3단계: 상단 림 라이트 반사 그래디언트
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(isDarkTheme ? 0.12 : 0.35),
+                    Color.white.opacity(0.0)
+                ],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .clipShape(bubbleShape)
+            .allowsHitTesting(false)
+        )
+        .overlay(
+            // 4단계: 외곽선 스트로크
+            bubbleShape
+                .stroke(
+                    LinearGradient(
+                        colors: isDarkTheme ? [
+                            Color.white.opacity(0.35),
+                            Color.white.opacity(0.10)
+                        ] : [
+                            Color.black.opacity(0.22),
+                            Color.black.opacity(0.12)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.8
+                )
+                .allowsHitTesting(false)
+        )
+        // 5단계: 순정 부드러운 그림자
         .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 7, x: 0, y: 3.5)
     }
 }
