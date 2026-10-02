@@ -40,7 +40,7 @@ public struct EventPopoverView: View {
     }
 
     private var textMuted: Color {
-        isDarkTheme ? Color.white.opacity(0.55) : Color.black.opacity(0.45)
+        isDarkTheme ? Color.white.opacity(0.60) : Color.black.opacity(0.55)
     }
 
     public var body: some View {
@@ -102,46 +102,20 @@ public struct EventPopoverView: View {
         )
         .clipShape(bubbleShape)
         .overlay(
-            // 3단계: 상단 림 라이트 반사 그래디언트
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(isDarkTheme ? 0.12 : 0.35),
-                    Color.white.opacity(0.0)
-                ],
-                startPoint: .top,
-                endPoint: .center
-            )
-            .clipShape(bubbleShape)
-            .allowsHitTesting(false)
-        )
-        .overlay(
-            // 4단계: 외곽선 스트로크 (라이트 모드 듀얼 톤 경계선 가시성 확보)
+            // 순정 macOS 메뉴/팝오버 0.5pt 헤어라인 경계선
             bubbleShape
-                .stroke(
-                    LinearGradient(
-                        colors: isDarkTheme ? [
-                            Color.white.opacity(0.35),
-                            Color.white.opacity(0.10)
-                        ] : [
-                            Color.black.opacity(0.20),
-                            Color.black.opacity(0.10)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
+                .stroke(isDarkTheme ? Color.white.opacity(0.18) : Color.black.opacity(0.12), lineWidth: 0.5)
                 .allowsHitTesting(false)
         )
-        // 5단계: 순정 부드러운 그림자 (밝은 배경 플로팅 입체감 보강)
-        .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 7, x: 0, y: 3.5)
+        // 순정 윈도우 부유 그림자
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 8, x: 0, y: 4)
     }
 
     // MARK: - 개별 일정 카드 뷰
     @ViewBuilder
     private func singleEventCard(event: CalendarEvent) -> some View {
-        let textPrimary = isDarkTheme ? Color.white : Color.black.opacity(0.9)
-        let textSecondary = isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.65)
+        let textPrimary = isDarkTheme ? Color.white : Color.black.opacity(0.95)
+        let textSecondary = isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.70)
         let rawCalColor = settings.customColor(for: event.calendarIdentifier) ?? event.defaultColor
 
         VStack(alignment: .leading, spacing: 6) {

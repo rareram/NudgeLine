@@ -54,32 +54,19 @@ public struct SimpleInfoPopoverView: View {
         )
         .clipShape(bubbleShape)
         .overlay(
-            // 3단계: 외곽선 스트로크 (라이트 모드 듀얼 톤 경계선 가시성 확보)
+            // 순정 macOS 메뉴/팝오버 0.5pt 헤어라인 경계선
             bubbleShape
-                .stroke(
-                    LinearGradient(
-                        colors: isDarkTheme ? [
-                            Color.white.opacity(0.35),
-                            Color.white.opacity(0.10)
-                        ] : [
-                            Color.black.opacity(0.20),
-                            Color.black.opacity(0.10)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
+                .stroke(isDarkTheme ? Color.white.opacity(0.18) : Color.black.opacity(0.12), lineWidth: 0.5)
                 .allowsHitTesting(false)
         )
-        // 4단계: 순정 부드러운 그림자 (밝은 배경 플로팅 입체감 보강)
+        // 순정 윈도우 부유 그림자
         .shadow(color: Color.black.opacity(isDarkTheme ? 0.30 : 0.16), radius: 6, x: 0, y: 3)
     }
 
     @ViewBuilder
     private func singleEventRow(event: CalendarEvent) -> some View {
-        let textPrimary = isDarkTheme ? Color.white : Color.black.opacity(0.9)
-        let textSecondary = isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.65)
+        let textPrimary = isDarkTheme ? Color.white : Color.black.opacity(0.95)
+        let textSecondary = isDarkTheme ? Color.white.opacity(0.72) : Color.black.opacity(0.70)
         let rawCalColor = settings.customColor(for: event.calendarIdentifier) ?? event.defaultColor
 
         VStack(alignment: .leading, spacing: 3) {

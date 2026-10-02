@@ -1376,7 +1376,11 @@ private struct AllDayWithRemindersPopoverView: View {
 
     private var tintColor: Color {
         let opacity = settings.cardOpacity
-        return isDarkTheme ? Color.black.opacity(opacity * 0.40) : Color.white.opacity(max(0.85, opacity * 0.90))
+        if isDarkTheme {
+            return Color.black.opacity(opacity * 0.40)
+        } else {
+            return Color.white.opacity(opacity * 0.35)
+        }
     }
 
     private var textColor: Color {
@@ -1685,44 +1689,23 @@ private struct AllDayWithRemindersPopoverView: View {
         .padding(.bottom, direction == .bottom ? 18 : 12)
         .frame(width: 280, alignment: .leading)
         .fixedSize(horizontal: true, vertical: false)
+        // 1단계: 순정 머티리얼 글래스 블러 (사용자 cardOpacity 투명도 반영)
         .background(.ultraThinMaterial.opacity(settings.cardOpacity), in: bubbleShape)
         .background(
+            // 2단계: 테마 투명 틴트 레이어 (다크/라이트 모드 대비 보강)
             bubbleShape
                 .fill(tintColor)
                 .allowsHitTesting(false)
         )
         .clipShape(bubbleShape)
         .overlay(
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(isDarkTheme ? 0.12 : 0.35),
-                    Color.white.opacity(0.0)
-                ],
-                startPoint: .top,
-                endPoint: .center
-            )
-            .clipShape(bubbleShape)
-            .allowsHitTesting(false)
-        )
-        .overlay(
+            // 순정 macOS 메뉴/팝오버 0.5pt 헤어라인 경계선
             bubbleShape
-                .stroke(
-                    LinearGradient(
-                        colors: isDarkTheme ? [
-                            Color.white.opacity(0.35),
-                            Color.white.opacity(0.10)
-                        ] : [
-                            Color.black.opacity(0.20),
-                            Color.black.opacity(0.10)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
+                .stroke(isDarkTheme ? Color.white.opacity(0.18) : Color.black.opacity(0.12), lineWidth: 0.5)
                 .allowsHitTesting(false)
         )
-        .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 7, x: 0, y: 3.5)
+        // 순정 윈도우 부유 그림자
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 8, x: 0, y: 4)
     }
 
     // ponytail: 위치 및 웹 링크 공통 액션 버튼 렌더러
@@ -1830,8 +1813,11 @@ private struct ReminderPopoverCardView: View {
 
     private var tintColor: Color {
         let opacity = settings.cardOpacity
-        // 라이트 모드: 흰색 바탕 위에서 카드가 날아가지 않도록 충분한 불투명도(0.85)를 확보하여 내부 텍스트 가독성 보호
-        return isDarkTheme ? Color.black.opacity(opacity * 0.40) : Color.white.opacity(max(0.85, opacity * 0.90))
+        if isDarkTheme {
+            return Color.black.opacity(opacity * 0.40)
+        } else {
+            return Color.white.opacity(opacity * 0.35)
+        }
     }
 
     private var effectiveReminderColor: Color {
@@ -2063,49 +2049,23 @@ private struct ReminderPopoverCardView: View {
         .padding(.bottom, direction == .bottom ? 18 : 12)
         .frame(width: 260, alignment: .leading)
         .fixedSize(horizontal: true, vertical: false)
-        // 1단계: 순정 머티리얼 글래스 블러
+        // 1단계: 순정 머티리얼 글래스 블러 (사용자 cardOpacity 투명도 반영)
         .background(.ultraThinMaterial.opacity(settings.cardOpacity), in: bubbleShape)
         .background(
-            // 2단계: 테마 투명 틴트 레이어
+            // 2단계: 테마 투명 틴트 레이어 (다크/라이트 모드 대비 보강)
             bubbleShape
                 .fill(tintColor)
                 .allowsHitTesting(false)
         )
         .clipShape(bubbleShape)
         .overlay(
-            // 3단계: 상단 림 라이트 반사 그래디언트
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(isDarkTheme ? 0.12 : 0.35),
-                    Color.white.opacity(0.0)
-                ],
-                startPoint: .top,
-                endPoint: .center
-            )
-            .clipShape(bubbleShape)
-            .allowsHitTesting(false)
-        )
-        .overlay(
-            // 4단계: 외곽선 스트로크
+            // 순정 macOS 메뉴/팝오버 0.5pt 헤어라인 경계선
             bubbleShape
-                .stroke(
-                    LinearGradient(
-                        colors: isDarkTheme ? [
-                            Color.white.opacity(0.35),
-                            Color.white.opacity(0.10)
-                        ] : [
-                            Color.black.opacity(0.22),
-                            Color.black.opacity(0.12)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
+                .stroke(isDarkTheme ? Color.white.opacity(0.18) : Color.black.opacity(0.12), lineWidth: 0.5)
                 .allowsHitTesting(false)
         )
-        // 5단계: 순정 부드러운 그림자
-        .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 7, x: 0, y: 3.5)
+        // 순정 윈도우 부유 그림자
+        .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 8, x: 0, y: 4)
     }
 }
 
