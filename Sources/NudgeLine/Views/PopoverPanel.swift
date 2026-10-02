@@ -179,6 +179,31 @@ extension PopoverPanel {
         return NSRect(x: winX, y: winY, width: winW, height: winH)
     }
 
+    // 타임라인 바 위치에 따른 카드 앵커링 (말풍선 꼬리를 타임라인 바 방향 에지에 정확히 밀착)
+    @ViewBuilder
+    private static func anchorCardView(
+        _ cardView: AnyView,
+        for barPosition: BarPosition
+    ) -> some View {
+        switch barPosition {
+        case .bottom:
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                cardView
+            }
+        case .right:
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                cardView
+            }
+        case .left:
+            HStack(spacing: 0) {
+                cardView
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
     public func show(
         events: [CalendarEvent],
         allDayEvents: [CalendarEvent] = [],
@@ -209,26 +234,46 @@ extension PopoverPanel {
             allDayEvents: allDayEvents,
             isHorizontal: isHorizontal
         )
-        let targetWidth = targetDimensions.width
-        let targetHeight = targetDimensions.height
+        var targetWidth = targetDimensions.width
+        var targetHeight = targetDimensions.height
 
         let pad = shadowPadding(for: barPosition)
-        let anyView = AnyView(
+        let cardView = AnyView(
             renderer.makeView(
                 events: events,
                 allDayEvents: allDayEvents,
                 settings: settings
             )
-            .padding(pad)
+        )
+
+        let anchoredCardView = AnyView(
+            Self.anchorCardView(cardView, for: barPosition)
+                .padding(pad)
         )
 
         if let hosting = hostingView {
-            hosting.rootView = anyView
+            hosting.rootView = anchoredCardView
         } else {
-            let hosting = FirstMouseHostingView(rootView: anyView)
+            let hosting = FirstMouseHostingView(rootView: anchoredCardView)
             hosting.appearance = self.appearance
             self.contentView = hosting
             self.hostingView = hosting
+        }
+
+        if let hosting = hostingView {
+            let fitting = hosting.fittingSize
+            if fitting.width > 0 {
+                let actualWidth = ceil(fitting.width - pad.leading - pad.trailing)
+                if actualWidth > 20 {
+                    targetWidth = actualWidth
+                }
+            }
+            if fitting.height > 0 {
+                let actualHeight = ceil(fitting.height - pad.top - pad.bottom)
+                if actualHeight > 20 {
+                    targetHeight = actualHeight
+                }
+            }
         }
 
         var finalX: CGFloat
@@ -495,31 +540,51 @@ extension PopoverPanel {
         updatePanelAppearance(settings: context.settings)
         self.isDetailMode = true
 
-        let targetWidth: CGFloat = 280.0
-        let targetHeight: CGFloat = AllDayWithRemindersPopoverView.calculateTargetHeight(
+        var targetWidth: CGFloat = 280.0
+        var targetHeight: CGFloat = AllDayWithRemindersPopoverView.calculateTargetHeight(
             events: events,
             reminders: reminders,
             barPosition: context.barPosition
         )
 
         let pad = shadowPadding(for: context.barPosition)
-        let anyView = AnyView(
+        let cardView = AnyView(
             AllDayWithRemindersPopoverView(
                 events: events,
                 reminders: reminders,
                 barPosition: context.barPosition,
                 settings: context.settings
             )
-            .padding(pad)
+        )
+
+        let anchoredCardView = AnyView(
+            Self.anchorCardView(cardView, for: context.barPosition)
+                .padding(pad)
         )
 
         if let hosting = hostingView {
-            hosting.rootView = anyView
+            hosting.rootView = anchoredCardView
         } else {
-            let hosting = FirstMouseHostingView(rootView: anyView)
+            let hosting = FirstMouseHostingView(rootView: anchoredCardView)
             hosting.appearance = self.appearance
             self.contentView = hosting
             self.hostingView = hosting
+        }
+
+        if let hosting = hostingView {
+            let fitting = hosting.fittingSize
+            if fitting.width > 0 {
+                let actualWidth = ceil(fitting.width - pad.leading - pad.trailing)
+                if actualWidth > 20 {
+                    targetWidth = actualWidth
+                }
+            }
+            if fitting.height > 0 {
+                let actualHeight = ceil(fitting.height - pad.top - pad.bottom)
+                if actualHeight > 20 {
+                    targetHeight = actualHeight
+                }
+            }
         }
 
         let visibleFrame = screen.visibleFrame
@@ -574,7 +639,7 @@ extension PopoverPanel {
         self.isDetailMode = true
 
         let hasWebLink = reminder.url != nil || (reminder.notes?.contains("http://") == true || reminder.notes?.contains("https://") == true)
-        let targetWidth: CGFloat = 260.0
+        var targetWidth: CGFloat = 260.0
         var estimatedContentHeight: CGFloat = 120.0
         if let notes = reminder.notes, !notes.isEmpty {
             estimatedContentHeight += 32.0
@@ -582,25 +647,45 @@ extension PopoverPanel {
         if hasWebLink {
             estimatedContentHeight += 28.0
         }
-        let targetHeight = ceil(estimatedContentHeight + (context.isHorizontal ? 8.0 : 0.0))
+        var targetHeight = ceil(estimatedContentHeight + (context.isHorizontal ? 8.0 : 0.0))
 
         let pad = shadowPadding(for: context.barPosition)
-        let anyView = AnyView(
+        let cardView = AnyView(
             ReminderPopoverCardView(
                 reminder: reminder,
                 barPosition: context.barPosition,
                 settings: context.settings
             )
-            .padding(pad)
+        )
+
+        let anchoredCardView = AnyView(
+            Self.anchorCardView(cardView, for: context.barPosition)
+                .padding(pad)
         )
 
         if let hosting = hostingView {
-            hosting.rootView = anyView
+            hosting.rootView = anchoredCardView
         } else {
-            let hosting = FirstMouseHostingView(rootView: anyView)
+            let hosting = FirstMouseHostingView(rootView: anchoredCardView)
             hosting.appearance = self.appearance
             self.contentView = hosting
             self.hostingView = hosting
+        }
+
+        if let hosting = hostingView {
+            let fitting = hosting.fittingSize
+            if fitting.width > 0 {
+                let actualWidth = ceil(fitting.width - pad.leading - pad.trailing)
+                if actualWidth > 20 {
+                    targetWidth = actualWidth
+                }
+            }
+            if fitting.height > 0 {
+                let actualHeight = ceil(fitting.height - pad.top - pad.bottom)
+                if actualHeight > 20 {
+                    targetHeight = actualHeight
+                }
+            }
         }
 
         let visibleFrame = screen.visibleFrame
