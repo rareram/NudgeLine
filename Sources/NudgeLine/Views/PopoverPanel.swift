@@ -49,6 +49,11 @@ public final class FirstMouseHostingView<Content: View>: NSHostingView<Content> 
 // MARK: - 2. 팝오버 단일 패널 윈도우 인스턴스 (PopoverPanel)
 public final class PopoverPanel: NSPanel {
     public static let shared = PopoverPanel()
+    private static let tooltipTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "M.d (E) HH:mm"
+        return f
+    }()
 
     private var hostingView: FirstMouseHostingView<AnyView>?
     private var hideTimer: Timer?
@@ -170,30 +175,12 @@ extension PopoverPanel {
                 .padding(pad)
         )
 
-        if let hosting = hostingView {
-            hosting.rootView = anchoredCardView
-        } else {
-            let hosting = FirstMouseHostingView(rootView: anchoredCardView)
-            hosting.appearance = self.appearance
-            self.contentView = hosting
-            self.hostingView = hosting
-        }
-
-        if let hosting = hostingView {
-            let fitting = hosting.fittingSize
-            if fitting.width > 0 {
-                let actualWidth = ceil(fitting.width - pad.leading - pad.trailing)
-                if actualWidth > 20 {
-                    targetWidth = actualWidth
-                }
-            }
-            if fitting.height > 0 {
-                let actualHeight = ceil(fitting.height - pad.top - pad.bottom)
-                if actualHeight > 20 {
-                    targetHeight = actualHeight
-                }
-            }
-        }
+        (targetWidth, targetHeight) = updateHostingAndMeasureSize(
+            view: anchoredCardView,
+            padding: pad,
+            defaultWidth: targetWidth,
+            defaultHeight: targetHeight
+        )
 
         var finalX: CGFloat
         var finalY: CGFloat
@@ -322,9 +309,7 @@ extension PopoverPanel {
     ) {
         guard let screen = currentTargetScreen() else { return }
 
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "M.d (E) HH:mm"
-        let timeString = timeFormatter.string(from: currentTime)
+        let timeString = Self.tooltipTimeFormatter.string(from: currentTime)
 
         let targetWidth: CGFloat
         let targetHeight: CGFloat
@@ -538,30 +523,12 @@ extension PopoverPanel {
                 .padding(pad)
         )
 
-        if let hosting = hostingView {
-            hosting.rootView = anchoredCardView
-        } else {
-            let hosting = FirstMouseHostingView(rootView: anchoredCardView)
-            hosting.appearance = self.appearance
-            self.contentView = hosting
-            self.hostingView = hosting
-        }
-
-        if let hosting = hostingView {
-            let fitting = hosting.fittingSize
-            if fitting.width > 0 {
-                let actualWidth = ceil(fitting.width - pad.leading - pad.trailing)
-                if actualWidth > 20 {
-                    targetWidth = actualWidth
-                }
-            }
-            if fitting.height > 0 {
-                let actualHeight = ceil(fitting.height - pad.top - pad.bottom)
-                if actualHeight > 20 {
-                    targetHeight = actualHeight
-                }
-            }
-        }
+        (targetWidth, targetHeight) = updateHostingAndMeasureSize(
+            view: anchoredCardView,
+            padding: pad,
+            defaultWidth: targetWidth,
+            defaultHeight: targetHeight
+        )
 
         let visibleFrame = screen.visibleFrame
         let fullFrame = screen.frame
@@ -639,30 +606,12 @@ extension PopoverPanel {
                 .padding(pad)
         )
 
-        if let hosting = hostingView {
-            hosting.rootView = anchoredCardView
-        } else {
-            let hosting = FirstMouseHostingView(rootView: anchoredCardView)
-            hosting.appearance = self.appearance
-            self.contentView = hosting
-            self.hostingView = hosting
-        }
-
-        if let hosting = hostingView {
-            let fitting = hosting.fittingSize
-            if fitting.width > 0 {
-                let actualWidth = ceil(fitting.width - pad.leading - pad.trailing)
-                if actualWidth > 20 {
-                    targetWidth = actualWidth
-                }
-            }
-            if fitting.height > 0 {
-                let actualHeight = ceil(fitting.height - pad.top - pad.bottom)
-                if actualHeight > 20 {
-                    targetHeight = actualHeight
-                }
-            }
-        }
+        (targetWidth, targetHeight) = updateHostingAndMeasureSize(
+            view: anchoredCardView,
+            padding: pad,
+            defaultWidth: targetWidth,
+            defaultHeight: targetHeight
+        )
 
         let visibleFrame = screen.visibleFrame
         let fullFrame = screen.frame
@@ -711,6 +660,41 @@ extension PopoverPanel {
         self.pendingTooltipContext = nil
         self.pendingReminder = nil
         self.pendingReminderContext = nil
+    }
+
+    private func updateHostingAndMeasureSize(
+        view: AnyView,
+        padding: EdgeInsets,
+        defaultWidth: CGFloat,
+        defaultHeight: CGFloat
+    ) -> (width: CGFloat, height: CGFloat) {
+        if let hosting = hostingView {
+            hosting.rootView = view
+        } else {
+            let hosting = FirstMouseHostingView(rootView: view)
+            hosting.appearance = self.appearance
+            self.contentView = hosting
+            self.hostingView = hosting
+        }
+
+        var width = defaultWidth
+        var height = defaultHeight
+        if let hosting = hostingView {
+            let fitting = hosting.fittingSize
+            if fitting.width > 0 {
+                let actualWidth = ceil(fitting.width - padding.leading - padding.trailing)
+                if actualWidth > 20 {
+                    width = actualWidth
+                }
+            }
+            if fitting.height > 0 {
+                let actualHeight = ceil(fitting.height - padding.top - padding.bottom)
+                if actualHeight > 20 {
+                    height = actualHeight
+                }
+            }
+        }
+        return (width, height)
     }
 }
 
@@ -1416,11 +1400,7 @@ private struct AllDayWithRemindersPopoverView: View {
                         Spacer()
 
                         Button(action: {
-                            if let first = events.first {
-                                CalendarAppLauncher.open(event: first)
-                            } else {
-                                CalendarAppLauncher.open(event: nil)
-                            }
+                            CalendarAppLauncher.open(event: events.first)
                             PopoverPanel.shared.hide(delayed: false)
                         }) {
                             HStack(spacing: 2) {
@@ -1571,11 +1551,7 @@ private struct AllDayWithRemindersPopoverView: View {
 
                     if events.count > 3 {
                         Button(action: {
-                            if let first = events.first {
-                                CalendarAppLauncher.open(event: first)
-                            } else {
-                                CalendarAppLauncher.open(event: nil)
-                            }
+                            CalendarAppLauncher.open(event: events.first)
                             PopoverPanel.shared.hide(delayed: false)
                         }) {
                             Text(L10n.tr(.moreEventsNotice(events.count - 3), lang: settings.language))

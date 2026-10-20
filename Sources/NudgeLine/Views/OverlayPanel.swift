@@ -16,7 +16,6 @@ public final class OverlayPanel: NSPanel {
     private let settings: AppSettings
     public let panelState = OverlayPanelState()
     private var cancellables = Set<AnyCancellable>()
-    private var isOccludedByFullScreen: Bool = false
     private var lastMouseLoc: NSPoint = .zero
 
     public init(screen: NSScreen, settings: AppSettings) {
@@ -107,7 +106,7 @@ extension OverlayPanel {
     // 마우스 위치 기반 바 호버 판정 및 펫 근접 숨김 연산
     public func handleMouseMoved(at mouseLoc: NSPoint) {
         // 전체화면 상태일 때는 마우스 이벤트를 완전히 통과시킵니다.
-        if isOccludedByFullScreen {
+        if panelState.isOccludedByFullScreen {
             if !self.ignoresMouseEvents {
                 self.ignoresMouseEvents = true
             }
@@ -256,9 +255,6 @@ extension OverlayPanel {
     // 주입받은 시스템 윈도우 목록 기반 해당 모니터 전체화면 및 프레젠테이션 판정
     public func updateFullScreenState(windowList: [[String: Any]], currentPid: pid_t) {
         guard settings.hideOnFullScreen else {
-            if self.isOccludedByFullScreen {
-                self.isOccludedByFullScreen = false
-            }
             if self.panelState.isOccludedByFullScreen {
                 self.panelState.isOccludedByFullScreen = false
             }
@@ -320,7 +316,6 @@ extension OverlayPanel {
 
         let isOccluded = hasFullScreenOverlay || isFullDisplayCovered
 
-        self.isOccludedByFullScreen = isOccluded
         if self.panelState.isOccludedByFullScreen != isOccluded {
             self.panelState.isOccludedByFullScreen = isOccluded
         }
