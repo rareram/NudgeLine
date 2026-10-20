@@ -175,6 +175,7 @@ public struct LiquidGlassSurface: ViewModifier {
 
 // MARK: - 3-3. AppKit 글래스 서피스 브릿지 (NativeGlassSurface)
 // NSGlassEffectContainerView와 NSGlassEffectView를 SwiftUI 뷰 계층에 연결하는 래퍼
+// macOS 15 SDK 등 하위 빌드 환경과의 호환성을 위해 런타임 동적 바인딩을 적용합니다.
 @available(macOS 26.0, *)
 public struct NativeGlassSurface<Content: View>: NSViewRepresentable {
     public let cornerRadius: CGFloat
@@ -187,26 +188,45 @@ public struct NativeGlassSurface<Content: View>: NSViewRepresentable {
         self.content = content()
     }
 
-    public func makeNSView(context: Context) -> NSGlassEffectContainerView {
-        let container = NSGlassEffectContainerView()
-        container.spacing = 16
+    public func makeNSView(context: Context) -> NSView {
+        let hosting = NSHostingView(rootView: content)
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+
+        guard let containerClass = NSClassFromString("NSGlassEffectContainerView") as? NSView.Type,
+              let glassClass = NSClassFromString("NSGlassEffectView") as? NSView.Type else {
+            return hosting
+        }
+
+        let container = containerClass.init()
+        if container.responds(to: NSSelectorFromString("setSpacing:")) {
+            container.setValue(16.0 as CGFloat, forKey: "spacing")
+        }
 
         let host = NSView()
         host.translatesAutoresizingMaskIntoConstraints = false
 
-        let glass = NSGlassEffectView()
+        let glass = glassClass.init()
         glass.translatesAutoresizingMaskIntoConstraints = false
-        glass.style = .regular
-        glass.cornerRadius = cornerRadius
+        if glass.responds(to: NSSelectorFromString("setStyle:")) {
+            glass.setValue(0, forKey: "style") // 0: NSGlassEffectViewStyleRegular
+        }
+        if glass.responds(to: NSSelectorFromString("setCornerRadius:")) {
+            glass.setValue(cornerRadius, forKey: "cornerRadius")
+        }
         // 테마별 텍스트 가독성을 보정하기 위한 미세 틴트 색상
-        glass.tintColor = isDarkTheme
-            ? NSColor.black.withAlphaComponent(0.18)
-            : NSColor.white.withAlphaComponent(0.12)
+        if glass.responds(to: NSSelectorFromString("setTintColor:")) {
+            let tintColor = isDarkTheme
+                ? NSColor.black.withAlphaComponent(0.18)
+                : NSColor.white.withAlphaComponent(0.12)
+            glass.setValue(tintColor, forKey: "tintColor")
+        }
 
         // 글래스 효과 내부에 카드 본문 뷰 배치
-        let hosting = NSHostingView(rootView: content)
-        hosting.translatesAutoresizingMaskIntoConstraints = false
-        glass.contentView = hosting
+        if glass.responds(to: NSSelectorFromString("setContentView:")) {
+            glass.setValue(hosting, forKey: "contentView")
+        } else {
+            glass.addSubview(hosting)
+        }
 
         host.addSubview(glass)
         NSLayoutConstraint.activate([
@@ -216,17 +236,36 @@ public struct NativeGlassSurface<Content: View>: NSViewRepresentable {
             glass.bottomAnchor.constraint(equalTo: host.bottomAnchor),
         ])
 
-        container.contentView = host
+        if container.responds(to: NSSelectorFromString("setContentView:")) {
+            container.setValue(host, forKey: "contentView")
+        } else {
+            container.addSubview(host)
+        }
+
         return container
     }
 
-    public func updateNSView(_ nsView: NSGlassEffectContainerView, context: Context) {
+    public func updateNSView(_ nsView: NSView, context: Context) {
         // 테마 및 코너 반경 변경 사항을 하위 글래스 뷰에 반영
-        for sub in nsView.contentView?.subviews ?? [] {
-            (sub as? NSGlassEffectView)?.cornerRadius = cornerRadius
-            (sub as? NSGlassEffectView)?.tintColor = isDarkTheme
-                ? NSColor.black.withAlphaComponent(0.18)
-                : NSColor.white.withAlphaComponent(0.12)
+        let tintColor = isDarkTheme
+            ? NSColor.black.withAlphaComponent(0.18)
+            : NSColor.white.withAlphaComponent(0.12)
+
+        let targetViews: [NSView]
+        if nsView.responds(to: NSSelectorFromString("contentView")),
+           let contentHost = nsView.value(forKey: "contentView") as? NSView {
+            targetViews = contentHost.subviews
+        } else {
+            targetViews = nsView.subviews
+        }
+
+        for sub in targetViews {
+            if sub.responds(to: NSSelectorFromString("setCornerRadius:")) {
+                sub.setValue(cornerRadius, forKey: "cornerRadius")
+            }
+            if sub.responds(to: NSSelectorFromString("setTintColor:")) {
+                sub.setValue(tintColor, forKey: "tintColor")
+            }
         }
     }
 }
