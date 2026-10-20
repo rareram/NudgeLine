@@ -1,9 +1,9 @@
-// 팝오버 플로팅 패널 관리자 및 FirstMouse 호버 브릿지 제어
+// 팝오버 패널 창 및 마우스 호버 감지 뷰
 import AppKit
 import SwiftUI
 import Combine
 
-// MARK: - 1. FirstMouse 호버 브릿지 뷰 (FirstMouseHostingView)
+// MARK: - 1. 마우스 호버 감지 뷰 (FirstMouseHostingView)
 public final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
     public override var acceptsFirstResponder: Bool { true }
     private var trackingArea: NSTrackingArea?
@@ -53,27 +53,18 @@ public final class PopoverPanel: NSPanel {
     private var hostingView: FirstMouseHostingView<AnyView>?
     private var hideTimer: Timer?
     private var currentClusterId: String? = nil
-    // private var isMouseInside: Bool = false
     private var hasEnteredPopover: Bool = false
     private var isDetailMode: Bool = false
     private var showGeneration: Int = 0
     private var cancellables = Set<AnyCancellable>()
 
-    // 빈 영역 툴팁 -> 상세 카드 확장용 상태 (종일 일정 및 당일 미리알림)
+    // 빈 영역 툴팁 상세 펼침용 데이터 (종일 일정 및 당일 미리알림)
     private var pendingAllDayEvents: [CalendarEvent] = []
     private var pendingAllDayReminders: [ReminderItem] = []
     private var pendingTooltipContext: (cursorOffset: CGFloat, isHorizontal: Bool, barPosition: BarPosition, settings: AppSettings)? = nil
-    // 시간 지정 미리알림 툴팁 -> 상세 카드 확장용 상태
+    // 미리알림 툴팁 상세 펼침용 데이터
     private var pendingReminder: ReminderItem? = nil
     private var pendingReminderContext: (offset: CGFloat, isHorizontal: Bool, barPosition: BarPosition, settings: AppSettings)? = nil
-
-    private func clearPendingExpansionState() {
-        self.pendingAllDayEvents = []
-        self.pendingAllDayReminders = []
-        self.pendingTooltipContext = nil
-        self.pendingReminder = nil
-        self.pendingReminderContext = nil
-    }
 
     private init() {
         super.init(
@@ -129,96 +120,10 @@ public final class PopoverPanel: NSPanel {
         self.appearance = targetAppearance
         self.hostingView?.appearance = targetAppearance
     }
-
-    public func setMouseInside(_ inside: Bool) {
-        // self.isMouseInside = inside
-        if inside {
-            self.hasEnteredPopover = true
-            hideTimer?.invalidate()
-            hideTimer = nil
-
-            // 1. 시간 지정 미리알림 툴팁 -> 상세 액션 카드 자동 확장
-            if let reminder = pendingReminder, let context = pendingReminderContext {
-                expandToReminderCard(reminder: reminder, context: context)
-                clearPendingExpansionState()
-            }
-            // 2. 당일 종일 일정 및 할 일 툴팁 -> 상세 액션 카드 자동 확장
-            else if (!pendingAllDayEvents.isEmpty || !pendingAllDayReminders.isEmpty), let context = pendingTooltipContext {
-                expandToAllDayCard(events: pendingAllDayEvents, reminders: pendingAllDayReminders, context: context)
-                clearPendingExpansionState()
-            }
-        } else {
-            hide(delayed: true)
-        }
-    }
-
-    // 마우스 커서가 현재 위치한 디스플레이 화면 반환 (다중 모니터 대응)
-    private func currentTargetScreen() -> NSScreen? {
-        let mouseLoc = NSEvent.mouseLocation
-        return NSScreen.screens.first(where: { $0.frame.contains(mouseLoc) }) ?? NSScreen.main ?? NSScreen.screens.first
-    }
 }
 
-// MARK: - 3. 일정 호버 팝오버 표시 및 좌표 애니메이션
+// MARK: - 2-1. 메인 팝오버 표시 및 숨김 제어 (Show & Hide)
 extension PopoverPanel {
-    // MARK: - 방향별 그림자 여백 연산
-    // 타임라인 바와의 호버 간섭을 방지하고 외곽 그림자 잘림을 막기 위한 비대칭 안전 여백 반환
-    private func shadowPadding(for barPosition: BarPosition) -> EdgeInsets {
-        let margin: CGFloat = 10.0
-        switch barPosition {
-        case .left:
-            return EdgeInsets(top: margin, leading: 0, bottom: margin, trailing: margin)
-        case .right:
-            return EdgeInsets(top: margin, leading: margin, bottom: margin, trailing: 0)
-        case .bottom:
-            return EdgeInsets(top: margin, leading: margin, bottom: 0, trailing: margin)
-        }
-    }
-
-    // 그림자 여백을 고려하여 카드 본체 표시 위치에 맞춘 패널 창 프레임 연산
-    private func computePanelFrame(
-        cardX: CGFloat,
-        cardY: CGFloat,
-        cardWidth: CGFloat,
-        cardHeight: CGFloat,
-        barPosition: BarPosition
-    ) -> NSRect {
-        let pad = shadowPadding(for: barPosition)
-        let winX = cardX - pad.leading
-        let winY = cardY - pad.bottom
-        let winW = cardWidth + pad.leading + pad.trailing
-        let winH = cardHeight + pad.top + pad.bottom
-        return NSRect(x: winX, y: winY, width: winW, height: winH)
-    }
-
-    // 타임라인 바 위치에 맞춰 카드 뷰를 에지에 정렬하고 창 컨테이너 배경을 투명화
-    @ViewBuilder
-    private static func anchorCardView(
-        _ cardView: AnyView,
-        for barPosition: BarPosition
-    ) -> some View {
-        Group {
-            switch barPosition {
-            case .bottom:
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    cardView
-                }
-            case .right:
-                HStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    cardView
-                }
-            case .left:
-                HStack(spacing: 0) {
-                    cardView
-                    Spacer(minLength: 0)
-                }
-            }
-        }
-        .containerBackground(.clear, for: .window)
-    }
-
     public func show(
         events: [CalendarEvent],
         allDayEvents: [CalendarEvent] = [],
@@ -344,42 +249,70 @@ extension PopoverPanel {
             self.setFrame(finalFrame, display: true, animate: false)
         }
     }
-}
 
-// MARK: - 4. 미니 툴팁 및 안내 팝오버 표시
-extension PopoverPanel {
-    private func calculateTooltipFrame(
-        offset: CGFloat,
-        targetWidth: CGFloat,
-        targetHeight: CGFloat,
-        barPosition: BarPosition,
-        settings: AppSettings,
-        screen: NSScreen
-    ) -> NSRect {
-        let visibleFrame = screen.visibleFrame
-        let fullFrame = screen.frame
-        let thickness = max(settings.barWidth, settings.hoverWidth)
-
-        var finalX: CGFloat
-        var finalY: CGFloat
-
-        switch barPosition {
-        case .bottom:
-            let idealX = visibleFrame.minX + offset - (targetWidth / 2)
-            finalX = max(visibleFrame.minX + 4, min(visibleFrame.maxX - targetWidth - 4, idealX))
-            finalY = visibleFrame.minY + thickness + 4
-        case .left:
-            let idealY = visibleFrame.maxY - offset - (targetHeight / 2)
-            finalY = max(visibleFrame.minY + 4, min(visibleFrame.maxY - targetHeight - 4, idealY))
-            finalX = fullFrame.minX + thickness + 4
-        case .right:
-            let idealY = visibleFrame.maxY - offset - (targetHeight / 2)
-            finalY = max(visibleFrame.minY + 4, min(visibleFrame.maxY - targetHeight - 4, idealY))
-            finalX = fullFrame.maxX - thickness - targetWidth - 4
+    // 팝오버 숨김 타이머 (대각선 진입 시 0.20초 보호, 팝오버 이탈 시 0.04초 즉시 닫기)
+    public func hide(delayed: Bool = false) {
+        hideTimer?.invalidate()
+        if delayed {
+            let delayTime: TimeInterval = hasEnteredPopover ? 0.04 : (isDetailMode ? 0.20 : 0.04)
+            let timer = Timer(timeInterval: delayTime, repeats: false) { [weak self] _ in
+                guard let self = self else { return }
+                // 타이머 만료 시 실제 OS 마우스 절대 좌표로 물리적 검증 (박제 방지)
+                if self.frame.contains(NSEvent.mouseLocation) {
+                    return
+                }
+                self.performHide()
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            hideTimer = timer
+        } else {
+            clearPendingExpansionState()
+            performHide()
         }
-        return NSRect(x: finalX, y: finalY, width: targetWidth, height: targetHeight)
     }
 
+    // 팝오버 페이드아웃 및 닫기 수행
+    private func performHide() {
+        guard self.isVisible else { return }
+        let hideGen = showGeneration
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.10
+            self.animator().alphaValue = 0.0
+        }, completionHandler: { [weak self] in
+            guard let self = self else { return }
+            if self.showGeneration == hideGen {
+                self.orderOut(nil)
+                self.currentClusterId = nil
+                self.hasEnteredPopover = false
+                self.clearPendingExpansionState()
+            }
+        })
+    }
+
+    public func setMouseInside(_ inside: Bool) {
+        if inside {
+            self.hasEnteredPopover = true
+            hideTimer?.invalidate()
+            hideTimer = nil
+
+            // 1. 미리알림 툴팁을 상세 카드로 펼침
+            if let reminder = pendingReminder, let context = pendingReminderContext {
+                expandToReminderCard(reminder: reminder, context: context)
+                clearPendingExpansionState()
+            }
+            // 2. 종일 일정 툴팁을 상세 카드로 펼침
+            else if (!pendingAllDayEvents.isEmpty || !pendingAllDayReminders.isEmpty), let context = pendingTooltipContext {
+                expandToAllDayCard(events: pendingAllDayEvents, reminders: pendingAllDayReminders, context: context)
+                clearPendingExpansionState()
+            }
+        } else {
+            hide(delayed: true)
+        }
+    }
+}
+
+// MARK: - 2-2. 미니 툴팁 및 알림 표출 (Tooltips & Notices)
+extension PopoverPanel {
     public func showTimeTooltip(
         currentTime: Date,
         timeOffset: CGFloat,
@@ -543,7 +476,37 @@ extension PopoverPanel {
         )
     }
 
-    // 당일 종일 일정 및 할 일 미니 툴팁 -> 상세 액션 카드 자동 확장
+    public func showPermissionNotice(
+        cursorOffset: CGFloat,
+        isHorizontal: Bool,
+        barPosition: BarPosition,
+        settings: AppSettings = .shared
+    ) {
+        guard let screen = currentTargetScreen() else { return }
+
+        let targetWidth: CGFloat = settings.language.isKorean ? 260.0 : 360.0
+        let finalFrame = calculateTooltipFrame(
+            offset: cursorOffset,
+            targetWidth: targetWidth,
+            targetHeight: 24.0,
+            barPosition: barPosition,
+            settings: settings,
+            screen: screen
+        )
+
+        presentTooltip(
+            content: AnyView(PermissionNoticeTooltipView(settings: settings)),
+            frame: finalFrame,
+            clusterId: "__PERMISSION_NOTICE__",
+            isDetailMode: true, // 시스템 설정 열기 버튼을 클릭할 수 있도록 마우스 브릿지를 유지합니다.
+            settings: settings
+        )
+    }
+}
+
+// MARK: - 2-3. 상세 카드 점진적 확장 (Interactive Card Expansion)
+extension PopoverPanel {
+    // 종일 일정 툴팁을 상세 카드로 펼침
     private func expandToAllDayCard(
         events: [CalendarEvent],
         reminders: [ReminderItem] = [],
@@ -641,7 +604,7 @@ extension PopoverPanel {
         }
     }
 
-    // 시간 지정 미리알림 미니 툴팁 -> 상세 액션 카드 자동 확장
+    // 미리알림 툴팁을 상세 카드로 펼침
     private func expandToReminderCard(
         reminder: ReminderItem,
         context: (offset: CGFloat, isHorizontal: Bool, barPosition: BarPosition, settings: AppSettings)
@@ -742,33 +705,17 @@ extension PopoverPanel {
         }
     }
 
-    public func showPermissionNotice(
-        cursorOffset: CGFloat,
-        isHorizontal: Bool,
-        barPosition: BarPosition,
-        settings: AppSettings = .shared
-    ) {
-        guard let screen = currentTargetScreen() else { return }
-
-        let targetWidth: CGFloat = settings.language.isKorean ? 260.0 : 360.0
-        let finalFrame = calculateTooltipFrame(
-            offset: cursorOffset,
-            targetWidth: targetWidth,
-            targetHeight: 24.0,
-            barPosition: barPosition,
-            settings: settings,
-            screen: screen
-        )
-
-        presentTooltip(
-            content: AnyView(PermissionNoticeTooltipView(settings: settings)),
-            frame: finalFrame,
-            clusterId: "__PERMISSION_NOTICE__",
-            isDetailMode: true, // 시스템 설정 열기 버튼을 클릭할 수 있도록 마우스 브릿지를 유지합니다.
-            settings: settings
-        )
+    private func clearPendingExpansionState() {
+        self.pendingAllDayEvents = []
+        self.pendingAllDayReminders = []
+        self.pendingTooltipContext = nil
+        self.pendingReminder = nil
+        self.pendingReminderContext = nil
     }
+}
 
+// MARK: - 2-4. 내부 기하 및 프레임 연산 헬퍼 (Geometry & Layout Helpers)
+extension PopoverPanel {
     // 여러 소형 툴팁(현재 시각, 빈 일정 안내, 권한 알림 등)을 공통 페이드 애니메이션으로 표시합니다.
     private func presentTooltip(
         content: AnyView,
@@ -813,53 +760,104 @@ extension PopoverPanel {
             }
         }
     }
-}
 
-// MARK: - 5. 팝오버 닫기 및 애니메이션 타이머
-extension PopoverPanel {
-    // 팝오버 숨김 타이머 (대각선 진입 시 0.20초 보호, 팝오버 이탈 시 0.04초 즉시 닫기)
-    public func hide(delayed: Bool = false) {
-        hideTimer?.invalidate()
-        if delayed {
-            let delayTime: TimeInterval = hasEnteredPopover ? 0.04 : (isDetailMode ? 0.20 : 0.04)
-            let timer = Timer(timeInterval: delayTime, repeats: false) { [weak self] _ in
-                guard let self = self else { return }
-                // 타이머 만료 시 실제 OS 마우스 절대 좌표로 물리적 검증 (박제 방지)
-                if self.frame.contains(NSEvent.mouseLocation) {
-                    return
-                }
-                // self.isMouseInside = false
-                self.performHide()
-            }
-            RunLoop.main.add(timer, forMode: .common)
-            hideTimer = timer
-        } else {
-            clearPendingExpansionState()
-            performHide()
+    // 그림자 여백을 고려하여 카드 본체 표시 위치에 맞춘 패널 창 프레임 연산
+    private func computePanelFrame(
+        cardX: CGFloat,
+        cardY: CGFloat,
+        cardWidth: CGFloat,
+        cardHeight: CGFloat,
+        barPosition: BarPosition
+    ) -> NSRect {
+        let pad = shadowPadding(for: barPosition)
+        let winX = cardX - pad.leading
+        let winY = cardY - pad.bottom
+        let winW = cardWidth + pad.leading + pad.trailing
+        let winH = cardHeight + pad.top + pad.bottom
+        return NSRect(x: winX, y: winY, width: winW, height: winH)
+    }
+
+    private func calculateTooltipFrame(
+        offset: CGFloat,
+        targetWidth: CGFloat,
+        targetHeight: CGFloat,
+        barPosition: BarPosition,
+        settings: AppSettings,
+        screen: NSScreen
+    ) -> NSRect {
+        let visibleFrame = screen.visibleFrame
+        let fullFrame = screen.frame
+        let thickness = max(settings.barWidth, settings.hoverWidth)
+
+        var finalX: CGFloat
+        var finalY: CGFloat
+
+        switch barPosition {
+        case .bottom:
+            let idealX = visibleFrame.minX + offset - (targetWidth / 2)
+            finalX = max(visibleFrame.minX + 4, min(visibleFrame.maxX - targetWidth - 4, idealX))
+            finalY = visibleFrame.minY + thickness + 4
+        case .left:
+            let idealY = visibleFrame.maxY - offset - (targetHeight / 2)
+            finalY = max(visibleFrame.minY + 4, min(visibleFrame.maxY - targetHeight - 4, idealY))
+            finalX = fullFrame.minX + thickness + 4
+        case .right:
+            let idealY = visibleFrame.maxY - offset - (targetHeight / 2)
+            finalY = max(visibleFrame.minY + 4, min(visibleFrame.maxY - targetHeight - 4, idealY))
+            finalX = fullFrame.maxX - thickness - targetWidth - 4
+        }
+        return NSRect(x: finalX, y: finalY, width: targetWidth, height: targetHeight)
+    }
+
+    // 타임라인 바와의 호버 간섭을 방지하고 외곽 그림자 잘림을 막기 위한 비대칭 안전 여백 반환
+    private func shadowPadding(for barPosition: BarPosition) -> EdgeInsets {
+        let margin: CGFloat = 10.0
+        switch barPosition {
+        case .left:
+            return EdgeInsets(top: margin, leading: 0, bottom: margin, trailing: margin)
+        case .right:
+            return EdgeInsets(top: margin, leading: margin, bottom: margin, trailing: 0)
+        case .bottom:
+            return EdgeInsets(top: margin, leading: margin, bottom: 0, trailing: margin)
         }
     }
 
-    // 팝오버 페이드아웃 및 닫기 수행
-    private func performHide() {
-        guard self.isVisible else { return }
-        let hideGen = showGeneration
-        NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.10
-            self.animator().alphaValue = 0.0
-        }, completionHandler: { [weak self] in
-            guard let self = self else { return }
-            if self.showGeneration == hideGen {
-                self.orderOut(nil)
-                self.currentClusterId = nil
-                // self.isMouseInside = false
-                self.hasEnteredPopover = false
-                self.clearPendingExpansionState()
+    // 타임라인 바 위치에 맞춰 카드 뷰를 에지에 정렬하고 창 컨테이너 배경을 투명화
+    @ViewBuilder
+    private static func anchorCardView(
+        _ cardView: AnyView,
+        for barPosition: BarPosition
+    ) -> some View {
+        Group {
+            switch barPosition {
+            case .bottom:
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    cardView
+                }
+            case .right:
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    cardView
+                }
+            case .left:
+                HStack(spacing: 0) {
+                    cardView
+                    Spacer(minLength: 0)
+                }
             }
-        })
+        }
+        .containerBackground(.clear, for: .window)
+    }
+
+    // 마우스 커서가 현재 위치한 디스플레이 화면 반환 (다중 모니터 대응)
+    private func currentTargetScreen() -> NSScreen? {
+        let mouseLoc = NSEvent.mouseLocation
+        return NSScreen.screens.first(where: { $0.frame.contains(mouseLoc) }) ?? NSScreen.main ?? NSScreen.screens.first
     }
 }
 
-// MARK: - 5-3. 수면 잔물결 액체 셰이프 (다중 조화파 합성 유체 파동)
+// MARK: - 3-1. 스누즈 게이지 물결 셰이프 (LiquidWaveShape)
 private struct LiquidWaveShape: Shape {
     var fillWidth: CGFloat
     var time: Double
@@ -898,7 +896,7 @@ private struct LiquidWaveShape: Shape {
     }
 }
 
-// MARK: - 5-4. 수면 잔물결 하이라이트 셰이프 (LiquidWaveCrestShape)
+// MARK: - 3-2. 물결 능선 라인 셰이프 (LiquidWaveCrestShape)
 private struct LiquidWaveCrestShape: Shape {
     var fillWidth: CGFloat
     var time: Double
@@ -937,7 +935,7 @@ private struct LiquidWaveCrestShape: Shape {
     }
 }
 
-// MARK: - 6. 현재 시각 미니 툴팁 뷰 (CurrentTimeTooltipView)
+// MARK: - 4-1. 현재 시각 미니 툴팁 뷰 (CurrentTimeTooltipView)
 private struct CurrentTimeTooltipView: View {
     let currentTime: Date
     var timeOffset: CGFloat = 0
@@ -1090,7 +1088,7 @@ private struct CurrentTimeTooltipView: View {
     }
 }
 
-// MARK: - 6-1. 미리알림 미니 툴팁 뷰 (ReminderTooltipView)
+// MARK: - 4-2. 미리알림 미니 툴팁 뷰 (ReminderTooltipView)
 private struct ReminderTooltipView: View {
     let reminder: ReminderItem
     let settings: AppSettings
@@ -1163,7 +1161,7 @@ private struct ReminderTooltipView: View {
     }
 }
 
-// MARK: - 7. 빈 일정 및 종일 일정 안내 툴팁 뷰 (EmptyScheduleTooltipView)
+// MARK: - 4-3. 빈 일정 및 종일 일정 안내 툴팁 뷰 (EmptyScheduleTooltipView)
 private struct EmptyScheduleTooltipView: View {
     let allDayEvents: [CalendarEvent]
     let allDayReminders: [ReminderItem]
@@ -1365,8 +1363,8 @@ private struct EmptyScheduleTooltipView: View {
     }
 }
 
-// MARK: - 7-1. 종일 일정 및 미리알림 복합 상세 팝오버 뷰 (AllDayWithRemindersPopoverView)
-// 당일 종일 일정 및 미리알림 복합 상세 팝오버: 2단 섹션 분리 및 원클릭 체크 완료
+// MARK: - 5-1. 종일 일정 및 할 일 상세 카드 (AllDayWithRemindersPopoverView)
+// 종일 일정 목록과 할 일 체크박스를 표시하는 카드
 private struct AllDayWithRemindersPopoverView: View {
     let events: [CalendarEvent]
     let reminders: [ReminderItem]
@@ -1785,8 +1783,8 @@ private struct AllDayWithRemindersPopoverView: View {
     }
 }
 
-// MARK: - 7-2. 시간 지정 미리알림 단독 상세 팝오버 뷰 (ReminderPopoverCardView)
-// 시간 지정 미리알림 호버 시 원클릭 완료 및 앱 바로가기를 제공하는 점진적 공개 액션 카드
+// MARK: - 5-2. 미리알림 상세 카드 (ReminderPopoverCardView)
+// 미리알림 완료 체크 및 세부 정보를 표시하는 카드
 private struct ReminderPopoverCardView: View {
     let reminder: ReminderItem
     let barPosition: BarPosition
@@ -2065,7 +2063,7 @@ private struct ReminderPopoverCardView: View {
     }
 }
 
-// MARK: - 8. 캘린더 접근 권한 안내 뷰 (PermissionNoticeTooltipView)
+// MARK: - 6. 캘린더 접근 권한 안내 뷰 (PermissionNoticeTooltipView)
 private struct PermissionNoticeTooltipView: View {
     let settings: AppSettings
 

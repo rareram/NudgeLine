@@ -723,6 +723,13 @@ extension AppSettings {
         return Color(hex: trackColorHex) ?? .black
     }
 
+    // 펫 스누즈(일시 숨김) 테마 색상 (다크 모드: 고발광 스카이블루, 라이트 모드: 고대비 딥 로열블루)
+    public static func petSnoozeAccentColor(isDark: Bool) -> Color {
+        isDark
+            ? Color(red: 0.35, green: 0.58, blue: 0.98) // 다크모드: 어두운 배경 위 고시인성 스카이블루
+            : Color(red: 0.08, green: 0.42, blue: 0.92) // 라이트모드: 흰색/밝은 배경 위 고대비 딥 로열블루
+    }
+
     public func setCustomColor(for id: String, color: Color?) {
         if let color = color, let hex = color.toHex() {
             calendarCustomColors[id] = hex
@@ -814,14 +821,5 @@ public extension Color {
             // 라이트 모드: 흰 배경 위에서 날아가지 않도록 명도를 톤다운하고 채도 보존
             return Color(nsColor: NSColor(hue: h, saturation: min(1.0, s * 1.15), brightness: b * factor, alpha: a))
         }
-    }
-}
-
-// MARK: - 펫 스누즈(일시 숨김) 테마 색상 (다크 모드: 고발광 스카이블루, 라이트 모드: 고대비 딥 로열블루)
-public extension AppSettings {
-    static func petSnoozeAccentColor(isDark: Bool) -> Color {
-        isDark
-            ? Color(red: 0.35, green: 0.58, blue: 0.98) // 다크모드: 어두운 배경 위 고시인성 스카이블루
-            : Color(red: 0.08, green: 0.42, blue: 0.92) // 라이트모드: 흰색/밝은 배경 위 고대비 딥 로열블루
     }
 }

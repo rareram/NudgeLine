@@ -311,11 +311,11 @@ extension OverlayPanel {
             }
         }
 
-        // [실측 기반 전체화면 및 프레젠테이션 확정 조건]
+        // 전체화면 및 프레젠테이션 모드 판별
         // 1. 특수 오버레이 레이어 기반 전체화면 (툴바 26 / 종료 배너 999 등)
         let hasFullScreenOverlay = (onScreenCoveringApps.count == 1) && hasFullScreenLayer
 
-        // 2. 물리 화면 높이 100% 덮음 (IINA / 유튜브 / Keynote / MS 파워포인트 등)
+        // 2. 물리 화면 전체 덮음 (동영상 플레이어, 프레젠테이션 등)
         let isFullDisplayCovered = (maxCoveringHeight >= targetBounds.height - 5.0)
 
         let isOccluded = hasFullScreenOverlay || isFullDisplayCovered
@@ -358,6 +358,14 @@ private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Con
         super.init(rootView: rootView)
     }
 
+    // 물리 바 두께 이외 영역의 마우스 클릭을 하위 앱으로 관통
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        if isHitInBar(windowPoint: point) {
+            return self
+        }
+        return nil
+    }
+
     // 바 내부 영역 판정 (윈도우 좌표계 기준, 설정된 두께와 1:1 일치)
     private func isHitInBar(windowPoint: NSPoint) -> Bool {
         let thickness = settings.expandOnHover ? max(settings.barWidth, settings.hoverWidth) : settings.barWidth
@@ -371,14 +379,6 @@ private final class EdgePassthroughHostingView<Content: View>: NSHostingView<Con
         case .bottom:
             return windowPoint.y >= 0 && windowPoint.y <= hitMargin
         }
-    }
-
-    // 물리 바 두께 이외 영역의 마우스 클릭을 하위 앱으로 관통
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        if isHitInBar(windowPoint: point) {
-            return self
-        }
-        return nil
     }
 
     // 메뉴 아이템 항상 활성화 유효성 검증

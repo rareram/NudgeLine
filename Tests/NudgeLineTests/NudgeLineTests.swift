@@ -4,10 +4,17 @@ import SwiftUI
 import EventKit
 @testable import NudgeLine
 
+import Testing
+import Foundation
+import SwiftUI
+import EventKit
+@testable import NudgeLine
+
+// MARK: - 1. 다국어 현지화 단위 테스트
 @Suite("Localization Tests")
 struct LocalizationTests {
-    @Test("한/영 다국어 주요 키 번역 검증")
-    func testLocalizationKeys() {
+    @Test("핵심 화면 및 빈 상태 다국어 키 검증")
+    func testCoreAndEmptyStateLocalization() {
         // 캘린더 미연동 및 오늘 예정된 일정 없음 키
         #expect(L10n.tr(.noCalendars, lang: .ko) == "등록된 캘린더가 없습니다.")
         #expect(L10n.tr(.noCalendars, lang: .en) == "No calendars found.")
@@ -15,33 +22,14 @@ struct LocalizationTests {
         #expect(L10n.tr(.noCalendarsWithSettings, lang: .en) == "No calendars connected (Settings ⌘,)")
         #expect(L10n.tr(.noEventsToday, lang: .ko) == "오늘 예정된 일정이 없습니다.")
         #expect(L10n.tr(.noEventsToday, lang: .en) == "No events scheduled for today.")
+        #expect(L10n.tr(.noEventsShort, lang: .ko) == "일정 없음")
+        #expect(L10n.tr(.noEventsShort, lang: .en) == "No events")
 
-        // 종일 일정 안내 키
-        #expect(L10n.tr(.allDayNotice("전사 휴무"), lang: .ko) == "하루 종일: 전사 휴무")
-        #expect(L10n.tr(.allDayNotice("Company Holiday"), lang: .en) == "All Day: Company Holiday")
-        #expect(L10n.tr(.allDayNoticeWithCount("전사 휴무", 2), lang: .ko) == "하루 종일: 전사 휴무 외 2건")
-        #expect(L10n.tr(.allDayNoticeWithCount("Company Holiday", 2), lang: .en) == "All Day: Company Holiday +2")
-
-        // 시스템 설정 열기 키
+        // 캘린더 권한 및 시스템 설정 열기 키
         #expect(L10n.tr(.openSystemPrivacy, lang: .ko) == "시스템 설정 열기")
         #expect(L10n.tr(.openSystemPrivacy, lang: .en) == "Open System Settings")
-
-        // 캘린더 권한 필요 키
         #expect(L10n.tr(.permissionNeeded, lang: .ko) == "macOS 캘린더 접근 권한이 필요합니다.")
         #expect(L10n.tr(.permissionNeeded, lang: .en) == "Calendar access permission is required.")
-
-        // 미리알림 설명문 및 표시 범위 키
-        #expect(L10n.tr(.enableRemindersDescription, lang: .ko) == "날짜 및 시간 정보가 있는 미리알림만 타임라인에 표시됩니다.")
-        #expect(L10n.tr(.enableRemindersDescription, lang: .en) == "Only reminders with a due date and time are shown.")
-        #expect(L10n.tr(.reminderProximityLabel, lang: .ko) == "표시 범위:")
-        #expect(L10n.tr(.reminderProximityLabel, lang: .en) == "Display Range:")
-        #expect(L10n.tr(.reminderRange1Hour, lang: .ko) == "1시간")
-        #expect(L10n.tr(.reminderRangeAllDay, lang: .ko) == "하루 전체")
-        #expect(L10n.tr(.reminderRangeAllDay, lang: .en) == "All Day")
-
-        // 지난 일정 흐리게 키
-        #expect(L10n.tr(.dimPastEventsLabel, lang: .ko) == "지난 일정 흐리게")
-        #expect(L10n.tr(.dimPastEventsLabel, lang: .en) == "Dim past events")
 
         // 캘린더 계정 및 앱 열기 버튼 키
         #expect(L10n.tr(.manageAccountsButton, lang: .ko) == "시스템 계정 관리…")
@@ -50,12 +38,11 @@ struct LocalizationTests {
         #expect(L10n.tr(.openCalendarApp, lang: .en) == "Open Calendar")
         #expect(L10n.tr(.openRemindersApp, lang: .ko) == "미리알림 앱 열기")
         #expect(L10n.tr(.openRemindersApp, lang: .en) == "Open Reminders")
+    }
 
-        // 전체 화면 시 숨김 키
-        #expect(L10n.tr(.hideOnFullScreenLabel, lang: .ko) == "전체 화면 시 숨김 (영상, 프레젠테이션)")
-        #expect(L10n.tr(.hideOnFullScreenLabel, lang: .en) == "Hide in Full Screen (Video, Presentation)")
-
-        // 설정창 4대 탭 타이틀 검증
+    @Test("설정창 탭 및 메뉴바 생명주기 다국어 키 검증")
+    func testSettingsTabsAndNavigationLocalization() {
+        // 설정창 5대 탭 타이틀 검증
         #expect(SettingsTab.timeline.title(lang: .ko) == "타임라인")
         #expect(SettingsTab.timeline.title(lang: .en) == "Timeline")
         #expect(SettingsTab.appearance.title(lang: .ko) == "표시 및 효과")
@@ -79,23 +66,29 @@ struct LocalizationTests {
         #expect(L10n.tr(.githubRepo, lang: .ko) == "GitHub 저장소 ↗")
         #expect(L10n.tr(.githubRepo, lang: .en) == "GitHub Repository ↗")
 
-        // 빈 상태 및 범위 외 일정 안내 키
-        #expect(L10n.tr(.noEventsShort, lang: .ko) == "일정 없음")
-        #expect(L10n.tr(.noEventsShort, lang: .en) == "No events")
-        #expect(L10n.tr(.noTimedEventsWithAllDayCard("연차"), lang: .ko) == "시간 일정 없음 · 종일: 연차")
-        #expect(L10n.tr(.noTimedEventsWithAllDayCard("Vacation"), lang: .en) == "No timed events · All-Day: Vacation")
-        #expect(L10n.tr(.outOfRangeSingleCard("21:00", "회의"), lang: .ko) == "표시 범위 외 1건 (21:00 회의)")
-        #expect(L10n.tr(.outOfRangeSingleCard("21:00", "Meeting"), lang: .en) == "1 event outside range (21:00 Meeting)")
-        #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .ko) == "범위 외 2건 (21:00)")
-        #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .en) == "Outside range: 2 (21:00)")
-
-        // 인앱 업데이트 및 지도 서비스 다국어 키
+        // 인앱 업데이트 및 옵션 라벨
         #expect(L10n.tr(.updateNowInApp, lang: .ko) == "지금 업데이트")
         #expect(L10n.tr(.updateNowInApp, lang: .en) == "Update Now")
         #expect(L10n.tr(.installingAndRestarting, lang: .ko) == "업데이트 설치 및 재시작 중…")
         #expect(L10n.tr(.installingAndRestarting, lang: .en) == "Installing update & restarting…")
         #expect(L10n.tr(.preferredMapServiceLabel, lang: .ko) == "일정 위치 열기:")
         #expect(L10n.tr(.preferredMapServiceLabel, lang: .en) == "Open Location with:")
+        #expect(L10n.tr(.hideOnFullScreenLabel, lang: .ko) == "전체 화면 시 숨김 (영상, 프레젠테이션)")
+        #expect(L10n.tr(.hideOnFullScreenLabel, lang: .en) == "Hide in Full Screen (Video, Presentation)")
+        #expect(L10n.tr(.dimPastEventsLabel, lang: .ko) == "지난 일정 흐리게")
+        #expect(L10n.tr(.dimPastEventsLabel, lang: .en) == "Dim past events")
+    }
+
+    @Test("미리알림 및 스누즈 다국어 키 검증")
+    func testRemindersAndRangeLocalization() {
+        // 미리알림 설명문 및 표시 범위 키
+        #expect(L10n.tr(.enableRemindersDescription, lang: .ko) == "날짜 및 시간 정보가 있는 미리알림만 타임라인에 표시됩니다.")
+        #expect(L10n.tr(.enableRemindersDescription, lang: .en) == "Only reminders with a due date and time are shown.")
+        #expect(L10n.tr(.reminderProximityLabel, lang: .ko) == "표시 범위:")
+        #expect(L10n.tr(.reminderProximityLabel, lang: .en) == "Display Range:")
+        #expect(L10n.tr(.reminderRange1Hour, lang: .ko) == "1시간")
+        #expect(L10n.tr(.reminderRangeAllDay, lang: .ko) == "하루 전체")
+        #expect(L10n.tr(.reminderRangeAllDay, lang: .en) == "All Day")
         #expect(L10n.tr(.reminderMarkerGlowLabel, lang: .ko) == "마커 네온 효과 및 테두리 강조")
         #expect(L10n.tr(.reminderMarkerGlowLabel, lang: .en) == "Marker neon glow & border accent")
 
@@ -105,8 +98,23 @@ struct LocalizationTests {
         #expect(L10n.tr(.petSnoozedTooltip(10), lang: .ko) == "펫 숨김 10분 남음 · 클릭 시 복귀")
         #expect(L10n.tr(.petSnoozedTooltip(10), lang: .en) == "Pet paused for 10m · Click to resume")
     }
+
+    @Test("종일 일정 및 초과 일정 포맷 다국어 검증")
+    func testAllDayAndNoticeFormatLocalization() {
+        #expect(L10n.tr(.allDayNotice("전사 휴무"), lang: .ko) == "하루 종일: 전사 휴무")
+        #expect(L10n.tr(.allDayNotice("Company Holiday"), lang: .en) == "All Day: Company Holiday")
+        #expect(L10n.tr(.allDayNoticeWithCount("전사 휴무", 2), lang: .ko) == "하루 종일: 전사 휴무 외 2건")
+        #expect(L10n.tr(.allDayNoticeWithCount("Company Holiday", 2), lang: .en) == "All Day: Company Holiday +2")
+        #expect(L10n.tr(.noTimedEventsWithAllDayCard("연차"), lang: .ko) == "시간 일정 없음 · 종일: 연차")
+        #expect(L10n.tr(.noTimedEventsWithAllDayCard("Vacation"), lang: .en) == "No timed events · All-Day: Vacation")
+        #expect(L10n.tr(.outOfRangeSingleCard("21:00", "회의"), lang: .ko) == "표시 범위 외 1건 (21:00 회의)")
+        #expect(L10n.tr(.outOfRangeSingleCard("21:00", "Meeting"), lang: .en) == "1 event outside range (21:00 Meeting)")
+        #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .ko) == "범위 외 2건 (21:00)")
+        #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .en) == "Outside range: 2 (21:00)")
+    }
 }
 
+// MARK: - 2. 앱 전역 설정 및 색상 유틸리티 단위 테스트
 @Suite("AppSettings Tests")
 struct AppSettingsTests {
     @Test("앱 환경설정 기본값 정합성 검증")
@@ -118,6 +126,7 @@ struct AppSettingsTests {
         #expect(settings.hoverWidth >= settings.barWidth)
         #expect(settings.preEventAlertMinutes >= 5 && settings.preEventAlertMinutes <= 20)
         #expect(settings.enableReminderMarkerGlow == true)
+        #expect(settings.clearPastReminderMarkers == true)
     }
 
     @Test("테마 다크모드 판별 검증")
@@ -159,8 +168,50 @@ struct AppSettingsTests {
         settings.checkSnoozeExpiration()
         #expect(settings.snoozeUntil == nil)
     }
+
+    @Test("펫 스누즈 테마 색상 토큰 및 HEX 변환 검증")
+    func testPetSnoozeAccentColorAndHex() {
+        // 다크 모드: 고시인성 스카이블루 토큰 (ADR-58)
+        let darkColor = AppSettings.petSnoozeAccentColor(isDark: true)
+        #expect(darkColor.toHex() != nil)
+
+        // 라이트 모드: 고대비 딥 로열블루 토큰 (ADR-58)
+        let lightColor = AppSettings.petSnoozeAccentColor(isDark: false)
+        #expect(lightColor.toHex() != nil)
+
+        // Color(hex:) 파싱 및 toHex() 상호 변환 검증
+        let hexColor = Color(hex: "#FF5733")
+        #expect(hexColor != nil)
+        let convertedHex = hexColor?.toHex()
+        #expect(convertedHex?.uppercased() == "#FF5733")
+
+        // 잘못된 HEX 문자열 방어
+        #expect(Color(hex: "invalid") == nil)
+        #expect(Color(hex: "#123") == nil)
+
+        // 명암비 자동 보정(adjustedForContrast) 검증
+        let baseColor = Color.blue
+        let darkAdjusted = baseColor.adjustedForContrast(isDark: true)
+        let lightAdjusted = baseColor.adjustedForContrast(isDark: false)
+        #expect(darkAdjusted.toHex() != nil)
+        #expect(lightAdjusted.toHex() != nil)
+    }
+
+    @Test("타임라인 시작 및 종료 시각 계산 검증")
+    func testTimelineDateRangeCalculation() {
+        let settings = AppSettings.shared
+        let today = Date()
+
+        let start = settings.startDate(for: today)
+        let end = settings.endDate(for: today)
+
+        #expect(end > start)
+        let diffHours = end.timeIntervalSince(start) / 3600.0
+        #expect(diffHours >= 1.0)
+    }
 }
 
+// MARK: - 3. 캘린더 일정 모델 및 세그먼트 슬라이싱 단위 테스트
 @Suite("CalendarEvent Model Tests")
 struct CalendarEventModelTests {
     @Test("이벤트 시간 범위 및 기본값 검증")
@@ -202,6 +253,92 @@ struct CalendarEventModelTests {
         #expect(allDayEvent.formattedTimeRange(lang: .ko) == "하루 종일")
         #expect(allDayEvent.formattedTimeRange(lang: .en) == "All Day")
     }
+
+    @Test("단일 일정의 타임라인 단일 세그먼트 생성 검증")
+    func testBuildSegmentsSingleEvent() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dayStart = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: today)!
+        let dayEnd = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: today)!
+
+        let evStart = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: today)!
+        let evEnd = calendar.date(bySettingHour: 11, minute: 0, second: 0, of: today)!
+        let event = CalendarEvent(id: "single-1", rawTitle: "단일 미팅", startDate: evStart, endDate: evEnd)
+
+        let segments = CalendarEvent.buildSegments(from: [event], dayStart: dayStart, dayEnd: dayEnd)
+        #expect(segments.count == 1)
+        #expect(segments.first?.start == evStart)
+        #expect(segments.first?.end == evEnd)
+        #expect(segments.first?.events.count == 1)
+        #expect(segments.first?.events.first?.id == "single-1")
+        #expect(segments.first?.isOverlap == false)
+    }
+
+    @Test("2개 중첩 일정의 3단계 슬라이스 분할 검증")
+    func testBuildSegmentsOverlappingEvents() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dayStart = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: today)!
+        let dayEnd = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: today)!
+
+        // 일정 A: 10:00 ~ 11:30
+        let aStart = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: today)!
+        let aEnd = calendar.date(bySettingHour: 11, minute: 30, second: 0, of: today)!
+        let eventA = CalendarEvent(id: "ev-A", rawTitle: "일정 A", startDate: aStart, endDate: aEnd)
+
+        // 일정 B: 11:00 ~ 12:00 (11:00~11:30 구간 중첩)
+        let bStart = calendar.date(bySettingHour: 11, minute: 0, second: 0, of: today)!
+        let bEnd = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: today)!
+        let eventB = CalendarEvent(id: "ev-B", rawTitle: "일정 B", startDate: bStart, endDate: bEnd)
+
+        let segments = CalendarEvent.buildSegments(from: [eventA, eventB], dayStart: dayStart, dayEnd: dayEnd)
+        // 3개 슬라이스로 정확히 분할되어야 함: [10:00~11:00 (A)], [11:00~11:30 (A+B)], [11:30~12:00 (B)]
+        #expect(segments.count == 3)
+
+        // 1구간: 일정 A 단독
+        #expect(segments[0].start == aStart)
+        #expect(segments[0].end == bStart)
+        #expect(segments[0].events.count == 1)
+        #expect(segments[0].events.first?.id == "ev-A")
+        #expect(segments[0].isOverlap == false)
+
+        // 2구간: 일정 A + B 중첩
+        #expect(segments[1].start == bStart)
+        #expect(segments[1].end == aEnd)
+        #expect(segments[1].events.count == 2)
+        #expect(segments[1].isOverlap == true)
+
+        // 3구간: 일정 B 단독
+        #expect(segments[2].start == aEnd)
+        #expect(segments[2].end == bEnd)
+        #expect(segments[2].events.count == 1)
+        #expect(segments[2].events.first?.id == "ev-B")
+        #expect(segments[2].isOverlap == false)
+    }
+
+    @Test("종일 일정 및 표시 범위 외 일정의 세그먼트 제외 필터링 검증")
+    func testBuildSegmentsFiltersAllDayAndOutOfRange() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dayStart = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: today)!
+        let dayEnd = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: today)!
+
+        // 종일 일정
+        let allDay = CalendarEvent(id: "allday-1", rawTitle: "휴가", startDate: today, endDate: today, isAllDay: true)
+
+        // 범위 이전 일정 (07:00 ~ 08:30)
+        let pastStart = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: today)!
+        let pastEnd = calendar.date(bySettingHour: 8, minute: 30, second: 0, of: today)!
+        let pastEvent = CalendarEvent(id: "past-1", rawTitle: "조찬", startDate: pastStart, endDate: pastEnd)
+
+        // 범위 이후 일정 (19:00 ~ 20:00)
+        let futureStart = calendar.date(bySettingHour: 19, minute: 0, second: 0, of: today)!
+        let futureEnd = calendar.date(bySettingHour: 20, minute: 0, second: 0, of: today)!
+        let futureEvent = CalendarEvent(id: "future-1", rawTitle: "야근", startDate: futureStart, endDate: futureEnd)
+
+        let segments = CalendarEvent.buildSegments(from: [allDay, pastEvent, futureEvent], dayStart: dayStart, dayEnd: dayEnd)
+        #expect(segments.isEmpty)
+    }
 }
 
 @Suite("Version Comparison Tests")
@@ -236,6 +373,23 @@ struct VersionComparisonTests {
             url: URL(string: "https://github.com/rareram/NudgeLine/releases/tag/v0.4.0")!
         )
         #expect(releaseWithoutZip.zipURL == nil)
+    }
+
+    @Test("버전 비교 엣지 케이스 및 세 자릿수 빌드 정밀 판별 검증")
+    func testIsNewerVersionEdgeCases() {
+        // 빌드 번호가 주어졌을 때의 패치 비교
+        #expect(UpdateService.isNewerVersion(latest: "0.4.500", current: "0.4", currentBuild: "425") == true)
+        #expect(UpdateService.isNewerVersion(latest: "0.4.425", current: "0.4", currentBuild: "425") == false)
+        #expect(UpdateService.isNewerVersion(latest: "0.4.424", current: "0.4", currentBuild: "425") == false)
+
+        // 자릿수가 다른 동일 프리픽스 버전 비교
+        #expect(UpdateService.isNewerVersion(latest: "0.4.0", current: "0.4", currentBuild: "") == false)
+        #expect(UpdateService.isNewerVersion(latest: "0.4.0.1", current: "0.4.0", currentBuild: "") == true)
+
+        // 비정상/빈 문자열 입력 방어
+        #expect(UpdateService.isNewerVersion(latest: "", current: "0.4", currentBuild: "425") == false)
+        #expect(UpdateService.isNewerVersion(latest: "invalid", current: "0.4", currentBuild: "425") == false)
+        #expect(UpdateService.isNewerVersion(latest: "0.5.alpha", current: "0.4", currentBuild: "425") == true)
     }
 }
 
@@ -487,6 +641,27 @@ struct WebLinkExtractionTests {
         // 하단 줌 버튼이 생기므로 상단 웹 링크로는 중복 노출되지 않음
         #expect(event.webLink == nil)
     }
+
+    @Test("웹 링크 끝단 문장부호 정제 및 위험 스킴 방어 검증")
+    func testWebLinkPunctuationTrimmingAndSafety() {
+        // 문장 끝 괄호 및 마침표가 붙은 웹 링크
+        let eventWithPunctuation = CalendarEvent(
+            id: "punct-1",
+            rawTitle: "문서 공유",
+            notes: "참고 문서 확인 부탁드립니다: (https://github.com/rareram/NudgeLine)."
+        )
+        #expect(eventWithPunctuation.webLink != nil)
+        #expect(eventWithPunctuation.webLink?.displayHost == "github.com")
+        #expect(eventWithPunctuation.webLink?.url.absoluteString == "https://github.com/rareram/NudgeLine")
+
+        // 위험한 자바스크립트 스킴 삽입 시도 방어
+        let unsafeEvent = CalendarEvent(
+            id: "unsafe-1",
+            rawTitle: "보안 테스트",
+            notes: "클릭하세요: javascript:alert('xss')"
+        )
+        #expect(unsafeEvent.webLink == nil)
+    }
 }
 
 // MARK: - 본문 메모 정제 및 보일러플레이트 필터링 검증
@@ -690,22 +865,23 @@ struct ReminderIntegrationTests {
         let dueIn120Min = calendar.date(byAdding: .minute, value: 120, to: now)!
         let item120Min = ReminderItem(title: "퇴근 보고", dueDate: dueIn120Min)
 
-        // 5분 전 경과 미리알림 (지나간 10분 유예 범위 내)
+        // 마감 경과 미리알림 (과거 10분 유예 제거 및 순수 미래 구간 전용 정밀화 - ADR-65)
         let duePast5Min = calendar.date(byAdding: .minute, value: -5, to: now)!
         let itemPast5Min = ReminderItem(title: "지각 점검", dueDate: duePast5Min)
 
-        // 15분 전 경과 미리알림 (10분 유예 초과)
+        // 15분 전 경과 미리알림 (마감 경과)
         let duePast15Min = calendar.date(byAdding: .minute, value: -15, to: now)!
         let itemPast15Min = ReminderItem(title: "오래된 알림", dueDate: duePast15Min)
 
-        // 1. 종일 모드 (1440분 이상): 모두 노출
+        // 1. 종일 모드 (1440분 이상): 미래 항목 노출 및 마감 경과 항목 차단
         #expect(item30Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 1440) == true)
         #expect(item120Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 1440) == true)
+        #expect(itemPast5Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 1440) == false)
 
-        // 2. 60분 근접 모드
+        // 2. 60분 근접 모드: 60분 이내 미래 항목만 true
         #expect(item30Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 60) == true)
         #expect(item120Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 60) == false)
-        #expect(itemPast5Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 60) == true)
+        #expect(itemPast5Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 60) == false)
         #expect(itemPast15Min.isWithinVisibilityWindow(currentTime: now, proximityMinutes: 60) == false)
     }
 
@@ -780,5 +956,48 @@ struct ReminderIntegrationTests {
         #expect(L10n.tr(.todayRemindersOnlyNotice("재활용 분리수거", 2), lang: .ko) == "오늘 할 일: 재활용 분리수거 외 2건")
         #expect(L10n.tr(.todayRemindersOnlyNotice("Recycling", 0), lang: .en) == "Today's Task: Recycling")
         #expect(L10n.tr(.todayRemindersOnlyNotice("Recycling", 2), lang: .en) == "Today's Tasks: Recycling +2")
+    }
+
+    @Test("미리알림 반복 주기 텍스트 다국어 포맷 검증")
+    func testReminderRecurrenceText() {
+        let baseDate = Date()
+        let dailyItem = ReminderItem(title: "매일 운동", dueDate: baseDate, recurrenceRule: "daily")
+        let weeklyItem = ReminderItem(title: "주간 회의", dueDate: baseDate, recurrenceRule: "weekly")
+        let monthlyItem = ReminderItem(title: "월간 정산", dueDate: baseDate, recurrenceRule: "monthly")
+        let yearlyItem = ReminderItem(title: "연간 점검", dueDate: baseDate, recurrenceRule: "yearly")
+        let customItem = ReminderItem(title: "커스텀 반복", dueDate: baseDate, recurrenceRule: "custom_rule")
+        let nonRecurringItem = ReminderItem(title: "단발성 할 일", dueDate: baseDate, recurrenceRule: nil)
+
+        #expect(dailyItem.recurrenceText(isKorean: true) == "매일")
+        #expect(dailyItem.recurrenceText(isKorean: false) == "Daily")
+
+        #expect(weeklyItem.recurrenceText(isKorean: true) == "매주")
+        #expect(weeklyItem.recurrenceText(isKorean: false) == "Weekly")
+
+        #expect(monthlyItem.recurrenceText(isKorean: true) == "매월")
+        #expect(monthlyItem.recurrenceText(isKorean: false) == "Monthly")
+
+        #expect(yearlyItem.recurrenceText(isKorean: true) == "매년")
+        #expect(yearlyItem.recurrenceText(isKorean: false) == "Yearly")
+
+        #expect(customItem.recurrenceText(isKorean: true) == "반복")
+        #expect(customItem.recurrenceText(isKorean: false) == "Recurring")
+
+        #expect(nonRecurringItem.recurrenceText(isKorean: true) == nil)
+        #expect(nonRecurringItem.recurrenceText(isKorean: false) == nil)
+    }
+
+    @Test("미리알림 리스트 메타데이터 모델 검증")
+    func testReminderListInfoMetadata() {
+        let listInfo = ReminderListInfo(
+            id: "work-list-1",
+            title: "업무 프로젝트",
+            color: .blue,
+            sourceTitle: "iCloud"
+        )
+        #expect(listInfo.id == "work-list-1")
+        #expect(listInfo.title == "업무 프로젝트")
+        #expect(listInfo.color == .blue)
+        #expect(listInfo.sourceTitle == "iCloud")
     }
 }

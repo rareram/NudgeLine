@@ -44,21 +44,68 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         super.init()
     }
 
-    // MARK: - 1. 프로세스 단순 재기동 (Relaunch)
-    public func restartApp() {
-        #if APP_STORE
-        // App Store 환경에서는 프로세스 자가 실행이 금지됨
-        #else
-        let bundleURL = Bundle.main.bundleURL
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/sh")
-        task.arguments = ["-c", "sleep 0.3 && open \"$1\"", "--", bundleURL.path]
-        try? task.run()
-        NSApplication.shared.terminate(nil)
-        #endif
+    // MARK: - 1. 원격 GitHub Releases 비동기 조회
+    public func fetchLatestRelease(completion: @escaping @MainActor @Sendable (Result<ReleaseInfo, Error>) -> Void) {
+        var request = URLRequest(url: Self.latestReleaseAPI)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 10.0
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
+            guard let self = self else { return }
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let tagName = json["tag_name"] as? String else {
+                DispatchQueue.main.async { completion(.failure(URLError(.cannotParseResponse))) }
+                return
+            }
+
+            let version = tagName.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
+            let releaseUrl = (json["html_url"] as? String).flatMap { URL(string: $0) } ?? Self.releasesURL
+
+            // Release Assets 중 .zip 확장자를 가진 바이너리 다운로드 URL 추출
+            let zipDownloadURL = (json["assets"] as? [[String: Any]])?
+                .compactMap { asset -> URL? in
+                    guard let name = asset["name"] as? String, name.hasSuffix(".zip"),
+                          let downloadStr = asset["browser_download_url"] as? String else { return nil }
+                    return URL(string: downloadStr)
+                }
+                .first
+
+            let info = ReleaseInfo(version: version, url: releaseUrl, zipURL: zipDownloadURL)
+            DispatchQueue.main.async {
+                let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
+                let currentBuild = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+                if Self.isNewerVersion(latest: version, current: currentVersion, currentBuild: currentBuild) {
+                    self.updateState = .remoteAvailable(version: version, url: releaseUrl, zipURL: zipDownloadURL)
+                }
+                completion(.success(info))
+            }
+        }.resume()
     }
 
-    // MARK: - 2. 인앱 원클릭 다운로드 및 자동 설치 파이프라인
+    // MARK: - 2. 시맨틱 버전 비교 유틸리티
+    public static func isNewerVersion(latest: String, current: String, currentBuild: String) -> Bool {
+        let latestParts = latest.split(separator: ".").compactMap { Int($0) }
+        var currentParts = current.split(separator: ".").compactMap { Int($0) }
+        if currentParts.count == 2, let build = Int(currentBuild) {
+            currentParts.append(build)
+        }
+        let maxCount = max(latestParts.count, currentParts.count)
+        for i in 0..<maxCount {
+            let l = i < latestParts.count ? latestParts[i] : 0
+            let c = i < currentParts.count ? currentParts[i] : 0
+            if l > c { return true }
+            if l < c { return false }
+        }
+        return false
+    }
+
+    // MARK: - 3. 인앱 원클릭 다운로드 및 자동 설치 파이프라인
     public func startInAppDownload(release: ReleaseInfo) {
         #if APP_STORE
         // App Store 환경에서는 시스템 App Store 또는 릴리스 페이지로 이동
@@ -165,50 +212,6 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         progressWindow?.close()
         progressWindow = nil
         updateState = .idle
-    }
-
-    // MARK: - 3. 원격 GitHub Releases 비동기 조회
-    public func fetchLatestRelease(completion: @escaping @MainActor @Sendable (Result<ReleaseInfo, Error>) -> Void) {
-        var request = URLRequest(url: Self.latestReleaseAPI)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 10.0
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
-            guard let self = self else { return }
-            if let error = error {
-                DispatchQueue.main.async { completion(.failure(error)) }
-                return
-            }
-
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let tagName = json["tag_name"] as? String else {
-                DispatchQueue.main.async { completion(.failure(URLError(.cannotParseResponse))) }
-                return
-            }
-
-            let version = tagName.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
-            let releaseUrl = (json["html_url"] as? String).flatMap { URL(string: $0) } ?? Self.releasesURL
-
-            // Release Assets 중 .zip 확장자를 가진 바이너리 다운로드 URL 추출
-            let zipDownloadURL = (json["assets"] as? [[String: Any]])?
-                .compactMap { asset -> URL? in
-                    guard let name = asset["name"] as? String, name.hasSuffix(".zip"),
-                          let downloadStr = asset["browser_download_url"] as? String else { return nil }
-                    return URL(string: downloadStr)
-                }
-                .first
-
-            let info = ReleaseInfo(version: version, url: releaseUrl, zipURL: zipDownloadURL)
-            DispatchQueue.main.async {
-                let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
-                let currentBuild = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
-                if Self.isNewerVersion(latest: version, current: currentVersion, currentBuild: currentBuild) {
-                    self.updateState = .remoteAvailable(version: version, url: releaseUrl, zipURL: zipDownloadURL)
-                }
-                completion(.success(info))
-            }
-        }.resume()
     }
 
     // MARK: - 4. URLSessionDownloadDelegate 이벤트 수신
@@ -404,20 +407,17 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         }
     }
 
-    // MARK: - 5. 시맨틱 버전 비교 유틸리티
-    public static func isNewerVersion(latest: String, current: String, currentBuild: String) -> Bool {
-        let latestParts = latest.split(separator: ".").compactMap { Int($0) }
-        var currentParts = current.split(separator: ".").compactMap { Int($0) }
-        if currentParts.count == 2, let build = Int(currentBuild) {
-            currentParts.append(build)
-        }
-        let maxCount = max(latestParts.count, currentParts.count)
-        for i in 0..<maxCount {
-            let l = i < latestParts.count ? latestParts[i] : 0
-            let c = i < currentParts.count ? currentParts[i] : 0
-            if l > c { return true }
-            if l < c { return false }
-        }
-        return false
+    // MARK: - 5. 프로세스 단순 재기동 (Relaunch)
+    public func restartApp() {
+        #if APP_STORE
+        // App Store 환경에서는 프로세스 자가 실행이 금지됨
+        #else
+        let bundleURL = Bundle.main.bundleURL
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        task.arguments = ["-c", "sleep 0.3 && open \"$1\"", "--", bundleURL.path]
+        try? task.run()
+        NSApplication.shared.terminate(nil)
+        #endif
     }
 }

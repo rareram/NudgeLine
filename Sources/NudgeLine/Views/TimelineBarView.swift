@@ -165,7 +165,28 @@ public struct TimelineBarView: View {
         }
     }
 
-    // MARK: - 1. 타임라인 레이어 렌더링 (배경, 세그먼트, 마커, 인디케이터)
+    // MARK: - 1. 뷰 빌더 및 서브 레이어 렌더링 (View Body & Renderers)
+    // 타임라인 우클릭 컨텍스트 메뉴
+    @ViewBuilder
+    private var barContextMenu: some View {
+        Button(L10n.tr(.settings, lang: settings.language)) {
+            openSettingsWindow()
+        }
+
+        Button(L10n.tr(.refresh, lang: settings.language)) {
+            calendarService.refreshSources()
+            calendarService.loadCalendars()
+            calendarService.fetchEvents(settings: settings)
+        }
+
+        Divider()
+
+        Button(L10n.tr(.quit, lang: settings.language)) {
+            NSApplication.shared.terminate(nil)
+        }
+    }
+
+    // 타임라인 레이어 렌더링 (배경, 세그먼트, 마커, 인디케이터)
     @ViewBuilder
     private func timelineLayers(
         totalLength: CGFloat,
@@ -264,7 +285,154 @@ public struct TimelineBarView: View {
         }
     }
 
-    // MARK: - 2. 단일 마우스 좌표 센서 호버 이벤트 처리
+    @ViewBuilder
+    private func backgroundTrack(thickness: CGFloat, length: CGFloat, isHorizontal: Bool, isDark: Bool) -> some View {
+        let lightTrackColor = Color(red: 0.14, green: 0.15, blue: 0.18).opacity(max(0.16, settings.trackOpacity))
+        let darkTrackColor = Color.black.opacity(settings.trackOpacity)
+        let borderStrokeColor = isDark ? Color.white.opacity(0.15) : Color.black.opacity(0.20)
+
+        Group {
+            switch settings.barStyleMode {
+            case .adaptive:
+                Rectangle()
+                    .fill(isDark ? darkTrackColor : lightTrackColor)
+                    .overlay(
+                        Rectangle().stroke(borderStrokeColor, lineWidth: 0.5)
+                    )
+
+            case .dark:
+                Rectangle()
+                    .fill(darkTrackColor)
+                    .overlay(
+                        Rectangle().stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+
+            case .light:
+                Rectangle()
+                    .fill(lightTrackColor)
+                    .overlay(
+                        Rectangle().stroke(Color.black.opacity(0.20), lineWidth: 0.5)
+                    )
+
+            case .custom:
+                Rectangle()
+                    .fill(settings.effectiveTrackColor().opacity(settings.trackOpacity))
+                    .overlay(
+                        Rectangle().stroke(borderStrokeColor, lineWidth: 0.5)
+                    )
+            }
+        }
+        .frame(
+            width: isHorizontal ? length : thickness,
+            height: isHorizontal ? thickness : length
+        )
+    }
+
+    @ViewBuilder
+    private func renderSegment(
+        segment: TimelineSegment,
+        dayStart: Date,
+        totalSec: TimeInterval,
+        totalLength: CGFloat,
+        isHorizontal: Bool
+    ) -> some View {
+        let segOffset = calculateTimeOffset(time: segment.start, dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
+        let segEndOffset = calculateTimeOffset(time: segment.end, dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
+        let segLength = max(1.0, round(segEndOffset - segOffset))
+
+        SegmentBlockView(
+            segment: segment,
+            settings: settings,
+            hoveredFocusId: hoveredFocusId,
+            length: segLength,
+            isHorizontal: isHorizontal,
+            currentTime: currentTime,
+            isPulsing: pulsingSegmentId == segment.id,
+            isDark: isDark
+        )
+        .offset(
+            x: isHorizontal ? segOffset : 0,
+            y: isHorizontal ? 0 : segOffset
+        )
+    }
+
+    // 투 트랙 마커 렌더링: 가시 범위 이내는 심볼/먹이 팝업, 가시 범위 밖 당일 일정은 은은한 다이아몬드 노치
+    @ViewBuilder
+    private func renderReminder(
+        reminder: ReminderItem,
+        dayStart: Date,
+        totalSec: TimeInterval,
+        totalLength: CGFloat,
+        isHorizontal: Bool
+    ) -> some View {
+        let secFromStart = reminder.dueDate.timeIntervalSince(dayStart)
+        let diffMinutes = reminder.dueDate.timeIntervalSince(currentTime) / 60.0
+        let isPast = diffMinutes < 0
+
+        if shouldShowReminder(secFromStart: secFromStart, totalSec: totalSec, diffMinutes: diffMinutes) {
+            let ratio = CGFloat(secFromStart / totalSec)
+            let pos = round(ratio * totalLength)
+            let isHovered = hoveredActiveId == "__REMINDER_\(reminder.id)__"
+            let isApproaching = reminder.isWithinVisibilityWindow(currentTime: currentTime, proximityMinutes: settings.reminderProximityMinutes)
+            let offsets = markerOffsets(pos: pos, isApproaching: isApproaching)
+
+            ReminderMarkerView(
+                reminder: reminder,
+                isApproaching: isApproaching,
+                isPast: isPast,
+                isHovered: isHovered,
+                enableGlow: settings.enableReminderMarkerGlow,
+                markerStyle: settings.reminderMarkerStyle,
+                selectedPetType: settings.selectedPetType,
+                barPosition: settings.barPosition,
+                isHorizontal: isHorizontal,
+                isDark: isDark
+            )
+            .offset(x: offsets.x, y: offsets.y)
+        }
+    }
+
+    // 설정 변경 시 1시간 단위 감시 범위(Ruler) 마커들을 즉시 미리보기하기 위한 렌더링 (가시 범위: 심볼, 이후: 다이아몬드 노치)
+    @ViewBuilder
+    private func renderPreviewMarker(
+        totalLength: CGFloat,
+        isHorizontal: Bool
+    ) -> some View {
+        let sampleColors: [Color] = [.orange, .blue, .green, .purple, .pink, .teal]
+
+        ForEach(previewMarkerPositions) { pt in
+            let offsets = markerOffsets(pos: pt.pos, isApproaching: pt.isApproaching)
+            let itemColor = sampleColors[(max(1, pt.id) - 1) % sampleColors.count]
+            let sampleReminder = ReminderItem(
+                id: "__PREVIEW_REMINDER_\(pt.id)__",
+                title: settings.language.isKorean ? "주요 마일스톤 점검" : "Milestone Review",
+                dueDate: currentTime.addingTimeInterval(Double(pt.id) * 3600),
+                listIdentifier: "preview_\(pt.id)",
+                listTitle: settings.language.isKorean ? "미리알림" : "Reminders",
+                color: itemColor,
+                notes: nil,
+                url: nil,
+                priority: 1,
+                isCompleted: false
+            )
+
+            ReminderMarkerView(
+                reminder: sampleReminder,
+                isApproaching: pt.isApproaching,
+                isHovered: pt.id == 1,
+                enableGlow: settings.enableReminderMarkerGlow,
+                markerStyle: settings.reminderMarkerStyle,
+                selectedPetType: settings.selectedPetType,
+                barPosition: settings.barPosition,
+                isHorizontal: isHorizontal,
+                isDark: isDark
+            )
+            .offset(x: offsets.x, y: offsets.y)
+            .transition(.scale.combined(with: .opacity))
+        }
+    }
+
+    // MARK: - 2. 마우스 인터랙션 및 호버 처리 (Mouse Interaction & Hover)
     private func handleHoverPhase(
         _ phase: HoverPhase,
         geometry: GeometryProxy,
@@ -432,26 +600,159 @@ public struct TimelineBarView: View {
         }
     }
 
-    // MARK: - 3. 타임라인 우클릭 컨텍스트 메뉴
-    @ViewBuilder
-    private var barContextMenu: some View {
-        Button(L10n.tr(.settings, lang: settings.language)) {
-            openSettingsWindow()
+    // 호버 커서 좌표 기반 일정 탐색 (최단 시간 일정 우선 포커스)
+    private func resolveHoveredEvents(
+        at coord: CGFloat,
+        allEvents: [CalendarEvent],
+        dayStart: Date,
+        totalSec: TimeInterval,
+        totalLength: CGFloat
+    ) -> (events: [CalendarEvent], allDayEvents: [CalendarEvent], activeId: String, startOffset: CGFloat, length: CGFloat, focusId: String)? {
+        guard totalLength > 0, totalSec > 0 else { return nil }
+        let progress = max(0.0, min(1.0, coord / totalLength))
+        let cursorTime = dayStart.addingTimeInterval(progress * totalSec)
+
+        // 1. 커서 시각 포함 일정 탐색
+        let matchedEvents = allEvents.filter { event in
+            if event.isAllDay { return false }
+            return event.startDate <= cursorTime.addingTimeInterval(30) && event.endDate >= cursorTime.addingTimeInterval(-30)
         }
 
-        Button(L10n.tr(.refresh, lang: settings.language)) {
-            calendarService.refreshSources()
-            calendarService.loadCalendars()
-            calendarService.fetchEvents(settings: settings)
+        let allDayEvents = allEvents.filter { $0.isAllDay }
+
+        if !matchedEvents.isEmpty {
+            // 중첩 일정 중 소요 시간이 가장 짧은 일정을 포커스 타깃으로 선정
+            let focused = matchedEvents.min(by: {
+                $0.endDate.timeIntervalSince($0.startDate) < $1.endDate.timeIntervalSince($1.startDate)
+            }) ?? matchedEvents[0]
+
+            let startOffset = calculateTimeOffset(time: max(dayStart, focused.startDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
+            let endOffset = calculateTimeOffset(time: min(dayStart.addingTimeInterval(totalSec), focused.endDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
+            let length = max(4.0, round(endOffset - startOffset))
+
+            // 시간 일정과 종일 일정을 분리하여 카드에 전달
+            let activeId = matchedEvents.map(\.id).sorted().joined(separator: "+")
+
+            return (matchedEvents, allDayEvents, activeId, startOffset, length, focused.id)
         }
 
-        Divider()
+        // 2. 얇은 일정 인접 호버 허용 오차 보정 (±4px)
+        for event in allEvents where !event.isAllDay {
+            let start = calculateTimeOffset(time: max(dayStart, event.startDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
+            let end = calculateTimeOffset(time: min(dayStart.addingTimeInterval(totalSec), event.endDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
+            if coord >= (start - 4) && coord <= (end + 4) {
+                let length = max(4.0, round(end - start))
+                return ([event], allDayEvents, event.id, start, length, event.id)
+            }
+        }
 
-        Button(L10n.tr(.quit, lang: settings.language)) {
-            NSApplication.shared.terminate(nil)
+        return nil
+    }
+
+    // 커서 위치(±12px)와 일치하는 표시 마커 탐색 (접근 팝업 마커 및 잠복 다이아몬드 노치 모두 지원)
+    private func resolveHoveredReminder(
+        at cursorCoord: CGFloat,
+        dayStart: Date,
+        totalSec: TimeInterval,
+        totalLength: CGFloat
+    ) -> (reminder: ReminderItem, pos: CGFloat)? {
+        for reminder in reminderService.timedReminders {
+            let sec = reminder.dueDate.timeIntervalSince(dayStart)
+            let diffMinutes = reminder.dueDate.timeIntervalSince(currentTime) / 60.0
+            guard shouldShowReminder(secFromStart: sec, totalSec: totalSec, diffMinutes: diffMinutes) else {
+                continue
+            }
+
+            let pos = round(CGFloat(sec / totalSec) * totalLength)
+            if abs(cursorCoord - pos) <= 12 {
+                return (reminder, pos)
+            }
+        }
+        return nil
+    }
+
+    private func triggerMarkerPreview(
+        timeOffset: CGFloat?,
+        totalLength: CGFloat,
+        isHorizontal: Bool,
+        dayStart: Date,
+        totalSec: TimeInterval
+    ) {
+        let proximitySec = Double(settings.reminderProximityMinutes * 60)
+        var positions: [PreviewMarkerPoint] = []
+
+        if totalSec > 0 {
+            // 당일 종료 시점까지 1시간 단위로 순회하여 가시 범위 이내는 심볼, 그 이후는 은은한 노치로 배치
+            for hour in 1...24 {
+                let targetDate = currentTime.addingTimeInterval(Double(hour) * 3600)
+                let secFromStart = targetDate.timeIntervalSince(dayStart)
+                guard secFromStart >= 0 && secFromStart <= totalSec else { break }
+
+                let pos = round(CGFloat(secFromStart / totalSec) * totalLength)
+                let isApproaching = targetDate.timeIntervalSince(currentTime) <= proximitySec
+                positions.append(PreviewMarkerPoint(id: hour, pos: pos, isApproaching: isApproaching))
+            }
+        }
+
+        // 당일 종료 시각 이후라 당일 범위 내 마커가 없는 경우, 타임라인 끝단 근처에 최소 1개 배치하여 스타일 확인 보장
+        if positions.isEmpty {
+            let fallbackPos = min(totalLength - 12, (timeOffset ?? (totalLength * 0.5)) + 30)
+            positions.append(PreviewMarkerPoint(id: 1, pos: fallbackPos, isApproaching: true))
+        }
+
+        // 1. 위치 선할당 (이동 글리치 차단)
+        previewMarkerPositions = positions
+        previewGeneration += 1
+        let currentGen = previewGeneration
+
+        // 2. 마커 팝업 출현 (0.0초)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+            isPreviewingMarker = true
+        }
+
+        let firstPos = positions.first?.pos ?? (totalLength * 0.5)
+        let sampleReminder = ReminderItem(
+            id: "__PREVIEW_REMINDER__",
+            title: settings.language.isKorean ? "주요 마일스톤 점검" : "Milestone Review",
+            dueDate: currentTime.addingTimeInterval(3600),
+            listIdentifier: "preview",
+            listTitle: settings.language.isKorean ? "미리알림" : "Reminders",
+            color: .orange,
+            notes: nil,
+            url: nil,
+            priority: 1,
+            isCompleted: false
+        )
+
+        // 3. 0.4초 시차 후 가장 인접한 첫 번째 마커 상단에 풍선도움말 출현
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [self] in
+            guard self.isPreviewingMarker, self.previewGeneration == currentGen else { return }
+            PopoverPanel.shared.showReminderTooltip(
+                reminder: sampleReminder,
+                offset: firstPos,
+                isHorizontal: isHorizontal,
+                barPosition: settings.barPosition,
+                settings: settings
+            )
+        }
+
+        // 4. 3.2초 후 마커와 팝오버 동시 페이드아웃 및 정리
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { [self] in
+            guard self.previewGeneration == currentGen else { return }
+            withAnimation(.easeOut(duration: 0.25)) {
+                self.isPreviewingMarker = false
+            }
+            PopoverPanel.shared.hide(delayed: false)
         }
     }
 
+    private func openSettingsWindow() {
+        if let appDelegate = NSApp.delegate as? AppDelegate {
+            appDelegate.openSettings()
+        }
+    }
+
+    // MARK: - 3. 이벤트 트리거 및 시간 이펙트 (Event Triggers & Visual Effects)
     // 00초 정각 일정 시작 접점 및 매시간 정각 알림 감지 (1.0초 마이크로 이펙트 트리거)
     private func checkEventContactEffect(at time: Date) {
         guard settings.enableEventTriggerEffect, activeEffectType == nil else { return }
@@ -588,147 +889,17 @@ public struct TimelineBarView: View {
         }
     }
 
+    // MARK: - 4. 타임라인 좌표 및 기하 연산 헬퍼 (Geometry & Layout Helpers)
     private func updateSegments() {
         let dayStart = settings.startDate(for: currentTime)
         let dayEnd = settings.endDate(for: currentTime)
         cachedSegments = CalendarEvent.buildSegments(from: calendarService.events, dayStart: dayStart, dayEnd: dayEnd)
     }
 
-    private var alignmentForPosition: Alignment {
-        switch settings.barPosition {
-        case .left: return .topLeading
-        case .right: return .topTrailing
-        case .bottom: return .bottomLeading
-        }
-    }
-
     private func calculateTimeOffset(time: Date, dayStart: Date, totalSec: TimeInterval, totalLength: CGFloat) -> CGFloat {
         let sec = max(0, min(totalSec, time.timeIntervalSince(dayStart)))
         let ratio = CGFloat(sec / totalSec)
         return round(ratio * totalLength)
-    }
-
-    // 호버 커서 좌표 기반 일정 탐색 (최단 시간 일정 우선 포커스)
-    private func resolveHoveredEvents(
-        at coord: CGFloat,
-        allEvents: [CalendarEvent],
-        dayStart: Date,
-        totalSec: TimeInterval,
-        totalLength: CGFloat
-    ) -> (events: [CalendarEvent], allDayEvents: [CalendarEvent], activeId: String, startOffset: CGFloat, length: CGFloat, focusId: String)? {
-        guard totalLength > 0, totalSec > 0 else { return nil }
-        let progress = max(0.0, min(1.0, coord / totalLength))
-        let cursorTime = dayStart.addingTimeInterval(progress * totalSec)
-
-        // 1. 커서 시각 포함 일정 탐색
-        let matchedEvents = allEvents.filter { event in
-            if event.isAllDay { return false }
-            return event.startDate <= cursorTime.addingTimeInterval(30) && event.endDate >= cursorTime.addingTimeInterval(-30)
-        }
-
-        let allDayEvents = allEvents.filter { $0.isAllDay }
-
-        if !matchedEvents.isEmpty {
-            // 중첩 일정 중 소요 시간이 가장 짧은 일정을 포커스 타깃으로 선정
-            let focused = matchedEvents.min(by: {
-                $0.endDate.timeIntervalSince($0.startDate) < $1.endDate.timeIntervalSince($1.startDate)
-            }) ?? matchedEvents[0]
-
-            let startOffset = calculateTimeOffset(time: max(dayStart, focused.startDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
-            let endOffset = calculateTimeOffset(time: min(dayStart.addingTimeInterval(totalSec), focused.endDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
-            let length = max(4.0, round(endOffset - startOffset))
-
-            // [안 D 적용: 시간 일정과 종일 일정 분리 전달]
-            // - 원인/배경: 시간 일정 카드에 종일 일정을 풀 카드로 합치면 카드 높이가 폭증하고 말풍선 꼬리가 바 아래로 이탈함
-            // - 해결 방법: 메인 카드 events에는 순수 시간 일정(matchedEvents)만 전달하고, 종일 일정은 allDayEvents로 분리 전달하여 1줄 미니 인라인 칩으로만 표출
-            // - 기대 효과: 카드가 슬림하게 유지되어 화면 이탈 0% 및 말풍선 꼬리가 시간 블록 중앙을 100% 정밀 조준
-            let activeId = matchedEvents.map(\.id).sorted().joined(separator: "+")
-
-            return (matchedEvents, allDayEvents, activeId, startOffset, length, focused.id)
-        }
-
-        // 2. 얇은 일정 인접 호버 허용 오차 보정 (±4px)
-        for event in allEvents where !event.isAllDay {
-            let start = calculateTimeOffset(time: max(dayStart, event.startDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
-            let end = calculateTimeOffset(time: min(dayStart.addingTimeInterval(totalSec), event.endDate), dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
-            if coord >= (start - 4) && coord <= (end + 4) {
-                let length = max(4.0, round(end - start))
-                return ([event], allDayEvents, event.id, start, length, event.id)
-            }
-        }
-
-        return nil
-    }
-
-    @ViewBuilder
-    private func renderSegment(
-        segment: TimelineSegment,
-        dayStart: Date,
-        totalSec: TimeInterval,
-        totalLength: CGFloat,
-        isHorizontal: Bool
-    ) -> some View {
-        let segOffset = calculateTimeOffset(time: segment.start, dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
-        let segEndOffset = calculateTimeOffset(time: segment.end, dayStart: dayStart, totalSec: totalSec, totalLength: totalLength)
-        let segLength = max(1.0, round(segEndOffset - segOffset))
-
-        SegmentBlockView(
-            segment: segment,
-            settings: settings,
-            hoveredFocusId: hoveredFocusId,
-            length: segLength,
-            isHorizontal: isHorizontal,
-            currentTime: currentTime,
-            isPulsing: pulsingSegmentId == segment.id,
-            isDark: isDark
-        )
-        .offset(
-            x: isHorizontal ? segOffset : 0,
-            y: isHorizontal ? 0 : segOffset
-        )
-    }
-
-    @ViewBuilder
-    private func backgroundTrack(thickness: CGFloat, length: CGFloat, isHorizontal: Bool, isDark: Bool) -> some View {
-        let lightTrackColor = Color(red: 0.14, green: 0.15, blue: 0.18).opacity(max(0.16, settings.trackOpacity))
-        let darkTrackColor = Color.black.opacity(settings.trackOpacity)
-        let borderStrokeColor = isDark ? Color.white.opacity(0.15) : Color.black.opacity(0.20)
-
-        Group {
-            switch settings.barStyleMode {
-            case .adaptive:
-                Rectangle()
-                    .fill(isDark ? darkTrackColor : lightTrackColor)
-                    .overlay(
-                        Rectangle().stroke(borderStrokeColor, lineWidth: 0.5)
-                    )
-
-            case .dark:
-                Rectangle()
-                    .fill(darkTrackColor)
-                    .overlay(
-                        Rectangle().stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-
-            case .light:
-                Rectangle()
-                    .fill(lightTrackColor)
-                    .overlay(
-                        Rectangle().stroke(Color.black.opacity(0.20), lineWidth: 0.5)
-                    )
-
-            case .custom:
-                Rectangle()
-                    .fill(settings.effectiveTrackColor().opacity(settings.trackOpacity))
-                    .overlay(
-                        Rectangle().stroke(borderStrokeColor, lineWidth: 0.5)
-                    )
-            }
-        }
-        .frame(
-            width: isHorizontal ? length : thickness,
-            height: isHorizontal ? thickness : length
-        )
     }
 
     private func calculateCurrentTimeOffset(dayStart: Date, totalSec: TimeInterval, totalLength: CGFloat) -> CGFloat? {
@@ -739,182 +910,7 @@ public struct TimelineBarView: View {
         return round(ratio * totalLength)
     }
 
-    // MARK: - 미리알림 마커 노출 여부 판정 (과거 흔적 지우기 설정 및 전후 대칭 표시 범위 반영)
-    private func shouldShowReminder(
-        secFromStart: TimeInterval,
-        totalSec: TimeInterval,
-        diffMinutes: Double
-    ) -> Bool {
-        guard secFromStart >= 0 && secFromStart <= totalSec else { return false }
-        if diffMinutes < 0 {
-            // 마감 시각이 지난 과거 일감
-            if settings.clearPastReminderMarkers {
-                return false
-            }
-            // 전후 대칭 롤링 윈도우: 과거 proximityMinutes 이내인 경우에만 빛 꺼진 보석으로 유지
-            let proximityLimit = Double(settings.reminderProximityMinutes)
-            return diffMinutes >= -proximityLimit
-        } else {
-            // 미래 일감: 당일 범위 내이면 노출 (다가오면 심볼, 원거리면 반짝이는 다이아몬드)
-            return true
-        }
-    }
-
-    // MARK: - 미리알림 마커 렌더링 헬퍼
-    // 투 트랙 마커 렌더링: 가시 범위 이내는 심볼/먹이 팝업, 가시 범위 밖 당일 일정은 은은한 다이아몬드 노치
-    @ViewBuilder
-    private func renderReminder(
-        reminder: ReminderItem,
-        dayStart: Date,
-        totalSec: TimeInterval,
-        totalLength: CGFloat,
-        isHorizontal: Bool
-    ) -> some View {
-        let secFromStart = reminder.dueDate.timeIntervalSince(dayStart)
-        let diffMinutes = reminder.dueDate.timeIntervalSince(currentTime) / 60.0
-        let isPast = diffMinutes < 0
-
-        if shouldShowReminder(secFromStart: secFromStart, totalSec: totalSec, diffMinutes: diffMinutes) {
-            let ratio = CGFloat(secFromStart / totalSec)
-            let pos = round(ratio * totalLength)
-            let isHovered = hoveredActiveId == "__REMINDER_\(reminder.id)__"
-            let isApproaching = reminder.isWithinVisibilityWindow(currentTime: currentTime, proximityMinutes: settings.reminderProximityMinutes)
-            let offsets = markerOffsets(pos: pos, isApproaching: isApproaching)
-
-            ReminderMarkerView(
-                reminder: reminder,
-                isApproaching: isApproaching,
-                isPast: isPast,
-                isHovered: isHovered,
-                enableGlow: settings.enableReminderMarkerGlow,
-                markerStyle: settings.reminderMarkerStyle,
-                selectedPetType: settings.selectedPetType,
-                barPosition: settings.barPosition,
-                isHorizontal: isHorizontal,
-                isDark: isDark
-            )
-            .offset(x: offsets.x, y: offsets.y)
-        }
-    }
-
-    // MARK: - 미리알림 마커 미리보기 헬퍼
-    // 설정 변경 시 1시간 단위 감시 범위(Ruler) 마커들을 즉시 미리보기하기 위한 렌더링 (가시 범위: 심볼, 이후: 다이아몬드 노치)
-    @ViewBuilder
-    private func renderPreviewMarker(
-        totalLength: CGFloat,
-        isHorizontal: Bool
-    ) -> some View {
-        let sampleColors: [Color] = [.orange, .blue, .green, .purple, .pink, .teal]
-
-        ForEach(previewMarkerPositions) { pt in
-            let offsets = markerOffsets(pos: pt.pos, isApproaching: pt.isApproaching)
-            let itemColor = sampleColors[(max(1, pt.id) - 1) % sampleColors.count]
-            let sampleReminder = ReminderItem(
-                id: "__PREVIEW_REMINDER_\(pt.id)__",
-                title: settings.language.isKorean ? "주요 마일스톤 점검" : "Milestone Review",
-                dueDate: currentTime.addingTimeInterval(Double(pt.id) * 3600),
-                listIdentifier: "preview_\(pt.id)",
-                listTitle: settings.language.isKorean ? "미리알림" : "Reminders",
-                color: itemColor,
-                notes: nil,
-                url: nil,
-                priority: 1,
-                isCompleted: false
-            )
-
-            ReminderMarkerView(
-                reminder: sampleReminder,
-                isApproaching: pt.isApproaching,
-                isHovered: pt.id == 1,
-                enableGlow: settings.enableReminderMarkerGlow,
-                markerStyle: settings.reminderMarkerStyle,
-                selectedPetType: settings.selectedPetType,
-                barPosition: settings.barPosition,
-                isHorizontal: isHorizontal,
-                isDark: isDark
-            )
-            .offset(x: offsets.x, y: offsets.y)
-            .transition(.scale.combined(with: .opacity))
-        }
-    }
-
-    private func triggerMarkerPreview(
-        timeOffset: CGFloat?,
-        totalLength: CGFloat,
-        isHorizontal: Bool,
-        dayStart: Date,
-        totalSec: TimeInterval
-    ) {
-        let proximitySec = Double(settings.reminderProximityMinutes * 60)
-        var positions: [PreviewMarkerPoint] = []
-
-        if totalSec > 0 {
-            // 당일 종료 시점까지 1시간 단위로 순회하여 가시 범위 이내는 심볼, 그 이후는 은은한 노치로 배치
-            for hour in 1...24 {
-                let targetDate = currentTime.addingTimeInterval(Double(hour) * 3600)
-                let secFromStart = targetDate.timeIntervalSince(dayStart)
-                guard secFromStart >= 0 && secFromStart <= totalSec else { break }
-
-                let pos = round(CGFloat(secFromStart / totalSec) * totalLength)
-                let isApproaching = targetDate.timeIntervalSince(currentTime) <= proximitySec
-                positions.append(PreviewMarkerPoint(id: hour, pos: pos, isApproaching: isApproaching))
-            }
-        }
-
-        // 당일 종료 시각 이후라 당일 범위 내 마커가 없는 경우, 타임라인 끝단 근처에 최소 1개 배치하여 스타일 확인 보장
-        if positions.isEmpty {
-            let fallbackPos = min(totalLength - 12, (timeOffset ?? (totalLength * 0.5)) + 30)
-            positions.append(PreviewMarkerPoint(id: 1, pos: fallbackPos, isApproaching: true))
-        }
-
-        // 1. 위치 선할당 (이동 글리치 차단)
-        previewMarkerPositions = positions
-        previewGeneration += 1
-        let currentGen = previewGeneration
-
-        // 2. 마커 팝업 출현 (0.0초)
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
-            isPreviewingMarker = true
-        }
-
-        let firstPos = positions.first?.pos ?? (totalLength * 0.5)
-        let sampleReminder = ReminderItem(
-            id: "__PREVIEW_REMINDER__",
-            title: settings.language.isKorean ? "주요 마일스톤 점검" : "Milestone Review",
-            dueDate: currentTime.addingTimeInterval(3600),
-            listIdentifier: "preview",
-            listTitle: settings.language.isKorean ? "미리알림" : "Reminders",
-            color: .orange,
-            notes: nil,
-            url: nil,
-            priority: 1,
-            isCompleted: false
-        )
-
-        // 3. 0.4초 시차 후 가장 인접한 첫 번째 마커 상단에 풍선도움말 출현
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [self] in
-            guard self.isPreviewingMarker, self.previewGeneration == currentGen else { return }
-            PopoverPanel.shared.showReminderTooltip(
-                reminder: sampleReminder,
-                offset: firstPos,
-                isHorizontal: isHorizontal,
-                barPosition: settings.barPosition,
-                settings: settings
-            )
-        }
-
-        // 4. 3.2초 후 마커와 팝오버 동시 페이드아웃 및 정리
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { [self] in
-            guard self.previewGeneration == currentGen else { return }
-            withAnimation(.easeOut(duration: 0.25)) {
-                self.isPreviewingMarker = false
-            }
-            PopoverPanel.shared.hide(delayed: false)
-        }
-    }
-
-    // MARK: - 미리알림 마커 위치 오프셋 계산
-    // [원인/배경: 마커 규격 8px(SF Symbol 8pt, 펫먹이 11pt) 보정 -> 해결 방법: 접근 마커 규격을 8px로 설정하고, 바 경계선 1px 바 걸침 및 7px 안쪽 돌출 정밀 오프셋 수식 재조정 -> 기대 효과: 타임라인 바의 초슬림 앰비언트 규격과 완벽한 비례감 확보]
+    // 바 위치에 맞춘 미리알림 마커 표시 좌표 계산
     private func markerOffsets(pos: CGFloat, isApproaching: Bool) -> (x: CGFloat, y: CGFloat) {
         let size: CGFloat = isApproaching ? 8.0 : 3.0
         let half = size / 2.0
@@ -955,37 +951,37 @@ public struct TimelineBarView: View {
         }
     }
 
-    // MARK: - 마우스 커서 위치 기반 호버 미리알림 감지 헬퍼
-    // 커서 위치(±12px)와 일치하는 표시 마커 탐색 (접근 팝업 마커 및 잠복 다이아몬드 노치 모두 지원)
-    private func resolveHoveredReminder(
-        at cursorCoord: CGFloat,
-        dayStart: Date,
+    // 미리알림 마커 노출 여부 판정 (과거 흔적 지우기 설정 및 전후 대칭 표시 범위 반영)
+    private func shouldShowReminder(
+        secFromStart: TimeInterval,
         totalSec: TimeInterval,
-        totalLength: CGFloat
-    ) -> (reminder: ReminderItem, pos: CGFloat)? {
-        for reminder in reminderService.timedReminders {
-            let sec = reminder.dueDate.timeIntervalSince(dayStart)
-            let diffMinutes = reminder.dueDate.timeIntervalSince(currentTime) / 60.0
-            guard shouldShowReminder(secFromStart: sec, totalSec: totalSec, diffMinutes: diffMinutes) else {
-                continue
+        diffMinutes: Double
+    ) -> Bool {
+        guard secFromStart >= 0 && secFromStart <= totalSec else { return false }
+        if diffMinutes < 0 {
+            // 마감 시각이 지난 과거 일감
+            if settings.clearPastReminderMarkers {
+                return false
             }
-
-            let pos = round(CGFloat(sec / totalSec) * totalLength)
-            if abs(cursorCoord - pos) <= 12 {
-                return (reminder, pos)
-            }
+            // 전후 대칭 롤링 윈도우: 과거 proximityMinutes 이내인 경우에만 빛 꺼진 보석으로 유지
+            let proximityLimit = Double(settings.reminderProximityMinutes)
+            return diffMinutes >= -proximityLimit
+        } else {
+            // 미래 일감: 당일 범위 내이면 노출 (다가오면 심볼, 원거리면 반짝이는 다이아몬드)
+            return true
         }
-        return nil
     }
 
-    private func openSettingsWindow() {
-        if let appDelegate = NSApp.delegate as? AppDelegate {
-            appDelegate.openSettings()
+    private var alignmentForPosition: Alignment {
+        switch settings.barPosition {
+        case .left: return .topLeading
+        case .right: return .topTrailing
+        case .bottom: return .bottomLeading
         }
     }
 }
 
-// MARK: - 일정 세그먼트 블록 뷰
+// MARK: - 5-1. 일정 세그먼트 블록 뷰 (SegmentBlockView)
 private struct SegmentBlockView: View {
     let segment: TimelineSegment
     @ObservedObject var settings: AppSettings
@@ -1080,7 +1076,7 @@ private struct SegmentBlockView: View {
     }
 }
 
-// MARK: - 겹침 일정 크로스페이드 색상 전환 뷰 (GPU 하드웨어 가속 보간, 0 CPU Timer)
+// MARK: - 5-2. 겹침 일정 크로스페이드 색상 전환 뷰 (CrossFadeOverlapView)
 private struct CrossFadeOverlapView: View {
     let colors: [Color]
     @State private var isFaded: Bool = false
@@ -1107,7 +1103,7 @@ private struct CrossFadeOverlapView: View {
     }
 }
 
-// MARK: - 현재 시각 표시자 뷰 (4종 기하 형태, 펫 마스코트 및 이벤트 접점 마이크로 이펙트)
+// MARK: - 5-3. 현재 시각 표시자 뷰 (CurrentTimeIndicatorView)
 private struct CurrentTimeIndicatorView: View {
     @ObservedObject var settings: AppSettings
     let thickness: CGFloat
@@ -1331,7 +1327,7 @@ private struct CurrentTimeIndicatorView: View {
     }
 }
 
-// MARK: - 삼각 틱 Shape
+// MARK: - 5-4. 삼각 틱 Shape (TriangleTickShape)
 private struct TriangleTickShape: Shape {
     let position: BarPosition
     let thickness: CGFloat
@@ -1368,7 +1364,7 @@ private struct TriangleTickShape: Shape {
     }
 }
 
-// MARK: - 라운드 돔 Shape
+// MARK: - 5-5. 라운드 돔 Shape (RoundDomeShape)
 private struct RoundDomeShape: Shape {
     let position: BarPosition
     let thickness: CGFloat
@@ -1399,7 +1395,7 @@ private struct RoundDomeShape: Shape {
     }
 }
 
-// MARK: - 미리알림 시점 마커 뷰 (ReminderMarkerView)
+// MARK: - 5-6. 미리알림 시점 마커 뷰 (ReminderMarkerView)
 // 바 밖으로 꽂힌 마커 심볼 또는 펫 먹이 렌더링
 private struct ReminderMarkerView: View {
     let reminder: ReminderItem

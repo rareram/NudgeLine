@@ -285,72 +285,6 @@ public struct CalendarEvent: Identifiable, Hashable, Sendable {
 
 // MARK: - 3. 화상회의 URL 정규식 파서 및 피싱 방어 검증
 extension CalendarEvent {
-    // MARK: 3-1. 화상회의 플랫폼별 사전 컴파일된 정규식 (성능 최적화: 1회 컴파일 캐싱)
-    private enum MeetingRegex {
-        static let meet = try? NSRegularExpression(pattern: #"https?://meet\.google\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let zoom = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*zoom\.(?:us|com|gov|de)/[a-zA-Z0-9_.\-/?=&]+"#, options: [.caseInsensitive])
-        static let teams = try? NSRegularExpression(pattern: #"https?://teams\.microsoft\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let teamsLive = try? NSRegularExpression(pattern: #"https?://teams\.live\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let faceTime = try? NSRegularExpression(pattern: #"https?://facetime\.apple\.com/[a-zA-Z0-9_.\-/?=&%#]+"#, options: [.caseInsensitive])
-        static let faceTimeScheme = try? NSRegularExpression(pattern: #"facetime(?:-audio)?://[a-zA-Z0-9_.\-/?=&%#+@]+"#, options: [.caseInsensitive])
-        static let webex = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*webex\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let whaleOn = try? NSRegularExpression(pattern: #"https?://whaleon\.naver\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let discord = try? NSRegularExpression(pattern: #"https?://(?:www\.)?discord\.(?:gg|com)/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let lark = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*larksuite\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let feishu = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*feishu\.cn/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let jitsi = try? NSRegularExpression(pattern: #"https?://meet\.jit\.si/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let jitsi8x8 = try? NSRegularExpression(pattern: #"https?://8x8\.vc/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let whereby = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*whereby\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let chime = try? NSRegularExpression(pattern: #"https?://app\.chime\.aws/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let genericMeeting = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]+/(?:meeting|join|call|conference|j|room|bridge)/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
-        static let anyUrl = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]+\.[a-zA-Z]{2,}[a-zA-Z0-9_.\-/?=&%:]*"#, options: [.caseInsensitive])
-
-        // 기업 환경 URL 래퍼 (SafeLinks 및 Google 리디렉터)
-        static let safeLinks = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.-]*safelinks\.protection\.outlook\.com/[^\s"'<>]+"#, options: [.caseInsensitive])
-        static let googleRedirect = try? NSRegularExpression(pattern: #"https?://(?:www\.)?google\.[a-z]{2,}(?:\.[a-z]{2,})?/url\?[^\s"'<>]+"#, options: [.caseInsensitive])
-    }
-
-    // ponytail: URL 끝단 특수문자 정제 및 프로토콜 스킴 유효성 검증 단일 헬퍼
-    private static func sanitizeUrl(
-        _ raw: String,
-        allowedSchemes: Set<String> = ["http", "https", "zoommtg", "msteams", "facetime", "facetime-audio"]
-    ) -> URL? {
-        var trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trailingPunctuation = CharacterSet(charactersIn: ".,;:)>]}'\"`")
-        while let last = trimmed.unicodeScalars.last, trailingPunctuation.contains(last) {
-            trimmed.removeLast()
-        }
-        guard let validUrl = URL(string: trimmed),
-              let scheme = validUrl.scheme?.lowercased(),
-              allowedSchemes.contains(scheme) else {
-            return nil
-        }
-        return validUrl
-    }
-
-    // 래핑된 엔터프라이즈 URL(Outlook SafeLinks / Google Redirect)의 타깃 URL 디코딩
-    private static func unwrapRedirectUrl(from candidate: String) -> String? {
-        guard let comps = URLComponents(string: candidate),
-              let host = comps.host?.lowercased() else { return nil }
-
-        let queryKey: String?
-        if host == "safelinks.protection.outlook.com" || host.hasSuffix(".safelinks.protection.outlook.com") {
-            queryKey = "url"
-        } else if (host == "google.com" || host.hasSuffix(".google.com")), comps.path == "/url" {
-            queryKey = "q"
-        } else {
-            queryKey = nil
-        }
-
-        guard let key = queryKey,
-              let target = comps.queryItems?.first(where: { $0.name.lowercased() == key })?.value,
-              let decoded = target.removingPercentEncoding,
-              decoded.hasPrefix("http://") || decoded.hasPrefix("https://") else {
-            return nil
-        }
-        return decoded
-    }
-
     // 본문/위치/URL 내 화상회의 링크 정규식 추출
     private static func extractMeetingInfo(url: URL?, location: String?, notes: String?, currentUserEmail: String? = nil) -> MeetingInfo? {
         let combined = [url?.absoluteString, location, notes].compactMap { $0 }.joined(separator: "\n")
@@ -513,15 +447,49 @@ extension CalendarEvent {
         return nil
     }
 
-    private static func firstMatch(in text: String, regex: NSRegularExpression?) -> String? {
-        guard let regex = regex else { return nil }
-        let nsString = text as NSString
-        let match = regex.firstMatch(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
-        guard let m = match else { return nil }
-        return nsString.substring(with: m.range)
+    // MARK: - 일반 웹 링크 (세미나, 웨비나, 문서 등) 추출
+    public static func extractWebLink(url: URL?, notes: String?, meetingInfo: MeetingInfo?) -> WebLinkInfo? {
+        // 1순위: Apple 캘린더의 명시적 URL 필드 (ekEvent.url)
+        if let explicitUrl = url,
+           let scheme = explicitUrl.scheme?.lowercased(),
+           (scheme == "http" || scheme == "https"),
+           !isExcludedWebLink(candidateUrl: explicitUrl, meetingInfo: meetingInfo) {
+            let display = extractDisplayHost(from: explicitUrl)
+            return WebLinkInfo(url: explicitUrl, displayHost: display)
+        }
+
+        // 2순위: 본문 메모(notes)에서 첫 번째 유효한 외부 링크 추출 (구글 캘린더 등)
+        // 시스템 보일러플레이트 노이즈가 제거된 사용자 순수 메모 영역에서만 링크를 탐색합니다.
+        let cleanText = cleanNotes(from: notes)
+        guard let notesText = cleanText, !notesText.isEmpty else { return nil }
+        guard notesText.contains("http://") || notesText.contains("https://") else { return nil }
+
+        // HTML 엔티티 복원
+        let sanitized = notesText
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+
+        guard let regex = MeetingRegex.anyUrl else { return nil }
+        let nsString = sanitized as NSString
+        let matches = regex.matches(in: sanitized, options: [], range: NSRange(location: 0, length: nsString.length))
+
+        for m in matches {
+            let rawMatch = nsString.substring(with: m.range)
+            guard let candidateUrl = sanitizeUrl(rawMatch, allowedSchemes: ["http", "https"]) else {
+                continue
+            }
+
+            if !isExcludedWebLink(candidateUrl: candidateUrl, meetingInfo: meetingInfo) {
+                let display = extractDisplayHost(from: candidateUrl)
+                return WebLinkInfo(url: candidateUrl, displayHost: display)
+            }
+        }
+
+        return nil
     }
 
-    // MARK: 3-2. 일반 웹 링크 (세미나, 웨비나, 문서 등) 추출
     public static func extractDisplayHost(from url: URL) -> String {
         let targetString = unwrapRedirectUrl(from: url.absoluteString) ?? url.absoluteString
         guard let targetUrl = URL(string: targetString),
@@ -534,6 +502,7 @@ extension CalendarEvent {
         return host
     }
 
+    // MARK: - 도메인 필터링 및 URL 검증 헬퍼
     private static func isExcludedWebLink(candidateUrl: URL, meetingInfo: MeetingInfo?) -> Bool {
         // 화상회의 버튼 URL과 동일하면 제외 (공식 화상회의 버튼과 중복 방지)
         if let meeting = meetingInfo, meeting.platform != .unverified {
@@ -595,46 +564,78 @@ extension CalendarEvent {
         return false
     }
 
-    public static func extractWebLink(url: URL?, notes: String?, meetingInfo: MeetingInfo?) -> WebLinkInfo? {
-        // 1순위: Apple 캘린더의 명시적 URL 필드 (ekEvent.url)
-        if let explicitUrl = url,
-           let scheme = explicitUrl.scheme?.lowercased(),
-           (scheme == "http" || scheme == "https"),
-           !isExcludedWebLink(candidateUrl: explicitUrl, meetingInfo: meetingInfo) {
-            let display = extractDisplayHost(from: explicitUrl)
-            return WebLinkInfo(url: explicitUrl, displayHost: display)
+    // 래핑된 엔터프라이즈 URL(Outlook SafeLinks / Google Redirect)의 타깃 URL 디코딩
+    private static func unwrapRedirectUrl(from candidate: String) -> String? {
+        guard let comps = URLComponents(string: candidate),
+              let host = comps.host?.lowercased() else { return nil }
+
+        let queryKey: String?
+        if host == "safelinks.protection.outlook.com" || host.hasSuffix(".safelinks.protection.outlook.com") {
+            queryKey = "url"
+        } else if (host == "google.com" || host.hasSuffix(".google.com")), comps.path == "/url" {
+            queryKey = "q"
+        } else {
+            queryKey = nil
         }
 
-        // 2순위: 본문 메모(notes)에서 첫 번째 유효한 외부 링크 추출 (구글 캘린더 등)
-        // 시스템 보일러플레이트 노이즈가 제거된 사용자 순수 메모 영역에서만 링크를 탐색합니다.
-        let cleanText = cleanNotes(from: notes)
-        guard let notesText = cleanText, !notesText.isEmpty else { return nil }
-        guard notesText.contains("http://") || notesText.contains("https://") else { return nil }
-
-        // HTML 엔티티 복원
-        let sanitized = notesText
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&quot;", with: "\"")
-
-        guard let regex = MeetingRegex.anyUrl else { return nil }
-        let nsString = sanitized as NSString
-        let matches = regex.matches(in: sanitized, options: [], range: NSRange(location: 0, length: nsString.length))
-
-        for m in matches {
-            let rawMatch = nsString.substring(with: m.range)
-            guard let candidateUrl = sanitizeUrl(rawMatch, allowedSchemes: ["http", "https"]) else {
-                continue
-            }
-
-            if !isExcludedWebLink(candidateUrl: candidateUrl, meetingInfo: meetingInfo) {
-                let display = extractDisplayHost(from: candidateUrl)
-                return WebLinkInfo(url: candidateUrl, displayHost: display)
-            }
+        guard let key = queryKey,
+              let target = comps.queryItems?.first(where: { $0.name.lowercased() == key })?.value,
+              let decoded = target.removingPercentEncoding,
+              decoded.hasPrefix("http://") || decoded.hasPrefix("https://") else {
+            return nil
         }
+        return decoded
+    }
 
-        return nil
+    // ponytail: URL 끝단 특수문자 정제 및 프로토콜 스킴 유효성 검증 단일 헬퍼
+    private static func sanitizeUrl(
+        _ raw: String,
+        allowedSchemes: Set<String> = ["http", "https", "zoommtg", "msteams", "facetime", "facetime-audio"]
+    ) -> URL? {
+        var trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trailingPunctuation = CharacterSet(charactersIn: ".,;:)>]}'\"`")
+        while let last = trimmed.unicodeScalars.last, trailingPunctuation.contains(last) {
+            trimmed.removeLast()
+        }
+        guard let validUrl = URL(string: trimmed),
+              let scheme = validUrl.scheme?.lowercased(),
+              allowedSchemes.contains(scheme) else {
+            return nil
+        }
+        return validUrl
+    }
+
+    private static func firstMatch(in text: String, regex: NSRegularExpression?) -> String? {
+        guard let regex = regex else { return nil }
+        let nsString = text as NSString
+        let match = regex.firstMatch(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
+        guard let m = match else { return nil }
+        return nsString.substring(with: m.range)
+    }
+
+    // 화상회의 플랫폼별 사전 컴파일된 정규식 (성능 최적화: 1회 컴파일 캐싱)
+    private enum MeetingRegex {
+        static let meet = try? NSRegularExpression(pattern: #"https?://meet\.google\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let zoom = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*zoom\.(?:us|com|gov|de)/[a-zA-Z0-9_.\-/?=&]+"#, options: [.caseInsensitive])
+        static let teams = try? NSRegularExpression(pattern: #"https?://teams\.microsoft\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let teamsLive = try? NSRegularExpression(pattern: #"https?://teams\.live\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let faceTime = try? NSRegularExpression(pattern: #"https?://facetime\.apple\.com/[a-zA-Z0-9_.\-/?=&%#]+"#, options: [.caseInsensitive])
+        static let faceTimeScheme = try? NSRegularExpression(pattern: #"facetime(?:-audio)?://[a-zA-Z0-9_.\-/?=&%#+@]+"#, options: [.caseInsensitive])
+        static let webex = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*webex\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let whaleOn = try? NSRegularExpression(pattern: #"https?://whaleon\.naver\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let discord = try? NSRegularExpression(pattern: #"https?://(?:www\.)?discord\.(?:gg|com)/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let lark = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*larksuite\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let feishu = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*feishu\.cn/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let jitsi = try? NSRegularExpression(pattern: #"https?://meet\.jit\.si/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let jitsi8x8 = try? NSRegularExpression(pattern: #"https?://8x8\.vc/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let whereby = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]*whereby\.com/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let chime = try? NSRegularExpression(pattern: #"https?://app\.chime\.aws/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let genericMeeting = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]+/(?:meeting|join|call|conference|j|room|bridge)/[a-zA-Z0-9_.\-/?=&%]+"#, options: [.caseInsensitive])
+        static let anyUrl = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.\-_]+\.[a-zA-Z]{2,}[a-zA-Z0-9_.\-/?=&%:]*"#, options: [.caseInsensitive])
+
+        // 기업 환경 URL 래퍼 (SafeLinks 및 Google 리디렉터)
+        static let safeLinks = try? NSRegularExpression(pattern: #"https?://[a-zA-Z0-9.-]*safelinks\.protection\.outlook\.com/[^\s"'<>]+"#, options: [.caseInsensitive])
+        static let googleRedirect = try? NSRegularExpression(pattern: #"https?://(?:www\.)?google\.[a-z]{2,}(?:\.[a-z]{2,})?/url\?[^\s"'<>]+"#, options: [.caseInsensitive])
     }
 }
 

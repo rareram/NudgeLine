@@ -31,7 +31,6 @@ public final class CalendarService: ObservableObject {
     @Published public private(set) var authorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published public private(set) var events: [CalendarEvent] = []
     @Published public private(set) var sourceGroups: [CalendarSourceGroup] = []
-    // @Published public var errorMessage: String? = nil
 
     /// 연동된 전체 캘린더 목록 (편의 접근자)
     public var allCalendars: [CalendarInfo] {

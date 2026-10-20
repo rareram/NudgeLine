@@ -94,7 +94,37 @@ public struct EventPopoverView: View {
         )
     }
 
-    // MARK: - 개별 일정 카드 뷰
+    // MARK: - 1. 종일 일정 인라인 배지
+    // 시간제 일정 카드 상단에 당일 종일 일정 건수를 요약 표시
+    @ViewBuilder
+    private func allDayInlineBadgeView() -> some View {
+        let allDayCount = allDayEvents.count
+        let firstTitle = allDayEvents[0].title(lang: settings.language)
+        let badgeText = allDayCount == 1 ? firstTitle : "\(firstTitle) +\(allDayCount - 1)"
+
+        HStack(spacing: 5) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.8) : Color.black.opacity(0.7))
+
+            Text(L10n.tr(.allDayNotice(badgeText), lang: settings.language))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.85) : Color.black.opacity(0.75))
+                .lineLimit(1)
+
+            Spacer()
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3.5)
+        .background(isDarkTheme ? Color.white.opacity(0.08) : Color.black.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .overlay(
+            RoundedRectangle(cornerRadius: 5)
+                .stroke(isDarkTheme ? Color.white.opacity(0.12) : Color.black.opacity(0.08), lineWidth: 0.6)
+        )
+    }
+
+    // MARK: - 2. 개별 일정 카드 뷰
     @ViewBuilder
     private func singleEventCard(event: CalendarEvent) -> some View {
         let textPrimary = isDarkTheme ? Color.white : Color.black.opacity(0.95)
@@ -312,37 +342,7 @@ public struct EventPopoverView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - 종일 일정 인라인 배지
-    // 시간제 일정 카드 상단에 당일 종일 일정 건수를 요약 표시
-    @ViewBuilder
-    private func allDayInlineBadgeView() -> some View {
-        let allDayCount = allDayEvents.count
-        let firstTitle = allDayEvents[0].title(lang: settings.language)
-        let badgeText = allDayCount == 1 ? firstTitle : "\(firstTitle) +\(allDayCount - 1)"
-
-        HStack(spacing: 5) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.system(size: 9.5, weight: .semibold))
-                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.8) : Color.black.opacity(0.7))
-
-            Text(L10n.tr(.allDayNotice(badgeText), lang: settings.language))
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(isDarkTheme ? Color.white.opacity(0.85) : Color.black.opacity(0.75))
-                .lineLimit(1)
-
-            Spacer()
-        }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3.5)
-        .background(isDarkTheme ? Color.white.opacity(0.08) : Color.black.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 5))
-        .overlay(
-            RoundedRectangle(cornerRadius: 5)
-                .stroke(isDarkTheme ? Color.white.opacity(0.12) : Color.black.opacity(0.08), lineWidth: 0.6)
-        )
-    }
-
-    // MARK: - 다중 일정 초과 표시 푸터
+    // MARK: - 3. 다중 일정 초과 표시 푸터
     // 표시 한도를 초과한 일정이 있을 때 캘린더 앱 열기를 안내하는 바로가기 버튼
     @ViewBuilder
     private func overflowEventsFooterView(count: Int) -> some View {
