@@ -26,6 +26,10 @@ struct AppearanceTab: View {
         )
     }
 
+    private var isLiquidGlass: Bool {
+        settings.eventHoverStyle == .liquidGlassCard
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Form {
@@ -62,9 +66,17 @@ struct AppearanceTab: View {
                     LabeledContent(L10n.tr(.cardOpacityLabel, lang: settings.language)) {
                         HStack(spacing: 8) {
                             Slider(value: $settings.cardOpacity, in: 0.2...1.0)
-                            Text("\(Int(settings.cardOpacity * 100))%")
+                                .disabled(isLiquidGlass)
+                            Text(isLiquidGlass ? "—" : "\(Int(settings.cardOpacity * 100))%")
                                 .frame(width: 38, alignment: .trailing)
+                                .foregroundStyle(isLiquidGlass ? Color.secondary : Color.primary)
                         }
+                    }
+
+                    if isLiquidGlass {
+                        Text(L10n.tr(.cardOpacityManagedBySystem, lang: settings.language))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 

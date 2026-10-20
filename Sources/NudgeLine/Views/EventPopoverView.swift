@@ -30,15 +30,6 @@ public struct EventPopoverView: View {
         settings.eventCardTheme.isDark(for: colorScheme)
     }
 
-    private var tintColor: Color {
-        let opacity = settings.cardOpacity
-        if isDarkTheme {
-            return Color.black.opacity(opacity * 0.40)
-        } else {
-            return Color.white.opacity(opacity * 0.35)
-        }
-    }
-
     private var textMuted: Color {
         isDarkTheme ? Color.white.opacity(0.60) : Color.black.opacity(0.55)
     }
@@ -48,8 +39,10 @@ public struct EventPopoverView: View {
         let direction = bubbleDirection
         let bubbleShape = SpeechBubbleShape(direction: direction, arrowWidth: 8, arrowHeight: 14, cornerRadius: 10)
 
-        VStack(alignment: .leading, spacing: 8) {
-            // 당일 종일 일정이 존재하는 경우 1줄 미니 인라인 칩 표출 (카드 비대화 방지)
+        let isLiquidGlass = settings.eventHoverStyle == .liquidGlassCard
+
+        return VStack(alignment: .leading, spacing: 8) {
+            // 당일 종일 일정이 있을 때 상단에 표시하는 인라인 요약 배지
             if !allDayEvents.isEmpty {
                 allDayInlineBadgeView()
             }
@@ -86,29 +79,19 @@ public struct EventPopoverView: View {
                 overflowEventsFooterView(count: overflowCount)
             }
         }
-        .padding(.leading, direction == .left ? 18 : 12)
-        .padding(.trailing, direction == .right ? 18 : 12)
+        .padding(.leading, (!isLiquidGlass && direction == .left) ? 18 : 12)
+        .padding(.trailing, (!isLiquidGlass && direction == .right) ? 18 : 12)
         .padding(.top, 12)
-        .padding(.bottom, direction == .bottom ? 18 : 12)
+        .padding(.bottom, (!isLiquidGlass && direction == .bottom) ? 18 : 12)
         .frame(minWidth: isMulti ? 220 : 200, maxWidth: 280, alignment: .leading)
         .fixedSize(horizontal: true, vertical: false)
-        // 1단계: 순정 머티리얼 글래스 블러 (사용자 cardOpacity 투명도 반영)
-        .background(.ultraThinMaterial.opacity(settings.cardOpacity), in: bubbleShape)
-        .background(
-            // 2단계: 테마 투명 틴트 레이어 (다크/라이트 모드 대비 보강)
-            bubbleShape
-                .fill(tintColor)
-                .allowsHitTesting(false)
+        .eventCardBackground(
+            shape: bubbleShape,
+            cornerRadius: 14.0,
+            isDarkTheme: isDarkTheme,
+            cardOpacity: settings.cardOpacity,
+            isLiquidGlass: isLiquidGlass
         )
-        .clipShape(bubbleShape)
-        .overlay(
-            // 순정 macOS 메뉴/팝오버 0.5pt 헤어라인 경계선
-            bubbleShape
-                .stroke(isDarkTheme ? Color.white.opacity(0.18) : Color.black.opacity(0.12), lineWidth: 0.5)
-                .allowsHitTesting(false)
-        )
-        // 순정 윈도우 부유 그림자
-        .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 8, x: 0, y: 4)
     }
 
     // MARK: - 개별 일정 카드 뷰
@@ -329,8 +312,8 @@ public struct EventPopoverView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - 종일 일정 1줄 미니 인라인 배지
-    // [원인/배경: 시간 일정 카드에 종일 일정을 풀 카드로 병합 시 카드 높이 폭증 및 화면 이탈 발생 -> 해결 방법: 상단에 18pt 높이의 1줄 칩으로 가볍게 표시하여 존재 사실만 인지 -> 기대 효과: 카드 높이 슬림화 및 화살표 조준 정밀도 보존]
+    // MARK: - 종일 일정 인라인 배지
+    // 시간제 일정 카드 상단에 당일 종일 일정 건수를 요약 표시
     @ViewBuilder
     private func allDayInlineBadgeView() -> some View {
         let allDayCount = allDayEvents.count
@@ -359,8 +342,8 @@ public struct EventPopoverView: View {
         )
     }
 
-    // MARK: - 4개 이상 일정 스택 시 축약 배지
-    // [원인/배경: 종일 일정이 4개 이상일 때 무한 스택 시 화면 과점유 및 상단 메뉴바 침범 발생 -> 해결 방법: 최대 3개까지만 풀 카드로 노출하고 4개 이상은 Apple 캘린더 열기 바로가기 칩으로 축약 -> 기대 효과: 카드 최대 높이를 약 320px로 엄격히 제한하여 화면 안정성 확보]
+    // MARK: - 다중 일정 초과 표시 푸터
+    // 표시 한도를 초과한 일정이 있을 때 캘린더 앱 열기를 안내하는 바로가기 버튼
     @ViewBuilder
     private func overflowEventsFooterView(count: Int) -> some View {
         Button(action: {

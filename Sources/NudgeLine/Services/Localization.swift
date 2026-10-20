@@ -164,7 +164,9 @@ public struct L10n {
         case cardStyleLabel
         case cardThemeLabel
         case cardOpacityLabel
+        case cardOpacityManagedBySystem
         case styleActionCard
+        case styleLiquidGlassCard
         case styleSummaryBubble
 
         // 펫 캐릭터 및 표시자
@@ -385,7 +387,9 @@ extension L10n.Key {
         case .cardStyleLabel: return "카드 형태:"
         case .cardThemeLabel: return "카드 테마:"
         case .cardOpacityLabel: return "카드 투명도:"
-        case .styleActionCard: return "액션 카드"
+        case .cardOpacityManagedBySystem: return "리퀴드 글래스의 투명도는 macOS가 결정합니다."
+        case .styleActionCard: return "액션 카드 (클래식)"
+        case .styleLiquidGlassCard: return "액션 카드 (리퀴드 글래스)"
         case .styleSummaryBubble: return "요약 말풍선"
 
         case .indicatorStyleLabel: return "표시자 형태:"
@@ -592,7 +596,9 @@ extension L10n.Key {
         case .cardStyleLabel: return "Card Style:"
         case .cardThemeLabel: return "Card Theme:"
         case .cardOpacityLabel: return "Card Opacity:"
-        case .styleActionCard: return "Action Card"
+        case .cardOpacityManagedBySystem: return "Liquid Glass transparency is determined by macOS."
+        case .styleActionCard: return "Action Card (Classic)"
+        case .styleLiquidGlassCard: return "Action Card (Liquid Glass)"
         case .styleSummaryBubble: return "Summary Bubble"
 
         case .indicatorStyleLabel: return "Indicator Style:"

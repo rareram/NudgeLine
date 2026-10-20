@@ -6,21 +6,23 @@ import Combine
 
 // MARK: - 1. 환경설정 열거형 모델 (Enums)
 public enum EventHoverStyle: String, Codable, CaseIterable, Identifiable, Sendable {
-    case card = "card"               // 액션 카드 (미팅/캘린더)
-    case simpleInfo = "simpleInfo"   // 요약 말풍선 (초경량)
+    case card = "card"                       // 액션 카드 (클래식)
+    case liquidGlassCard = "liquidGlassCard" // 액션 카드 (리퀴드 글래스)
+    case simpleInfo = "simpleInfo"           // 요약 말풍선 (초경량)
 
     public var id: String { rawValue }
 
     public func title(lang: AppLanguage = .system) -> String {
         switch self {
         case .card: return L10n.tr(.styleActionCard, lang: lang)
+        case .liquidGlassCard: return L10n.tr(.styleLiquidGlassCard, lang: lang)
         case .simpleInfo: return L10n.tr(.styleSummaryBubble, lang: lang)
         }
     }
 
     public func renderer() -> EventHoverStyleRenderer {
         switch self {
-        case .card: return DetailCardHoverRenderer()
+        case .card, .liquidGlassCard: return DetailCardHoverRenderer()
         case .simpleInfo: return SimpleInfoHoverRenderer()
         }
     }

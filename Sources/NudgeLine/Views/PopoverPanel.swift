@@ -8,6 +8,18 @@ public final class FirstMouseHostingView<Content: View>: NSHostingView<Content> 
     public override var acceptsFirstResponder: Bool { true }
     private var trackingArea: NSTrackingArea?
 
+    public required init(rootView: Content) {
+        super.init(rootView: rootView)
+        self.wantsLayer = true
+        self.layer?.backgroundColor = NSColor.clear.cgColor
+    }
+
+    @MainActor required dynamic init?(coder: NSCoder) {
+        super.init(coder: coder)
+        self.wantsLayer = true
+        self.layer?.backgroundColor = NSColor.clear.cgColor
+    }
+
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
         return true
     }
@@ -66,7 +78,7 @@ public final class PopoverPanel: NSPanel {
     private init() {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 250, height: 160),
-            styleMask: [.borderless, .nonactivatingPanel],
+            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -149,8 +161,8 @@ public final class PopoverPanel: NSPanel {
 
 // MARK: - 3. 일정 호버 팝오버 표시 및 좌표 애니메이션
 extension PopoverPanel {
-    // MARK: - 방향별 그림자 안전 여백 연산
-    // [원인/배경: 균일 여백 부여 시 윈도우 프레임이 타임라인 바 영역(폭 2~3pt)을 덮어 호버 깜빡임(진자 루프) 유발 -> 해결 방법: 바를 향하는 방향은 여백 0pt로 물리적 경계를 엄격히 유지하고, 개방된 바깥 방향에만 10pt 여백을 부여하여 순정 그림자 클리핑 방지 -> 기대 효과: 타임라인 바 호버 간섭 0% 보장 및 흰색 배경에서의 부드러운 순정 그림자 보존]
+    // MARK: - 방향별 그림자 여백 연산
+    // 타임라인 바와의 호버 간섭을 방지하고 외곽 그림자 잘림을 막기 위한 비대칭 안전 여백 반환
     private func shadowPadding(for barPosition: BarPosition) -> EdgeInsets {
         let margin: CGFloat = 10.0
         switch barPosition {
@@ -163,7 +175,7 @@ extension PopoverPanel {
         }
     }
 
-    // [원인/배경: 비대칭 여백 추가 시 윈도우 원점과 크기 보정이 어긋나면 카드의 화면상 시각적 위치가 이동함 -> 해결 방법: 카드 본체 목표 좌표(cardX, cardY)에서 패딩을 차감/가산하여 윈도우 프레임을 역산 -> 기대 효과: 카드의 시각적 렌더링 위치는 이전과 100% 동일하게 유지하면서 여백만 안전하게 확장]
+    // 그림자 여백을 고려하여 카드 본체 표시 위치에 맞춘 패널 창 프레임 연산
     private func computePanelFrame(
         cardX: CGFloat,
         cardY: CGFloat,
@@ -179,29 +191,32 @@ extension PopoverPanel {
         return NSRect(x: winX, y: winY, width: winW, height: winH)
     }
 
-    // 타임라인 바 위치에 따른 카드 앵커링 (말풍선 꼬리를 타임라인 바 방향 에지에 정확히 밀착)
+    // 타임라인 바 위치에 맞춰 카드 뷰를 에지에 정렬하고 창 컨테이너 배경을 투명화
     @ViewBuilder
     private static func anchorCardView(
         _ cardView: AnyView,
         for barPosition: BarPosition
     ) -> some View {
-        switch barPosition {
-        case .bottom:
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-                cardView
-            }
-        case .right:
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
-                cardView
-            }
-        case .left:
-            HStack(spacing: 0) {
-                cardView
-                Spacer(minLength: 0)
+        Group {
+            switch barPosition {
+            case .bottom:
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    cardView
+                }
+            case .right:
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    cardView
+                }
+            case .left:
+                HStack(spacing: 0) {
+                    cardView
+                    Spacer(minLength: 0)
+                }
             }
         }
+        .containerBackground(.clear, for: .window)
     }
 
     public func show(
@@ -238,13 +253,12 @@ extension PopoverPanel {
         var targetHeight = targetDimensions.height
 
         let pad = shadowPadding(for: barPosition)
-        let cardView = AnyView(
-            renderer.makeView(
-                events: events,
-                allDayEvents: allDayEvents,
-                settings: settings
-            )
+        let rawCardView = renderer.makeView(
+            events: events,
+            allDayEvents: allDayEvents,
+            settings: settings
         )
+        let cardView = AnyView(rawCardView)
 
         let anchoredCardView = AnyView(
             Self.anchorCardView(cardView, for: barPosition)
@@ -548,14 +562,13 @@ extension PopoverPanel {
         )
 
         let pad = shadowPadding(for: context.barPosition)
-        let cardView = AnyView(
-            AllDayWithRemindersPopoverView(
-                events: events,
-                reminders: reminders,
-                barPosition: context.barPosition,
-                settings: context.settings
-            )
+        let rawCardView = AllDayWithRemindersPopoverView(
+            events: events,
+            reminders: reminders,
+            barPosition: context.barPosition,
+            settings: context.settings
         )
+        let cardView = AnyView(rawCardView)
 
         let anchoredCardView = AnyView(
             Self.anchorCardView(cardView, for: context.barPosition)
@@ -771,10 +784,11 @@ extension PopoverPanel {
         self.isDetailMode = isDetailMode
         updatePanelAppearance(settings: settings)
 
+        let preparedContent = AnyView(content.containerBackground(.clear, for: .window))
         if let hosting = hostingView {
-            hosting.rootView = content
+            hosting.rootView = preparedContent
         } else {
-            let hosting = FirstMouseHostingView(rootView: content)
+            let hosting = FirstMouseHostingView(rootView: preparedContent)
             hosting.appearance = self.appearance
             self.contentView = hosting
             self.hostingView = hosting
@@ -1374,15 +1388,6 @@ private struct AllDayWithRemindersPopoverView: View {
         }
     }
 
-    private var tintColor: Color {
-        let opacity = settings.cardOpacity
-        if isDarkTheme {
-            return Color.black.opacity(opacity * 0.40)
-        } else {
-            return Color.white.opacity(opacity * 0.35)
-        }
-    }
-
     private var textColor: Color {
         isDarkTheme ? Color.white : Color.black.opacity(0.95)
     }
@@ -1394,6 +1399,7 @@ private struct AllDayWithRemindersPopoverView: View {
     var body: some View {
         let direction = bubbleDirection
         let bubbleShape = SpeechBubbleShape(direction: direction, arrowWidth: 8, arrowHeight: 14, cornerRadius: 10)
+        let isLiquidGlass = settings.eventHoverStyle == .liquidGlassCard
 
         VStack(alignment: .leading, spacing: 8) {
             // 1. 종일 캘린더 일정 섹션 (존재 시)
@@ -1683,29 +1689,19 @@ private struct AllDayWithRemindersPopoverView: View {
                 }
             }
         }
-        .padding(.leading, direction == .left ? 18 : 12)
-        .padding(.trailing, direction == .right ? 18 : 12)
+        .padding(.leading, (!isLiquidGlass && direction == .left) ? 18 : 12)
+        .padding(.trailing, (!isLiquidGlass && direction == .right) ? 18 : 12)
         .padding(.top, 12)
-        .padding(.bottom, direction == .bottom ? 18 : 12)
+        .padding(.bottom, (!isLiquidGlass && direction == .bottom) ? 18 : 12)
         .frame(width: 280, alignment: .leading)
         .fixedSize(horizontal: true, vertical: false)
-        // 1단계: 순정 머티리얼 글래스 블러 (사용자 cardOpacity 투명도 반영)
-        .background(.ultraThinMaterial.opacity(settings.cardOpacity), in: bubbleShape)
-        .background(
-            // 2단계: 테마 투명 틴트 레이어 (다크/라이트 모드 대비 보강)
-            bubbleShape
-                .fill(tintColor)
-                .allowsHitTesting(false)
+        .eventCardBackground(
+            shape: bubbleShape,
+            cornerRadius: 14.0,
+            isDarkTheme: isDarkTheme,
+            cardOpacity: settings.cardOpacity,
+            isLiquidGlass: isLiquidGlass
         )
-        .clipShape(bubbleShape)
-        .overlay(
-            // 순정 macOS 메뉴/팝오버 0.5pt 헤어라인 경계선
-            bubbleShape
-                .stroke(isDarkTheme ? Color.white.opacity(0.18) : Color.black.opacity(0.12), lineWidth: 0.5)
-                .allowsHitTesting(false)
-        )
-        // 순정 윈도우 부유 그림자
-        .shadow(color: Color.black.opacity(isDarkTheme ? 0.32 : 0.16), radius: 8, x: 0, y: 4)
     }
 
     // ponytail: 위치 및 웹 링크 공통 액션 버튼 렌더러
