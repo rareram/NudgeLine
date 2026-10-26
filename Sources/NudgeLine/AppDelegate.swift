@@ -439,7 +439,7 @@ extension AppDelegate {
                     alert.messageText = "NudgeLine"
                     alert.informativeText = "\(L10n.tr(.upToDate, lang: self.settings.language))\n(Version \(appVersion), Build \(buildNumber))"
                     alert.alertStyle = .informational
-                    alert.addButton(withTitle: "OK")
+                    alert.addButton(withTitle: L10n.tr(.okButton, lang: self.settings.language))
                     alert.runModal()
                 }
             case .failure:
@@ -447,7 +447,7 @@ extension AppDelegate {
                 alert.messageText = "NudgeLine"
                 alert.informativeText = L10n.tr(.checkUpdateFailed, lang: self.settings.language)
                 alert.alertStyle = .warning
-                alert.addButton(withTitle: "OK")
+                alert.addButton(withTitle: L10n.tr(.okButton, lang: self.settings.language))
                 alert.runModal()
             }
         }

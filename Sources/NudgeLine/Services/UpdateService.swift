@@ -153,7 +153,7 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
             backing: .buffered,
             defer: false
         )
-        window.title = "NudgeLine Update"
+        window.title = L10n.tr(.updateWindowTitle)
         window.center()
         window.isReleasedWhenClosed = false
         window.level = .floating

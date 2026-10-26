@@ -90,7 +90,7 @@ extension CustomPetEditorSheet {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(frames.count) Frames")
+                Text(L10n.tr(.petFramesCount(frames.count), lang: settings.language))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -455,7 +455,7 @@ private struct LivePetPreviewBox: View {
     var body: some View {
         ZStack {
             if frames.isEmpty {
-                Text("No Frame")
+                Text(L10n.tr(.noFramePlaceholder))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary.opacity(0.5))
             } else {
@@ -490,7 +490,7 @@ private struct LivePetHidePreviewBox: View {
         GeometryReader { geo in
             ZStack {
                 if frames.isEmpty {
-                    Text("No Frame")
+                    Text(L10n.tr(.noFramePlaceholder))
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary.opacity(0.5))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -57,6 +57,7 @@ public struct L10n {
         case installingAndRestarting
         case updateNowInApp
         case inAppUpdateFailed
+        case updateWindowTitle
 
         // 환경설정 5대 핵심 탭
         case tabTimeline
@@ -103,6 +104,7 @@ public struct L10n {
         case visibleReminderListsSection
         case noReminderLists
         case openRemindersApp
+        case reminderDefaultListTitle
 
         // 탭 5: 일반 섹션
         case systemPreferencesSection
@@ -220,6 +222,8 @@ public struct L10n {
         case petNamePlaceholder
         case framesLabel
         case framesGuide
+        case petFramesCount(Int)
+        case noFramePlaceholder
         case dragDropGuide
         case previewLabel
         case speedLabel
@@ -229,6 +233,7 @@ public struct L10n {
         case rightHideOffsetLabel
         case cancelButton
         case addButton
+        case okButton
         case noCustomPets
 
         // 팝오버 및 회의 연동
@@ -280,6 +285,7 @@ extension L10n.Key {
         case .installingAndRestarting: return "업데이트 설치 및 재시작 중…"
         case .updateNowInApp: return "지금 업데이트"
         case .inAppUpdateFailed: return "인앱 업데이트 실패"
+        case .updateWindowTitle: return "NudgeLine 업데이트"
 
         case .tabTimeline: return "타임라인"
         case .tabAppearance: return "표시 및 효과"
@@ -318,6 +324,7 @@ extension L10n.Key {
         case .visibleReminderListsSection: return "표시할 미리알림 목록"
         case .noReminderLists: return "등록된 미리알림 목록이 없습니다."
         case .openRemindersApp: return "미리알림 앱 열기"
+        case .reminderDefaultListTitle: return "미리알림"
         case .systemPreferencesSection: return "시스템 설정"
 
         case .enableSegmentRimLabel: return "블록 테두리 강조"
@@ -440,6 +447,8 @@ extension L10n.Key {
         case .petNamePlaceholder: return "예: 삼색이, 백구"
         case .framesLabel: return "프레임"
         case .framesGuide: return "1. 포맷: PNG (투명)\n2. 기본: 80 × 116 px\n   (=레티나: 40 × 58 pt)\n3. 권장: 10장 미만"
+        case .petFramesCount(let count): return "\(count)개 프레임"
+        case .noFramePlaceholder: return "프레임 없음"
         case .dragDropGuide: return "PNG 파일들을 여기에 드래그하거나\n아래 '+' 버튼을 눌러 추가하세요"
         case .previewLabel: return "미리보기"
         case .speedLabel: return "애니메이션 속도"
@@ -449,6 +458,7 @@ extension L10n.Key {
         case .rightHideOffsetLabel: return "오른쪽 숨기 오프셋"
         case .cancelButton: return "취소"
         case .addButton: return "추가"
+        case .okButton: return "확인"
         case .noCustomPets: return "등록된 사용자 설정 펫이 없습니다."
 
         case .untitledEvent: return "(제목 없음)"
@@ -489,6 +499,7 @@ extension L10n.Key {
         case .installingAndRestarting: return "Installing update & restarting…"
         case .updateNowInApp: return "Update Now"
         case .inAppUpdateFailed: return "In-App Update Failed"
+        case .updateWindowTitle: return "NudgeLine Update"
 
         case .tabTimeline: return "Timeline"
         case .tabAppearance: return "Appearance"
@@ -527,6 +538,7 @@ extension L10n.Key {
         case .visibleReminderListsSection: return "Visible Reminder Lists"
         case .noReminderLists: return "No reminder lists found."
         case .openRemindersApp: return "Open Reminders"
+        case .reminderDefaultListTitle: return "Reminders"
         case .systemPreferencesSection: return "System Preferences"
 
         case .enableSegmentRimLabel: return "Block Rim Highlight"
@@ -649,6 +661,8 @@ extension L10n.Key {
         case .petNamePlaceholder: return "e.g., Patches, Snowy"
         case .framesLabel: return "Frames"
         case .framesGuide: return "1. Format: PNG (Alpha)\n2. Size: 80 × 116 px\n   (=Retina: 40 × 58 pt)\n3. Frames: < 10 frames"
+        case .petFramesCount(let count): return "\(count) Frames"
+        case .noFramePlaceholder: return "No Frame"
         case .dragDropGuide: return "Drag & drop PNG files here\nor click '+' below to add"
         case .previewLabel: return "Preview"
         case .speedLabel: return "Animation Speed"
@@ -658,6 +672,7 @@ extension L10n.Key {
         case .rightHideOffsetLabel: return "Right Hide Offset"
         case .cancelButton: return "Cancel"
         case .addButton: return "Add"
+        case .okButton: return "OK"
         case .noCustomPets: return "No custom pets registered."
 
         case .untitledEvent: return "(Untitled)"

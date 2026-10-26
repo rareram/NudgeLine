@@ -112,6 +112,20 @@ struct LocalizationTests {
         #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .ko) == "범위 외 2건 (21:00)")
         #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .en) == "Outside range: 2 (21:00)")
     }
+
+    @Test("신규 표준 다국어 키 (업데이트창, 확인버튼, 프레임, 미리알림 기본목록) 검증")
+    func testNewlyAddedLocalizationKeys() {
+        #expect(L10n.tr(.updateWindowTitle, lang: .ko) == "NudgeLine 업데이트")
+        #expect(L10n.tr(.updateWindowTitle, lang: .en) == "NudgeLine Update")
+        #expect(L10n.tr(.okButton, lang: .ko) == "확인")
+        #expect(L10n.tr(.okButton, lang: .en) == "OK")
+        #expect(L10n.tr(.petFramesCount(5), lang: .ko) == "5개 프레임")
+        #expect(L10n.tr(.petFramesCount(5), lang: .en) == "5 Frames")
+        #expect(L10n.tr(.noFramePlaceholder, lang: .ko) == "프레임 없음")
+        #expect(L10n.tr(.noFramePlaceholder, lang: .en) == "No Frame")
+        #expect(L10n.tr(.reminderDefaultListTitle, lang: .ko) == "미리알림")
+        #expect(L10n.tr(.reminderDefaultListTitle, lang: .en) == "Reminders")
+    }
 }
 
 // MARK: - 2. 앱 전역 설정 및 색상 유틸리티 단위 테스트

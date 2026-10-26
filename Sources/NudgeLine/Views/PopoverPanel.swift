@@ -1951,7 +1951,7 @@ private struct ReminderPopoverCardView: View {
                         Circle().stroke(Color.black.opacity(isDarkTheme ? 0.25 : 0.18), lineWidth: 0.5)
                     )
 
-                Text(reminder.listTitle.isEmpty ? "Reminders" : reminder.listTitle)
+                Text(reminder.listTitle.isEmpty ? L10n.tr(.reminderDefaultListTitle, lang: settings.language) : reminder.listTitle)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(textMuted)
                     .lineLimit(1)
