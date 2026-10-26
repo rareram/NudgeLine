@@ -581,7 +581,7 @@ extension PopoverPanel {
         updatePanelAppearance(settings: context.settings)
         self.isDetailMode = true
 
-        let hasWebLink = reminder.url != nil || (reminder.notes?.contains("http://") == true || reminder.notes?.contains("https://") == true)
+        let hasWebLink = ReminderLinkParser.parse(reminder: reminder, language: context.settings.language) != nil
         var targetWidth: CGFloat = 260.0
         var estimatedContentHeight: CGFloat = 120.0
         if let notes = reminder.notes, !notes.isEmpty {
@@ -1759,7 +1759,82 @@ private struct AllDayWithRemindersPopoverView: View {
     }
 }
 
-// MARK: - 5-2. 미리알림 상세 카드 (ReminderPopoverCardView)
+// MARK: - 5-2. 미리알림 링크 정보 모델 및 3단계 안전 판별 파서
+public struct ReminderLinkInfo: Equatable, Sendable {
+    public let url: URL
+    public let displayText: String
+    public let iconName: String
+    public let isUnverified: Bool
+
+    public init(url: URL, displayText: String, iconName: String, isUnverified: Bool) {
+        self.url = url
+        self.displayText = displayText
+        self.iconName = iconName
+        self.isUnverified = isUnverified
+    }
+}
+
+public enum ReminderLinkParser {
+    public static func parse(reminder: ReminderItem, language: AppLanguage) -> ReminderLinkInfo? {
+        let candidate: URL? = reminder.url ?? {
+            guard let notes = reminder.notes, !notes.isEmpty,
+                  let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue),
+                  let match = detector.firstMatch(in: notes, options: [], range: NSRange(location: 0, length: (notes as NSString).length)) else {
+                return nil
+            }
+            return match.url
+        }()
+
+        guard let rawUrl = candidate,
+              let scheme = rawUrl.scheme?.lowercased(),
+              !scheme.isEmpty else {
+            return nil
+        }
+
+        // 1단계: 보안상 유해한 위험 스킴 원천 배제 (로컬 파일 임의 실행 및 스크립트 인젝션 차단)
+        let blockedSchemes: Set<String> = ["file", "javascript", "applescript", "data", "blob", "help", "disk"]
+        if blockedSchemes.contains(scheme) {
+            return nil
+        }
+
+        // 2단계: 표준 웹 링크 (http, https) -> 도메인 호스트명 추출
+        if scheme == "http" || scheme == "https" {
+            let host = CalendarEvent.extractDisplayHost(from: rawUrl)
+            return ReminderLinkInfo(url: rawUrl, displayText: host, iconName: "link", isUnverified: false)
+        }
+
+        // 3단계: 잘 알려진 macOS 시스템 및 생산성 앱 딥링크
+        let isKo = language.isKorean
+        switch scheme {
+        case "message":
+            return ReminderLinkInfo(url: rawUrl, displayText: isKo ? "메일" : "Mail", iconName: "envelope", isUnverified: false)
+        case "notes":
+            return ReminderLinkInfo(url: rawUrl, displayText: isKo ? "메모" : "Notes", iconName: "note.text", isUnverified: false)
+        case "notion":
+            return ReminderLinkInfo(url: rawUrl, displayText: "Notion", iconName: "doc.text", isUnverified: false)
+        case "slack":
+            return ReminderLinkInfo(url: rawUrl, displayText: "Slack", iconName: "bubble.left.and.bubble.right", isUnverified: false)
+        case "things":
+            return ReminderLinkInfo(url: rawUrl, displayText: "Things", iconName: "checkmark.square", isUnverified: false)
+        case "obsidian":
+            return ReminderLinkInfo(url: rawUrl, displayText: "Obsidian", iconName: "doc.plaintext", isUnverified: false)
+        case "bear":
+            return ReminderLinkInfo(url: rawUrl, displayText: "Bear", iconName: "doc.text", isUnverified: false)
+        case "linear":
+            return ReminderLinkInfo(url: rawUrl, displayText: "Linear", iconName: "arrow.up.right.square", isUnverified: false)
+        case "figma":
+            return ReminderLinkInfo(url: rawUrl, displayText: "Figma", iconName: "pencil.and.outline", isUnverified: false)
+        case "x-apple-reminderkit":
+            return ReminderLinkInfo(url: rawUrl, displayText: isKo ? "미리알림" : "Reminders", iconName: "list.bullet", isUnverified: false)
+        default:
+            // 4단계: 관리 리스트에 없는 기타 외부 딥링크 -> '외부 앱 (스킴명)'으로 투명하게 표시
+            let label = isKo ? "외부 앱 (\(scheme))" : "App Link (\(scheme))"
+            return ReminderLinkInfo(url: rawUrl, displayText: label, iconName: "arrow.up.forward.app", isUnverified: true)
+        }
+    }
+}
+
+// MARK: - 5-3. 미리알림 상세 카드 (ReminderPopoverCardView)
 // 미리알림 완료 체크 및 세부 정보를 표시하는 카드
 private struct ReminderPopoverCardView: View {
     let reminder: ReminderItem
@@ -1858,16 +1933,8 @@ private struct ReminderPopoverCardView: View {
         }
     }
 
-    private var effectiveWebLink: URL? {
-        if let url = reminder.url {
-            return url
-        }
-        if let notes = reminder.notes, !notes.isEmpty {
-            let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
-            let matches = detector?.matches(in: notes, options: [], range: NSRange(location: 0, length: (notes as NSString).length))
-            return matches?.first?.url
-        }
-        return nil
+    private var effectiveLinkInfo: ReminderLinkInfo? {
+        ReminderLinkParser.parse(reminder: reminder, language: settings.language)
     }
 
     var body: some View {
@@ -1988,18 +2055,18 @@ private struct ReminderPopoverCardView: View {
                 }
             }
 
-            // 5. 웹 링크 (명시적 URL 또는 본문 링크 존재 시)
-            if let targetUrl = effectiveWebLink {
+            // 5. 웹/앱 링크 (명시적 URL 또는 본문 링크 존재 시)
+            if let link = effectiveLinkInfo {
                 Button(action: {
-                    NSWorkspace.shared.open(targetUrl)
+                    NSWorkspace.shared.open(link.url)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
                         PopoverPanel.shared.hide(delayed: false)
                     }
                 }) {
                     HStack(spacing: 4) {
-                        Image(systemName: "link")
+                        Image(systemName: link.iconName)
                             .font(.system(size: 8.5))
-                        Text(targetUrl.host ?? targetUrl.absoluteString)
+                        Text(link.displayText)
                             .font(.system(size: 9.5, weight: .medium))
                             .lineLimit(1)
                             .underline(true, color: (isDarkTheme ? Color.white.opacity(0.35) : Color.blue.opacity(0.35)))

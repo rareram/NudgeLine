@@ -944,6 +944,91 @@ struct ReminderIntegrationTests {
         #expect(item?.title == "디자인 싱크")
     }
 
+    @Test("미리알림 링크 3단계 안전 파싱 및 딥링크 배지 변환 검증")
+    func testReminderLinkParsingAndSecurityFiltering() {
+        let calendar = Calendar.current
+        let due = calendar.date(byAdding: .hour, value: 1, to: Date())!
+
+        // 1. 유해 스킴 차단 검증 (file, javascript 등 nil 반환)
+        let fileReminder = ReminderItem(
+            id: "rem-file",
+            title: "로컬 스크립트",
+            dueDate: due,
+            url: URL(string: "file:///Applications/Calculator.app")
+        )
+        #expect(ReminderLinkParser.parse(reminder: fileReminder, language: .ko) == nil)
+
+        let jsReminder = ReminderItem(
+            id: "rem-js",
+            title: "JS 인젝션",
+            dueDate: due,
+            notes: "참고: javascript:alert(1)"
+        )
+        #expect(ReminderLinkParser.parse(reminder: jsReminder, language: .ko) == nil)
+
+        // 2. 표준 웹 링크 검증 (도메인 추출)
+        let webReminder = ReminderItem(
+            id: "rem-web",
+            title: "노션 문서 확인",
+            dueDate: due,
+            url: URL(string: "https://www.notion.so/workspace/page-123")
+        )
+        let webInfo = ReminderLinkParser.parse(reminder: webReminder, language: .ko)
+        #expect(webInfo != nil)
+        #expect(webInfo?.displayText == "notion.so")
+        #expect(webInfo?.iconName == "link")
+        #expect(webInfo?.isUnverified == false)
+
+        // 3. 알려진 시스템 및 생산성 딥링크 검증 (Mail, Notion, Slack 등)
+        let mailReminder = ReminderItem(
+            id: "rem-mail",
+            title: "클라이언트 메일 회신",
+            dueDate: due,
+            url: URL(string: "message://%3C123456@mail.gmail.com%3E")
+        )
+        let mailInfoKo = ReminderLinkParser.parse(reminder: mailReminder, language: .ko)
+        #expect(mailInfoKo?.displayText == "메일")
+        #expect(mailInfoKo?.iconName == "envelope")
+        #expect(mailInfoKo?.isUnverified == false)
+
+        let mailInfoEn = ReminderLinkParser.parse(reminder: mailReminder, language: .en)
+        #expect(mailInfoEn?.displayText == "Mail")
+
+        let slackReminder = ReminderItem(
+            id: "rem-slack",
+            title: "슬랙 채널 확인",
+            dueDate: due,
+            url: URL(string: "slack://channel?team=T123&id=C456")
+        )
+        let slackInfo = ReminderLinkParser.parse(reminder: slackReminder, language: .ko)
+        #expect(slackInfo?.displayText == "Slack")
+        #expect(slackInfo?.iconName == "bubble.left.and.bubble.right")
+        #expect(slackInfo?.isUnverified == false)
+
+        // 4. 관리 리스트에 없는 임의의 3rd party 딥링크 (솔직한 알 수 없음 표시)
+        let customReminder = ReminderItem(
+            id: "rem-custom",
+            title: "특정 외부 툴 작업",
+            dueDate: due,
+            url: URL(string: "linear://issue/ENG-101")
+        )
+        let linearInfo = ReminderLinkParser.parse(reminder: customReminder, language: .ko)
+        #expect(linearInfo?.displayText == "Linear")
+        #expect(linearInfo?.isUnverified == false)
+
+        let unknownReminder = ReminderItem(
+            id: "rem-unknown",
+            title: "커스텀 툴 작업",
+            dueDate: due,
+            url: URL(string: "mytodoapp://task/999")
+        )
+        let unknownInfo = ReminderLinkParser.parse(reminder: unknownReminder, language: .ko)
+        #expect(unknownInfo != nil)
+        #expect(unknownInfo?.displayText == "외부 앱 (mytodoapp)")
+        #expect(unknownInfo?.iconName == "arrow.up.forward.app")
+        #expect(unknownInfo?.isUnverified == true)
+    }
+
     @Test("날짜 전용 미리알림 관련 다국어 키 검증")
     func testAllDayRemindersLocalizationKeys() {
         #expect(L10n.tr(.allDayRemindersNotice(3), lang: .ko) == "할 일 3건")
