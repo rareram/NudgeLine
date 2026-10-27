@@ -1,0 +1,32 @@
+name: CI Tests
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - 'draft/**'
+      - 'README.md'
+      - 'PRIVACY.md'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Unit Tests on macOS 15
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup macOS Environment & Swift
+        run: |
+          swift --version
+          xcodebuild -version || true
+
+      - name: Run Unit Tests
+        run: |
+          chmod +x ./scripts/run_tests.sh
+          ./scripts/run_tests.sh

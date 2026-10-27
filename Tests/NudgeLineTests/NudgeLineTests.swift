@@ -223,6 +223,33 @@ struct AppSettingsTests {
         let diffHours = end.timeIntervalSince(start) / 3600.0
         #expect(diffHours >= 1.0)
     }
+
+    @Test("지도 검색 URL 쿼리 파라미터 안전 이스케이프 검증")
+    func testMapSearchURLSafeEncoding() {
+        let location = "강남역 & 역삼역 = 테헤란로?"
+        let url = PreferredMapService.google.url(for: location)
+        #expect(url != nil)
+        let urlString = url!.absoluteString
+        #expect(urlString.contains("%26"))
+        #expect(urlString.contains("%3D"))
+        #expect(urlString.contains("%3F"))
+        #expect(!urlString.contains("& 역삼역"))
+    }
+
+    @Test("커스텀 펫 FPS 범위 클램핑 및 비정상 입력 방어 검증")
+    func testCustomPetFPSClamping() {
+        let petLow = CustomPet(name: "테스트", fps: -10.0, frameCount: 5)
+        #expect(petLow.fps == 8.0)
+
+        let petHigh = CustomPet(name: "테스트", fps: 120.0, frameCount: 5)
+        #expect(petHigh.fps == 60.0)
+
+        let petNormal = CustomPet(name: "테스트", fps: 12.0, frameCount: 5)
+        #expect(petNormal.fps == 12.0)
+
+        let petInf = CustomPet(name: "테스트", fps: Double.infinity, frameCount: 5)
+        #expect(petInf.fps == 8.0)
+    }
 }
 
 // MARK: - 3. 캘린더 일정 모델 및 세그먼트 슬라이싱 단위 테스트
@@ -405,6 +432,19 @@ struct VersionComparisonTests {
         #expect(UpdateService.isNewerVersion(latest: "invalid", current: "0.4", currentBuild: "425") == false)
         #expect(UpdateService.isNewerVersion(latest: "0.5.alpha", current: "0.4", currentBuild: "425") == true)
     }
+
+    @Test("업데이터 다운로드 호스트 화이트리스트 검증")
+    func testUpdateHostValidation() {
+        #expect(UpdateService.isTrustedDownloadHost(URL(string: "https://github.com/rareram/NudgeLine/releases/download/v0.4/NudgeLine.zip")!) == true)
+        #expect(UpdateService.isTrustedDownloadHost(URL(string: "https://objects.githubusercontent.com/github-production-release-asset-2e65be/123/NudgeLine.zip")!) == true)
+        #expect(UpdateService.isTrustedDownloadHost(URL(string: "https://release-assets.githubusercontent.com/123/NudgeLine.zip")!) == true)
+        // 사용자 임의 콘텐츠 호스트 차단 검증
+        #expect(UpdateService.isTrustedDownloadHost(URL(string: "https://raw.githubusercontent.com/user/repo/main/malicious.zip")!) == false)
+        #expect(UpdateService.isTrustedDownloadHost(URL(string: "https://gist.githubusercontent.com/user/123/malicious.zip")!) == false)
+        #expect(UpdateService.isTrustedDownloadHost(URL(string: "https://malicious-site.com/NudgeLine.zip")!) == false)
+        #expect(UpdateService.isTrustedDownloadHost(URL(string: "https://github.com.attacker.com/NudgeLine.zip")!) == false)
+        #expect(UpdateService.isTrustedDownloadHost(URL(string: "https://evilgithub.com/NudgeLine.zip")!) == false)
+    }
 }
 
 @Suite("Meeting Integration and Inactive Event Tests")
@@ -566,6 +606,14 @@ struct MeetingIntegrationAndInactiveEventTests {
         // 5. 빈 문자열 처리
         #expect(PreferredMapService.apple.url(for: "") == nil)
         #expect(PreferredMapService.naver.url(for: "   ") == nil)
+
+        // 6. 슬래시 및 쿼리 파라미터 구분자 이스케이프 검증
+        let complexLocation = "서울시 강남구 123/45 & 2?test=1"
+        let naverComplex = PreferredMapService.naver.url(for: complexLocation)
+        #expect(naverComplex != nil)
+        #expect(naverComplex?.absoluteString.contains("%2F") == true)
+        #expect(naverComplex?.absoluteString.contains("%26") == true)
+        #expect(naverComplex?.absoluteString.contains("%3F") == true)
     }
 }
 
@@ -1098,5 +1146,20 @@ struct ReminderIntegrationTests {
         #expect(listInfo.title == "업무 프로젝트")
         #expect(listInfo.color == .blue)
         #expect(listInfo.sourceTitle == "iCloud")
+    }
+
+    @Test("커스텀 펫 프레임 수 30개 상한 일원화 검증")
+    func testCustomPetFrameCountClamp() {
+        let pet1 = CustomPet(name: "테스트펫", frameCount: 150)
+        #expect(pet1.frameCount == 30)
+
+        let pet2 = CustomPet(name: "테스트펫", frameCount: -5)
+        #expect(pet2.frameCount == 0)
+
+        let json = """
+        {"id":"test-1","name":"오버플로우펫","fps":12.0,"frameCount":999,"createdAt":0}
+        """.data(using: .utf8)!
+        let decoded = try? JSONDecoder().decode(CustomPet.self, from: json)
+        #expect(decoded?.frameCount == 30)
     }
 }

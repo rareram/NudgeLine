@@ -9,6 +9,14 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
     public static let releasesURL = URL(string: "https://github.com/rareram/NudgeLine/releases")!
     public static let latestReleaseAPI = URL(string: "https://api.github.com/repos/rareram/NudgeLine/releases/latest")!
 
+    // GitHub 공식 릴리스 및 에셋 다운로드 호스트 화이트리스트 검증 (사용자 콘텐츠 호스트 배제한 정확 호스트 매칭)
+    public static func isTrustedDownloadHost(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host == "github.com" ||
+               host == "objects.githubusercontent.com" ||
+               host == "release-assets.githubusercontent.com"
+    }
+
     public enum UpdateState: Equatable, Sendable {
         case idle
         case remoteAvailable(version: String, url: URL, zipURL: URL?)
@@ -50,10 +58,16 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 10.0
 
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
             if let error = error {
                 DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+                DispatchQueue.main.async { completion(.failure(NSError(domain: "UpdateError", code: code, userInfo: [NSLocalizedDescriptionKey: "GitHub API request failed with status code \(code)."]))) }
                 return
             }
 
@@ -67,12 +81,14 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
             let version = tagName.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
             let releaseUrl = (json["html_url"] as? String).flatMap { URL(string: $0) } ?? Self.releasesURL
 
-            // Release Assets 중 .zip 확장자를 가진 바이너리 다운로드 URL 추출
+            // Release Assets 중 .zip 확장자를 가진 바이너리 다운로드 URL 추출 (신뢰할 수 있는 GitHub 호스트 검증 적용)
             let zipDownloadURL = (json["assets"] as? [[String: Any]])?
                 .compactMap { asset -> URL? in
                     guard let name = asset["name"] as? String, name.hasSuffix(".zip"),
-                          let downloadStr = asset["browser_download_url"] as? String else { return nil }
-                    return URL(string: downloadStr)
+                          let downloadStr = asset["browser_download_url"] as? String,
+                          let url = URL(string: downloadStr),
+                          Self.isTrustedDownloadHost(url) else { return nil }
+                    return url
                 }
                 .first
 
@@ -111,9 +127,9 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         // App Store 환경에서는 시스템 App Store 또는 릴리스 페이지로 이동
         NSWorkspace.shared.open(Self.releasesURL)
         #else
-        guard let zipURL = release.zipURL else {
-            // ZIP 에셋이 없으면 브라우저로 릴리스 페이지 오픈 폴백
-            NSWorkspace.shared.open(release.url)
+        guard let zipURL = release.zipURL, Self.isTrustedDownloadHost(zipURL) else {
+            // ZIP 에셋이 없거나 신뢰할 수 없는 호스트인 경우 브라우저로 릴리스 페이지 오픈 폴백
+            NSWorkspace.shared.open(Self.releasesURL)
             return
         }
 
@@ -215,6 +231,15 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
     }
 
     // MARK: - 4. URLSessionDownloadDelegate 이벤트 수신
+    // GitHub -> CDN 리다이렉트 시 목적지 호스트의 화이트리스트 일치 여부 검증 (위조 호스트 다운로드 차단)
+    public func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        if let targetURL = request.url, Self.isTrustedDownloadHost(targetURL) {
+            completionHandler(request)
+        } else {
+            completionHandler(nil)
+        }
+    }
+
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
         guard downloadTask.taskIdentifier == activeTaskId, totalBytesExpectedToWrite > 0 else { return }
         let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
@@ -234,11 +259,26 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
             return
         }
 
+        // 최종 HTTP 응답 코드 및 리다이렉트 완료 후 최종 URL 호스트 검증
+        if let httpResponse = downloadTask.response as? HTTPURLResponse {
+            guard (200...299).contains(httpResponse.statusCode),
+                  let finalURL = httpResponse.url,
+                  Self.isTrustedDownloadHost(finalURL) else {
+                try? FileManager.default.removeItem(at: location)
+                DispatchQueue.main.async { [weak self] in
+                    self?.progressWindow?.close()
+                    self?.progressWindow = nil
+                    self?.handleUpdateFailure(error: URLError(.badServerResponse))
+                }
+                return
+            }
+        }
+
         let targetJobId = jobId
         let targetTaskId = downloadTask.taskIdentifier
         let uniqueId = UUID().uuidString
-        let tempZipURL = URL(fileURLWithPath: "/tmp/nudgeline_pkg_\(uniqueId).zip")
-        let extractDir = URL(fileURLWithPath: "/tmp/nudgeline_extract_\(uniqueId)")
+        let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent("nudgeline_pkg_\(uniqueId).zip")
+        let extractDir = FileManager.default.temporaryDirectory.appendingPathComponent("nudgeline_extract_\(uniqueId)")
 
         // Apple URLSessionDownloadDelegate 규격상 콜백 메서드가 반환되는 즉시 시스템이 location의 임시 파일을 삭제하므로,
         // 비동기 큐 전환 전 동기 스코프에서 즉시 안전한 임시 경로로 이동(moveItem)하여 보존합니다.
@@ -337,7 +377,6 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
 
                 if /usr/bin/ditto "$SOURCE" "$TARGET"; then
                     rm -rf "$BACKUP"
-                    /usr/bin/xattr -d -r com.apple.quarantine "$TARGET" 2>/dev/null || true
                     /usr/bin/open "$TARGET"
                 else
                     if [ -d "$BACKUP" ]; then
@@ -371,6 +410,9 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
                     }
                 }
             } catch {
+                // 패키지 검증 또는 교체 실패 시 임시 아티팩트 잔여물 즉시 정리
+                try? FileManager.default.removeItem(at: tempZipURL)
+                try? FileManager.default.removeItem(at: extractDir)
                 DispatchQueue.main.async {
                     self.progressWindow?.close()
                     self.progressWindow = nil
@@ -402,8 +444,9 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         alert.addButton(withTitle: L10n.tr(.cancelButton))
 
         let resp = alert.runModal()
-        if resp == .alertFirstButtonReturn, let release = pendingRelease {
-            NSWorkspace.shared.open(release.url)
+        if resp == .alertFirstButtonReturn {
+            // 임의 URL 스킴 실행 공격 방지를 위해 고정된 공식 releasesURL로 브라우저 오픈
+            NSWorkspace.shared.open(Self.releasesURL)
         }
     }
 

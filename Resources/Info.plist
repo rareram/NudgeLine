@@ -34,5 +34,7 @@
     <string>NudgeLine needs reminders access to visualize today's scheduled tasks along your screen edges.</string>
     <key>NSRemindersUsageDescription</key>
     <string>NudgeLine needs reminders access to visualize today's scheduled tasks along your screen edges.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>NudgeLine needs permission to control Calendar to view events on specific dates.</string>
 </dict>
 </plist>

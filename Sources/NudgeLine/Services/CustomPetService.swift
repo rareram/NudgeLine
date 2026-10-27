@@ -24,8 +24,9 @@ public struct CustomPet: Identifiable, Codable, Hashable, Sendable {
     ) {
         self.id = id
         self.name = name
-        self.fps = fps
-        self.frameCount = frameCount
+        // 비정상 입력 및 과도한 메모리 할당 방지를 위한 fps(1.0~60.0) 및 프레임 수(최대 30장) 범위 제한
+        self.fps = (fps.isFinite && fps > 0) ? min(60.0, max(1.0, fps)) : 8.0
+        self.frameCount = max(0, min(30, frameCount))
         self.createdAt = createdAt
         self.leftHideOffset = leftHideOffset
         self.rightHideOffset = rightHideOffset
@@ -39,8 +40,11 @@ public struct CustomPet: Identifiable, Codable, Hashable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(String.self, forKey: .id)
         self.name = try container.decode(String.self, forKey: .name)
-        self.fps = try container.decode(Double.self, forKey: .fps)
-        self.frameCount = try container.decode(Int.self, forKey: .frameCount)
+        // 외부 metadata.json 변조 대비 fps(1.0~60.0) 및 프레임 수(최대 30장) 안전 클램핑
+        let rawFps = try container.decode(Double.self, forKey: .fps)
+        self.fps = (rawFps.isFinite && rawFps > 0) ? min(60.0, max(1.0, rawFps)) : 8.0
+        let rawFrameCount = try container.decode(Int.self, forKey: .frameCount)
+        self.frameCount = max(0, min(30, rawFrameCount))
         self.createdAt = try container.decode(Date.self, forKey: .createdAt)
         self.leftHideOffset = try container.decodeIfPresent(Double.self, forKey: .leftHideOffset) ?? -23.0
         self.rightHideOffset = try container.decodeIfPresent(Double.self, forKey: .rightHideOffset) ?? 6.0
@@ -137,7 +141,8 @@ extension CustomPetService {
         let pngFiles = files.filter { $0.pathExtension.lowercased() == "png" }
             .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
 
-        let images = pngFiles.compactMap { NSImage(contentsOf: $0) }
+        // 비정상적인 대량 파일 주입 시 메모리 고갈 방지를 위해 최대 30프레임으로 제한 로드
+        let images = pngFiles.prefix(30).compactMap { NSImage(contentsOf: $0) }
         cacheLock.withLock {
             imageCache[petId] = images
         }
@@ -157,6 +162,8 @@ extension CustomPetService {
         rightHideOffset: Double = 6.0
     ) -> CustomPet? {
         guard !images.isEmpty else { return nil }
+        // 최대 30개 프레임으로 제한하여 메모리 및 디스크 과열 방어
+        let clampedImages = Array(images.prefix(30))
 
         let petId = UUID().uuidString
         let petDir = petsDirectoryURL.appendingPathComponent(petId)
@@ -165,7 +172,7 @@ extension CustomPetService {
             try fileManager.createDirectory(at: petDir, withIntermediateDirectories: true)
 
             // 프레임 이미지 저장 (실패 시 롤백)
-            for (index, img) in images.enumerated() {
+            for (index, img) in clampedImages.enumerated() {
                 let frameURL = petDir.appendingPathComponent(String(format: "frame_%03d.png", index))
                 guard let tiff = img.tiffRepresentation,
                       let bitmap = NSBitmapImageRep(data: tiff),
@@ -179,7 +186,7 @@ extension CustomPetService {
                 id: petId,
                 name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                 fps: fps,
-                frameCount: images.count,
+                frameCount: clampedImages.count,
                 leftHideOffset: leftHideOffset,
                 rightHideOffset: rightHideOffset
             )
@@ -188,7 +195,7 @@ extension CustomPetService {
             try metaData.write(to: metaURL)
 
             cacheLock.withLock {
-                imageCache[petId] = images
+                imageCache[petId] = clampedImages
             }
             loadAllPets()
             return pet

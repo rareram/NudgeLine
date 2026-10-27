@@ -374,7 +374,25 @@ extension CustomPetEditorSheet {
 
 // MARK: - 3. 파일 선택 및 드롭 I/O 핸들러
 extension CustomPetEditorSheet {
+    // 메모리 과열 및 OOM 방어를 위한 프레임 수(30장), 파일 크기(5MB), 해상도(1024px) 상한 규격
+    private static let maxFramesCount: Int = 30
+    private static let maxFileSize: Int64 = 5 * 1024 * 1024
+    private static let maxDimension: CGFloat = 1024
+
+    // 단일 파일 크기 및 해상도 유효성 검증 후 이미지 로드 (기준 초과 시 nil 반환)
+    private static func loadValidImage(from url: URL) -> NSImage? {
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let fileSize = attrs[.size] as? Int64,
+              fileSize <= maxFileSize else {
+            return nil
+        }
+        guard let img = NSImage(contentsOf: url) else { return nil }
+        guard img.size.width <= maxDimension, img.size.height <= maxDimension else { return nil }
+        return img
+    }
+
     private func openFileDialog() {
+        guard frames.count < Self.maxFramesCount else { return }
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
@@ -383,8 +401,9 @@ extension CustomPetEditorSheet {
 
         if panel.runModal() == .OK {
             let sortedURLs = panel.urls.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
-            for url in sortedURLs {
-                if let img = NSImage(contentsOf: url) {
+            let remainingSlots = max(0, Self.maxFramesCount - frames.count)
+            for url in sortedURLs.prefix(remainingSlots) {
+                if let img = Self.loadValidImage(from: url) {
                     frames.append(img)
                 }
             }
@@ -401,6 +420,7 @@ extension CustomPetEditorSheet {
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
+        guard frames.count < Self.maxFramesCount else { return false }
         let group = DispatchGroup()
         let lock = NSLock()
         var collectedURLs: [URL] = []
@@ -423,7 +443,8 @@ extension CustomPetEditorSheet {
             let sortedURLs = collectedURLs.sorted {
                 $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending
             }
-            let loadedImages = sortedURLs.compactMap { NSImage(contentsOf: $0) }
+            let remainingSlots = max(0, Self.maxFramesCount - self.frames.count)
+            let loadedImages = sortedURLs.prefix(remainingSlots).compactMap { Self.loadValidImage(from: $0) }
             self.frames.append(contentsOf: loadedImages)
         }
         return true
@@ -459,10 +480,11 @@ private struct LivePetPreviewBox: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary.opacity(0.5))
             } else {
-                // 시스템 ProMotion/60Hz 렌더링 주기 동기화 및 뷰 비가시화 시 자동 절전 지원
-                TimelineView(.animation(minimumInterval: 1.0 / max(1.0, fps))) { context in
+                // fps 비정상 값(0, 음수, 무한대)에 따른 최소 갱신 간격 연산 오버플로 방어
+                let safeFps = (fps.isFinite && fps > 0) ? min(60.0, max(1.0, fps)) : 8.0
+                TimelineView(.animation(minimumInterval: 1.0 / safeFps)) { context in
                     let count = max(1, frames.count)
-                    let index = Int(context.date.timeIntervalSince1970 * fps) % count
+                    let index = Int(context.date.timeIntervalSince1970 * safeFps) % count
                     if let image = frames[safe: index] {
                         Image(nsImage: image)
                             .resizable()

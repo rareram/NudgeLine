@@ -209,8 +209,12 @@ public enum PreferredMapService: String, Codable, CaseIterable, Identifiable, Se
 
     public func url(for location: String) -> URL? {
         let trimmed = location.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty,
-              let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+        guard !trimmed.isEmpty else { return nil }
+
+        // 쿼리 파라미터 및 경로 구분자(&, =, ?, +, /)를 안전하게 이스케이프하기 위한 캐릭터셋
+        var safeQuerySet = CharacterSet.urlQueryAllowed
+        safeQuerySet.remove(charactersIn: "&=?+/")
+        guard let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: safeQuerySet) else {
             return nil
         }
         switch self {
