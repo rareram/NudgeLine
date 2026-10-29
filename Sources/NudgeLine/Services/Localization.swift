@@ -254,13 +254,20 @@ public struct L10n {
         // 일반 설정
         case preferredMapServiceLabel
         case mapServiceApple
+        case mapServiceGoogle
+        case mapServiceOpenStreetMap
         case mapServiceNaver
         case mapServiceKakao
-        case mapServiceGoogle
         case launchAtLogin
         case hideOnScreenShareLabel
         case hideOnFullScreenLabel
         case appDescription
+
+        // 앱 정보(About) 및 릴리스 하이라이트
+        case aboutViewRepo
+        case aboutFeedback
+        case releaseHighlightsTitle
+        case releaseHighlights
     }
 }
 
@@ -335,14 +342,15 @@ extension L10n.Key {
 
         case .preferredMapServiceLabel: return "일정 위치 열기:"
         case .mapServiceApple: return "Apple 지도"
+        case .mapServiceGoogle: return "Google 지도"
+        case .mapServiceOpenStreetMap: return "OpenStreetMap"
         case .mapServiceNaver: return "네이버 지도"
         case .mapServiceKakao: return "카카오맵"
-        case .mapServiceGoogle: return "Google 지도"
 
         case .launchAtLogin: return "로그인할 때 자동 실행"
         case .hideOnScreenShareLabel: return "화상회의 · 녹화 · 가상화면에 표시 안 함"
         case .hideOnFullScreenLabel: return "전체 화면 시 숨김 (영상, 프레젠테이션)"
-        case .appDescription: return "화면 가장자리에 오늘 일정을 시각화하는 세련된 macOS 캘린더 타임라인 바"
+        case .appDescription: return "화면 모서리에 머무는 오늘의 타임라인"
 
         case .permissionNeeded: return "macOS 캘린더 접근 권한이 필요합니다."
         case .requestPermission: return "권한 요청"
@@ -474,6 +482,12 @@ extension L10n.Key {
         case .declinedMeeting: return "참석 거절된 회의"
         case .canceledMeeting: return "취소된 회의"
         case .showDeclinedEventsLabel: return "거절/취소된 일정 로그 표시"
+
+        case .aboutViewRepo: return "GitHub 저장소"
+        case .aboutFeedback: return "피드백 및 문의"
+        case .releaseHighlightsTitle: return "주요 변경 사항"
+        case .releaseHighlights:
+            return "• **미리알림**: 노션·슬랙·메모 딥링크 및 전용 앱 배지 지원\n• **설정 > 일반**: 지도 서비스에 OpenStreetMap 추가 (5종 순서 정렬)\n• **캘린더 연동**: 날짜 이동 시 Apple Events 권한 충돌 방어 및 보안 강화\n• **정보 창**: 빌드별 주요 변경 사항 및 공식 링크 제공"
         }
     }
 }
@@ -549,14 +563,15 @@ extension L10n.Key {
 
         case .preferredMapServiceLabel: return "Open Location with:"
         case .mapServiceApple: return "Apple Maps"
+        case .mapServiceGoogle: return "Google Maps"
+        case .mapServiceOpenStreetMap: return "OpenStreetMap"
         case .mapServiceNaver: return "Naver Map"
         case .mapServiceKakao: return "KakaoMap"
-        case .mapServiceGoogle: return "Google Maps"
 
         case .launchAtLogin: return "Launch at Login"
         case .hideOnScreenShareLabel: return "Exclude from Meetings, Capture & Virtual Display"
         case .hideOnFullScreenLabel: return "Hide in Full Screen (Video, Presentation)"
-        case .appDescription: return "A sleek macOS edge timeline bar that visualizes today's schedule along screen edges."
+        case .appDescription: return "Today's schedule, quietly resting at your screen edge."
 
         case .permissionNeeded: return "Calendar access permission is required."
         case .requestPermission: return "Request Access"
@@ -688,6 +703,12 @@ extension L10n.Key {
         case .declinedMeeting: return "Declined Meeting"
         case .canceledMeeting: return "Canceled Meeting"
         case .showDeclinedEventsLabel: return "Show Declined/Canceled Events"
+
+        case .aboutViewRepo: return "GitHub Repository"
+        case .aboutFeedback: return "Feedback & Support"
+        case .releaseHighlightsTitle: return "Key Highlights"
+        case .releaseHighlights:
+            return "• **Reminders**: Deep links & dedicated app badges for Notion, Slack, and Notes\n• **Settings > General**: Added OpenStreetMap option (5 services ordered)\n• **Calendar Integration**: Prevented date navigation Apple Events permission crashes\n• **About Window**: Release highlights and direct official links"
         }
     }
 }

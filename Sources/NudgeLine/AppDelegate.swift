@@ -387,10 +387,9 @@ extension AppDelegate {
         SettingsWindowController.shared.showSettings()
     }
 
-    // 앱 정보(About) 표준 패널 표시
+    // 앱 정보(About) 윈도우 표시
     @objc public func openAboutPanel() {
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.orderFrontStandardAboutPanel(nil)
+        AboutWindowController.shared.show()
     }
 
     #if !APP_STORE
@@ -401,7 +400,9 @@ extension AppDelegate {
             if release.zipURL != nil {
                 let alert = NSAlert()
                 alert.messageText = "NudgeLine"
-                alert.informativeText = L10n.tr(.newVersionAvailable(release.version), lang: settings.language)
+                let newVersionMsg = L10n.tr(.newVersionAvailable(release.version), lang: settings.language)
+                let highlights = L10n.tr(.releaseHighlights, lang: settings.language).replacingOccurrences(of: "**", with: "")
+                alert.informativeText = "\(newVersionMsg)\n\n\(highlights)"
                 alert.alertStyle = .informational
                 alert.addButton(withTitle: L10n.tr(.updateNowInApp, lang: settings.language))
                 alert.addButton(withTitle: L10n.tr(.viewRelease, lang: settings.language))

@@ -571,10 +571,10 @@ struct MeetingIntegrationAndInactiveEventTests {
 
     @Test("PreferredMapService 지도 검색 URL 생성 및 순서 검증")
     func testPreferredMapServiceURLs() {
-        // 0. 케이스 순서 검증: Apple, Google, 네이버, 카카오
-        #expect(PreferredMapService.allCases == [.apple, .google, .naver, .kakao])
-        #expect(PreferredMapService.availableCases(for: .ko) == [.apple, .google, .naver, .kakao])
-        #expect(PreferredMapService.availableCases(for: .en) == [.apple, .google])
+        // 0. 케이스 순서 검증: Apple, Google, OpenStreetMap, 네이버, 카카오
+        #expect(PreferredMapService.allCases == [.apple, .google, .openStreetMap, .naver, .kakao])
+        #expect(PreferredMapService.availableCases(for: .ko) == [.apple, .google, .openStreetMap, .naver, .kakao])
+        #expect(PreferredMapService.availableCases(for: .en) == [.apple, .google, .openStreetMap])
 
         let location = "서울특별시 강남구 테헤란로 152"
 
@@ -584,24 +584,31 @@ struct MeetingIntegrationAndInactiveEventTests {
         #expect(appleUrl?.scheme == "maps")
         #expect(appleUrl?.query?.contains("q=") == true)
 
-        // 2. 네이버 지도
-        let naverUrl = PreferredMapService.naver.url(for: location)
-        #expect(naverUrl != nil)
-        #expect(naverUrl?.host == "map.naver.com")
-        #expect(naverUrl?.absoluteString.contains("/v5/search/") == true)
-
-        // 3. 카카오맵
-        let kakaoUrl = PreferredMapService.kakao.url(for: location)
-        #expect(kakaoUrl != nil)
-        #expect(kakaoUrl?.host == "map.kakao.com")
-        #expect(kakaoUrl?.absoluteString.contains("/link/search/") == true)
-
-        // 4. Google 지도
+        // 2. Google 지도
         let googleUrl = PreferredMapService.google.url(for: location)
         #expect(googleUrl != nil)
         #expect(googleUrl?.host == "www.google.com")
         #expect(googleUrl?.path == "/maps/search")
         #expect(googleUrl?.query?.contains("api=1") == true)
+
+        // 3. OpenStreetMap
+        let osmUrl = PreferredMapService.openStreetMap.url(for: location)
+        #expect(osmUrl != nil)
+        #expect(osmUrl?.host == "www.openstreetmap.org")
+        #expect(osmUrl?.path == "/search")
+        #expect(osmUrl?.query?.contains("query=") == true)
+
+        // 4. 네이버 지도
+        let naverUrl = PreferredMapService.naver.url(for: location)
+        #expect(naverUrl != nil)
+        #expect(naverUrl?.host == "map.naver.com")
+        #expect(naverUrl?.absoluteString.contains("/v5/search/") == true)
+
+        // 5. 카카오맵
+        let kakaoUrl = PreferredMapService.kakao.url(for: location)
+        #expect(kakaoUrl != nil)
+        #expect(kakaoUrl?.host == "map.kakao.com")
+        #expect(kakaoUrl?.absoluteString.contains("/link/search/") == true)
 
         // 5. 빈 문자열 처리
         #expect(PreferredMapService.apple.url(for: "") == nil)
@@ -1161,5 +1168,27 @@ struct ReminderIntegrationTests {
         """.data(using: .utf8)!
         let decoded = try? JSONDecoder().decode(CustomPet.self, from: json)
         #expect(decoded?.frameCount == 30)
+    }
+
+    @Test("앱 정보(About) 및 릴리스 하이라이트 다국어 키 검증")
+    func testAboutAndReleaseHighlightsLocalization() {
+        #expect(L10n.tr(.appDescription, lang: .ko) == "화면 모서리에 머무는 오늘의 타임라인")
+        #expect(L10n.tr(.appDescription, lang: .en) == "Today's schedule, quietly resting at your screen edge.")
+
+        #expect(L10n.tr(.aboutViewRepo, lang: .ko) == "GitHub 저장소")
+        #expect(L10n.tr(.aboutViewRepo, lang: .en) == "GitHub Repository")
+
+        #expect(L10n.tr(.aboutFeedback, lang: .ko) == "피드백 및 문의")
+        #expect(L10n.tr(.aboutFeedback, lang: .en) == "Feedback & Support")
+
+        #expect(L10n.tr(.releaseHighlightsTitle, lang: .ko) == "주요 변경 사항")
+        #expect(L10n.tr(.releaseHighlightsTitle, lang: .en) == "Key Highlights")
+
+        #expect(L10n.tr(.releaseHighlights, lang: .ko).contains("**미리알림**:"))
+        #expect(L10n.tr(.releaseHighlights, lang: .ko).contains("**설정 > 일반**:"))
+        #expect(L10n.tr(.releaseHighlights, lang: .ko).contains("**정보 창**:"))
+        #expect(L10n.tr(.releaseHighlights, lang: .en).contains("**Reminders**:"))
+        #expect(L10n.tr(.releaseHighlights, lang: .en).contains("**Settings > General**:"))
+        #expect(L10n.tr(.releaseHighlights, lang: .en).contains("**About Window**:"))
     }
 }

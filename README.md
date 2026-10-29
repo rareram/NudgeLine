@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>A screen-edge timeline bar for today's calendar events on macOS</strong><br>
+  <strong>Today's schedule, quietly resting at your screen edge.</strong><br>
   <em>macOS 15+ (Sequoia) / Swift 6, SwiftUI</em>
 </p>
 
@@ -106,7 +106,7 @@ brew install rareram/tap/nudgeline
 - **Pet Snooze**: Click the current time indicator or tooltip bubble to temporarily snooze the mascot. The indicator shows a subtle breathing animation, and the tooltip displays a live wave gauge with the remaining snooze countdown.
 
 ### 5. Event Popovers
-- **Action Card**: Schedule details, 1-click meeting join (supports unwrapping MS SafeLinks & Google Redirects), preferred map shortcuts (Apple, Google, Naver, Kakao), and Apple Calendar shortcut.
+- **Action Card**: Schedule details, 1-click meeting join with automatic SafeLinks/Redirect unwrapping, preferred map routing (Apple, Google, OpenStreetMap, Naver, Kakao), and Apple Calendar shortcut.
 - **Simple Tooltip**: Compact tooltip showing title and time.
 - **Card Themes**: Supports System Adaptive, Dark, and Light themes with contrast adjustment for buttons and links on light backgrounds.
 - **All-day Events**: Displays all-day events alongside timed schedules in popovers.
@@ -119,9 +119,11 @@ brew install rareram/tap/nudgeline
   - Pet Treats: Full-color food items matching the active pet (Meat for White Tiger, Bone for Jindo Dog, Fish for Calico Cat, Star for Custom Pets).
 - **Visibility Window**: Configurable display range (1, 2, 3, 4, 12 hours, or All Day).
 - **Interactive Popovers**: View reminder details, toggle completion status directly from the popover, and open the Apple Reminders app.
+- **Smart App Deep-Linking**: Securely recognizes task URLs and displays dedicated badges for productivity tools (Notion, Slack, Things 3, Obsidian, etc.) with 3-tier security filtering.
 
 ### 7. Shortcuts & Menu Controls
 - **Menu Bar Controls**: Quick access to Settings, Instant Refresh, Check for Updates, App Info (About NudgeLine), and Quit directly from the menu bar status icon.
+- **Native About Window**: A compact 320pt window displaying app identity, release highlights with markdown emphasis, and direct repository/feedback links.
 - **Instant Refresh**: Re-fetch today's calendar events via the timeline bar context menu or menu bar [Refresh] item.
 - **AppIntents Integration**:
   - `Refresh Schedule` / `NudgeLine 새로고침`: Refetch today's calendar events.
@@ -132,7 +134,31 @@ brew install rareram/tap/nudgeline
 - **Appearance**: Card style/theme/opacity, indicator shape/color, pre-event alert, event start effects, hourly alert, pet selection and hide motions, custom pet manager.
 - **Schedule**: 24-hour mode, work hours, visible calendars with color pickers, System Settings deep link.
 - **Reminders**: Enable/disable timeline markers, marker style (SF Symbols or Pet Treats), visibility window, and reminder list filter.
-- **General**: Language (System, Korean, English), launch at login (`SMAppService`), multi-display, hide on screen share, hide in full screen, app info.
+- **General**: Language (System, Korean, English), preferred map service, launch at login (`SMAppService`), multi-display, hide on screen share, hide in full screen, app info.
+
+---
+
+## Supported Integrations
+
+NudgeLine integrates with your daily workflow tools to provide a seamless, distraction-free experience.
+
+### 1. Video Meeting Platforms (11 Platforms)
+- **Global & Enterprise**: Google Meet, Zoom, Microsoft Teams, Apple FaceTime, Cisco Webex, Amazon Chime.
+- **Team Collaboration & Community**: Discord, Lark, Whereby, Jitsi Meet.
+- **Regional**: Naver Whale ON.
+- **Security & Native Launch**:
+  - Automatically unwraps obfuscated URLs (Microsoft Defender SafeLinks, Google Redirects) to reveal clean destinations.
+  - 1-click launch into native macOS clients for Microsoft Teams (`msteams://`) and FaceTime (`facetime://`).
+
+### 2. Productivity & Deep Links (10 Apps + Web)
+- **Task & Productivity Tools**: Notion (`notion://`), Slack (`slack://`), Things 3 (`things://`), Obsidian (`obsidian://`), Bear (`bear://`), Linear (`linear://`), Figma (`figma://`).
+- **Apple System Apps**: Apple Mail (`message://`), Apple Notes (`notes://`), Apple Reminders (`x-apple-reminderkit://`).
+- **Smart Web Badges**: Clean domain hostname badges for standard URLs (e.g., `github.com`, `docs.google.com`).
+- **3-Tier Safe Scheme Parser**: Blocks dangerous local file execution and script injection schemes (`file`, `javascript`, `applescript`, etc.).
+
+### 3. Location & Map Routing (5 Services)
+- **Supported Services**: Apple Maps, Google Maps, OpenStreetMap, Naver Map, Kakao Map.
+- **Configurable in Settings**: Choose your preferred map service in **Settings > General**. Korean localized environments provide Naver and Kakao options alongside global providers.
 
 ---
 
@@ -199,6 +225,8 @@ NudgeLine/
 │       │   ├── ReminderService.swift     # Apple Reminders fetch & toggle service
 │       │   └── UpdateService.swift       # In-app update checker and download coordinator
 │       └── Views/
+│           ├── About/                    # Native About window & singleton controller
+│           │   └── AboutView.swift
 │           ├── OverlayPanel.swift        # Edge floating NSPanel with mouse passthrough
 │           ├── PopoverPanel.swift        # Floating popover panel with .common runloop timer & empty tooltip
 │           ├── TimelineBarView.swift     # Main timeline rendering & gesture coordinator
@@ -231,6 +259,10 @@ NudgeLine/
 ├── Tests/
 │   └── NudgeLineTests/                   # Swift Testing unit test suite
 └── scripts/
+    ├── hooks/                            # Local Git pre-push automated verification hooks
+    │   ├── install_hook.sh
+    │   ├── pre-push.sh
+    │   └── uninstall_hook.sh
     ├── build_app.sh                      # Local Dev & Release bundle packager
     ├── create_dmg.sh                     # Release DMG packaging script
     ├── run_tests.sh                      # Local unit test runner

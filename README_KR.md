@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>화면 가장자리에 오늘 일정을 표시하는 macOS 캘린더 타임라인 바</strong><br>
+  <strong>화면 모서리에 머무는 오늘의 타임라인</strong><br>
   <em>macOS 15+ (Sequoia) / Swift 6, SwiftUI</em>
 </p>
 
@@ -108,7 +108,7 @@ brew install rareram/tap/nudgeline
 - **펫 일시 숨김(스누즈)**: 시간 표시자나 시간 툴팁 말풍선을 클릭하여 펫을 지정 시간 동안 숨김 상태로 고정. 스누즈 중에는 표시자가 은은한 브리딩 애니메이션으로 전환되며, 툴팁 호버 시 실시간 잔여 시간 파동 게이지 표시.
 
 ### 5. 팝오버 카드
-- **상세 액션 카드**: 일정 상세 정보, 화상회의 입장 버튼(MS Defender SafeLinks 및 Google Redirect 원본 복원 지원), 등록 장소 4대 지도(Apple/Google/네이버/카카오) 바로가기, 캘린더 앱 열기
+- **상세 액션 카드**: 일정 상세 정보, 1클릭 회의 참여(SafeLinks 및 Google Redirect 원본 복원 지원), 5대 지도 서비스(Apple/Google/OpenStreetMap/네이버/카카오) 바로가기, 캘린더 앱 열기
 - **심플 툴팁**: 제목과 시간 중심의 간결한 툴팁
 - **카드 테마**: 시스템 설정 연동(Adaptive), 다크, 라이트 테마 지원 (라이트 모드 배경에 맞춘 버튼/링크 명암 보정 적용)
 - **종일 일정 표시**: 시간 지정 일정과 함께 당일 종일 일정 표시
@@ -121,9 +121,11 @@ brew install rareram/tap/nudgeline
   - 펫 먹이·간식: 선택된 펫에 맞춰 바뀌는 풀컬러 먹이 아이템 (백호: 고기, 백구: 뼈다귀, 삼색고양이: 생선, 커스텀: 별)
 - **표시 범위 설정**: 마감 시간 기준 표시 범위 필터 (1/2/3/4/12시간 또는 하루 전체)
 - **인터랙티브 팝오버**: 팝오버 카드에서 미리알림 내용 확인, 완료/미완료 즉시 토글, 미리알림 앱 바로가기 지원
+- **스마트 딥링크 지원**: 할 일 메모에 포함된 노션, 슬랙, 시스템 메모, 메일 및 일반 웹 링크를 인식하여 전용 앱 배지로 원클릭 즉시 실행 (3단계 안전 파서 적용)
 
 ### 7. 메뉴바 및 단축어(Shortcuts) 연동
 - **메뉴바 조작**: 상단 메뉴바 상태 아이콘을 통해 환경설정, 즉시 새로 고침, 업데이트 확인, NudgeLine 정보, 앱 종료를 간편하게 조작
+- **네이티브 정보 창**: 밋밋한 시스템 표준 패널을 대체하는 320pt 정보 창으로, 버전/빌드 번호, 브랜드 카피, 마크다운 강조 릴리스 요약, GitHub 저장소 및 피드백 문의 링크 제공
 - **즉시 새로 고침**: 타임라인 우클릭 메뉴 또는 상단 메뉴바의 [새로 고침]으로 오늘 캘린더 즉시 재동기화
 - **AppIntents 지원**:
   - `NudgeLine 새로고침`: 오늘 일정 즉시 재동기화
@@ -134,7 +136,31 @@ brew install rareram/tap/nudgeline
 - **표시 및 효과**: 일정 카드 스타일/테마/투명도, 시간 표시자 모양/색상, 일정 시작 전 알림, 일정 시작 효과, 정각 알림, 펫 선택 및 숨김 동작, 커스텀 펫 관리
 - **시간 및 캘린더**: 24시간 모드, 업무 시간 범위 설정, 표시할 캘린더 선택 및 색상 지정, 시스템 설정 딥링크
 - **미리알림**: 타임라인 마커 표시 여부, 마커 스타일(SF 심볼 또는 펫 먹이 아이템), 표시 범위 필터, 표시할 미리알림 목록 선택
-- **일반**: 언어 설정(시스템 기본/한국어/영어), 로그인 시 자동 실행, 다중 모니터 표시, 화면 공유 시 숨김, 전체 화면 시 숨김, 앱 정보
+- **일반**: 언어 설정(시스템 기본/한국어/영어), 선호 지도 서비스(Apple/Google/OpenStreetMap/네이버/카카오), 로그인 시 자동 실행, 다중 모니터 표시, 화면 공유 시 숨김, 전체 화면 시 숨김, 앱 정보
+
+---
+
+## 지원 연동 생태계
+
+NudgeLine은 매일 사용하는 업무 도구들과 긴밀하게 연동되어 방해 없는 연속적인 워크플로를 제공합니다.
+
+### 1. 화상회의 플랫폼 (11종)
+- **글로벌 및 엔터프라이즈**: Google Meet, Zoom, Microsoft Teams, Apple FaceTime, Cisco Webex, Amazon Chime
+- **팀 협업 및 커뮤니티**: Discord, Lark, Whereby, Jitsi Meet
+- **국내 특화**: Naver Whale ON
+- **보안 및 네이티브 앱 실행**:
+  - 기업용 Microsoft Defender SafeLinks 및 Google Redirect 난독화 URL의 원본 타깃을 자동 복원
+  - Microsoft Teams(`msteams://`) 및 FaceTime(`facetime://`)의 macOS 네이티브 앱 1클릭 즉시 실행 변환
+
+### 2. 생산성 및 시스템 딥링크 (10종 + 웹)
+- **생산성 및 업무 툴**: Notion(`notion://`), Slack(`slack://`), Things 3(`things://`), Obsidian(`obsidian://`), Bear(`bear://`), Linear(`linear://`), Figma(`figma://`)
+- **Apple 시스템 기본 앱**: Apple Mail(`message://`), Apple Notes(`notes://`), Apple Reminders(`x-apple-reminderkit://`)
+- **스마트 웹 배지**: 일반 웹 링크의 도메인 호스트명을 깔끔한 배지로 자동 추출 (예: `github.com`, `docs.google.com`)
+- **3단계 보안 검증 파서**: 로컬 파일 임의 실행 및 시스템 스크립트 인젝션 위험 스킴(`file`, `javascript`, `applescript` 등) 원천 차단
+
+### 3. 위치 및 지도 서비스 (5종)
+- **지원 지도 서비스**: Apple 지도 (Apple Maps), Google 지도 (Google Maps), OpenStreetMap, 네이버 지도 (Naver Map), 카카오맵 (Kakao Map)
+- **환경설정 제공**: **설정 > 일반**에서 선호하는 지도 서비스를 선택할 수 있으며, 한국어 환경에서는 네이버와 카카오가 함께 노출됩니다.
 
 ---
 
@@ -201,6 +227,8 @@ NudgeLine/
 │       │   ├── ReminderService.swift     # Apple 미리알림 비동기 조회 및 완료 토글 서비스
 │       │   └── UpdateService.swift       # 인앱 업데이트 확인 및 백그라운드 다운로드 코디네이터
 │       └── Views/
+│           ├── About/                    # 네이티브 정보 창 및 싱글톤 윈도우 컨트롤러
+│           │   └── AboutView.swift
 │           ├── OverlayPanel.swift        # 마우스 패스스루 지원 화면 테두리 플로팅 NSPanel
 │           ├── PopoverPanel.swift        # .common 런루프 타이머 기반 팝오버 패널 및 빈 바 툴팁
 │           ├── TimelineBarView.swift     # 메인 타임라인 렌더링 및 제스처 코디네이터
@@ -233,6 +261,10 @@ NudgeLine/
 ├── Tests/
 │   └── NudgeLineTests/                   # Swift Testing 단위 테스트 스위트
 └── scripts/
+    ├── hooks/                            # 로컬 Git 사전 푸시 자동 검증 훅
+    │   ├── install_hook.sh
+    │   ├── pre-push.sh
+    │   └── uninstall_hook.sh
     ├── build_app.sh                      # 로컬 개발용(Dev) 및 정식 배포용 번들 빌드 스크립트
     ├── create_dmg.sh                     # 배포용 DMG 패키징 스크립트
     ├── run_tests.sh                      # 로컬 단위 테스트 러너

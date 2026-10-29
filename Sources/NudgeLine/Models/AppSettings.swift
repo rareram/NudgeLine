@@ -183,27 +183,29 @@ public enum BarPosition: String, Codable, CaseIterable, Identifiable, Sendable {
 }
 
 public enum PreferredMapService: String, Codable, CaseIterable, Identifiable, Sendable {
-    case apple  = "apple"
-    case google = "google"
-    case naver  = "naver"
-    case kakao  = "kakao"
+    case apple         = "apple"
+    case google        = "google"
+    case openStreetMap = "openstreetmap"
+    case naver         = "naver"
+    case kakao         = "kakao"
 
     public var id: String { rawValue }
 
     public static func availableCases(for language: AppLanguage) -> [PreferredMapService] {
         if language.isKorean {
-            return [.apple, .google, .naver, .kakao]
+            return [.apple, .google, .openStreetMap, .naver, .kakao]
         } else {
-            return [.apple, .google]
+            return [.apple, .google, .openStreetMap]
         }
     }
 
     public func title(lang: AppLanguage = .system) -> String {
         switch self {
-        case .apple:  return L10n.tr(.mapServiceApple, lang: lang)
-        case .google: return L10n.tr(.mapServiceGoogle, lang: lang)
-        case .naver:  return L10n.tr(.mapServiceNaver, lang: lang)
-        case .kakao:  return L10n.tr(.mapServiceKakao, lang: lang)
+        case .apple:         return L10n.tr(.mapServiceApple, lang: lang)
+        case .google:        return L10n.tr(.mapServiceGoogle, lang: lang)
+        case .openStreetMap: return L10n.tr(.mapServiceOpenStreetMap, lang: lang)
+        case .naver:         return L10n.tr(.mapServiceNaver, lang: lang)
+        case .kakao:         return L10n.tr(.mapServiceKakao, lang: lang)
         }
     }
 
@@ -222,6 +224,8 @@ public enum PreferredMapService: String, Codable, CaseIterable, Identifiable, Se
             return URL(string: "maps://?q=\(encoded)") ?? URL(string: "https://maps.apple.com/?q=\(encoded)")
         case .google:
             return URL(string: "https://www.google.com/maps/search/?api=1&query=\(encoded)")
+        case .openStreetMap:
+            return URL(string: "https://www.openstreetmap.org/search?query=\(encoded)")
         case .naver:
             return URL(string: "https://map.naver.com/v5/search/\(encoded)")
         case .kakao:
