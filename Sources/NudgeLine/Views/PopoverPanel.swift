@@ -168,10 +168,9 @@ extension PopoverPanel {
             allDayEvents: allDayEvents,
             settings: settings
         )
-        let cardView = AnyView(rawCardView)
 
         let anchoredCardView = AnyView(
-            Self.anchorCardView(cardView, for: barPosition)
+            Self.anchorCardView(rawCardView, for: barPosition)
                 .padding(pad)
         )
 
@@ -343,13 +342,13 @@ extension PopoverPanel {
         clearPendingExpansionState()
 
         presentTooltip(
-            content: AnyView(CurrentTimeTooltipView(
+            content: CurrentTimeTooltipView(
                 currentTime: currentTime,
                 timeOffset: timeOffset,
                 isHorizontal: isHorizontal,
                 barPosition: barPosition,
                 settings: settings
-            )),
+            ),
             frame: finalFrame,
             clusterId: "__CURRENT_TIME_TOOLTIP__",
             isDetailMode: false,
@@ -388,7 +387,7 @@ extension PopoverPanel {
         let clusterId = "__REMINDER_TOOLTIP_\(reminder.id)__"
 
         presentTooltip(
-            content: AnyView(ReminderTooltipView(reminder: reminder, settings: settings)),
+            content: ReminderTooltipView(reminder: reminder, settings: settings),
             frame: finalFrame,
             clusterId: clusterId,
             isDetailMode: true,
@@ -446,14 +445,14 @@ extension PopoverPanel {
         }
 
         presentTooltip(
-            content: AnyView(EmptyScheduleTooltipView(
+            content: EmptyScheduleTooltipView(
                 allDayEvents: allDayEvents,
                 allDayReminders: allDayReminders,
                 outOfRangeEvents: outOfRangeEvents,
                 hasTimedEventsInRange: hasTimedEventsInRange,
                 hasConnectedCalendars: hasConnectedCalendars,
                 settings: settings
-            )),
+            ),
             frame: finalFrame,
             clusterId: clusterId,
             isDetailMode: hasItems,
@@ -480,7 +479,7 @@ extension PopoverPanel {
         )
 
         presentTooltip(
-            content: AnyView(PermissionNoticeTooltipView(settings: settings)),
+            content: PermissionNoticeTooltipView(settings: settings),
             frame: finalFrame,
             clusterId: "__PERMISSION_NOTICE__",
             isDetailMode: true, // 시스템 설정 열기 버튼을 클릭할 수 있도록 마우스 브릿지를 유지합니다.
@@ -516,10 +515,9 @@ extension PopoverPanel {
             barPosition: context.barPosition,
             settings: context.settings
         )
-        let cardView = AnyView(rawCardView)
 
         let anchoredCardView = AnyView(
-            Self.anchorCardView(cardView, for: context.barPosition)
+            Self.anchorCardView(rawCardView, for: context.barPosition)
                 .padding(pad)
         )
 
@@ -593,16 +591,14 @@ extension PopoverPanel {
         var targetHeight = ceil(estimatedContentHeight + (context.isHorizontal ? 8.0 : 0.0))
 
         let pad = shadowPadding(for: context.barPosition)
-        let cardView = AnyView(
-            ReminderPopoverCardView(
-                reminder: reminder,
-                barPosition: context.barPosition,
-                settings: context.settings
-            )
+        let rawCardView = ReminderPopoverCardView(
+            reminder: reminder,
+            barPosition: context.barPosition,
+            settings: context.settings
         )
 
         let anchoredCardView = AnyView(
-            Self.anchorCardView(cardView, for: context.barPosition)
+            Self.anchorCardView(rawCardView, for: context.barPosition)
                 .padding(pad)
         )
 
@@ -701,8 +697,8 @@ extension PopoverPanel {
 // MARK: - 2-4. 내부 기하 및 프레임 연산 헬퍼 (Geometry & Layout Helpers)
 extension PopoverPanel {
     // 여러 소형 툴팁(현재 시각, 빈 일정 안내, 권한 알림 등)을 공통 페이드 애니메이션으로 표시합니다.
-    private func presentTooltip(
-        content: AnyView,
+    private func presentTooltip<Content: View>(
+        content: Content,
         frame: NSRect,
         clusterId: String,
         isDetailMode: Bool,
@@ -808,8 +804,8 @@ extension PopoverPanel {
 
     // 타임라인 바 위치에 맞춰 카드 뷰를 에지에 정렬하고 창 컨테이너 배경을 투명화
     @ViewBuilder
-    private static func anchorCardView(
-        _ cardView: AnyView,
+    private static func anchorCardView<Content: View>(
+        _ cardView: Content,
         for barPosition: BarPosition
     ) -> some View {
         Group {
@@ -1759,82 +1755,7 @@ private struct AllDayWithRemindersPopoverView: View {
     }
 }
 
-// MARK: - 5-2. 미리알림 링크 정보 모델 및 3단계 안전 판별 파서
-public struct ReminderLinkInfo: Equatable, Sendable {
-    public let url: URL
-    public let displayText: String
-    public let iconName: String
-    public let isUnverified: Bool
-
-    public init(url: URL, displayText: String, iconName: String, isUnverified: Bool) {
-        self.url = url
-        self.displayText = displayText
-        self.iconName = iconName
-        self.isUnverified = isUnverified
-    }
-}
-
-public enum ReminderLinkParser {
-    public static func parse(reminder: ReminderItem, language: AppLanguage) -> ReminderLinkInfo? {
-        let candidate: URL? = reminder.url ?? {
-            guard let notes = reminder.notes, !notes.isEmpty,
-                  let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue),
-                  let match = detector.firstMatch(in: notes, options: [], range: NSRange(location: 0, length: (notes as NSString).length)) else {
-                return nil
-            }
-            return match.url
-        }()
-
-        guard let rawUrl = candidate,
-              let scheme = rawUrl.scheme?.lowercased(),
-              !scheme.isEmpty else {
-            return nil
-        }
-
-        // 1단계: 보안상 유해한 위험 스킴 원천 배제 (로컬 파일 임의 실행 및 스크립트 인젝션 차단)
-        let blockedSchemes: Set<String> = ["file", "javascript", "applescript", "data", "blob", "help", "disk"]
-        if blockedSchemes.contains(scheme) {
-            return nil
-        }
-
-        // 2단계: 표준 웹 링크 (http, https) -> 도메인 호스트명 추출
-        if scheme == "http" || scheme == "https" {
-            let host = CalendarEvent.extractDisplayHost(from: rawUrl)
-            return ReminderLinkInfo(url: rawUrl, displayText: host, iconName: "link", isUnverified: false)
-        }
-
-        // 3단계: 잘 알려진 macOS 시스템 및 생산성 앱 딥링크
-        let isKo = language.isKorean
-        switch scheme {
-        case "message":
-            return ReminderLinkInfo(url: rawUrl, displayText: isKo ? "메일" : "Mail", iconName: "envelope", isUnverified: false)
-        case "notes":
-            return ReminderLinkInfo(url: rawUrl, displayText: isKo ? "메모" : "Notes", iconName: "note.text", isUnverified: false)
-        case "notion":
-            return ReminderLinkInfo(url: rawUrl, displayText: "Notion", iconName: "doc.text", isUnverified: false)
-        case "slack":
-            return ReminderLinkInfo(url: rawUrl, displayText: "Slack", iconName: "bubble.left.and.bubble.right", isUnverified: false)
-        case "things":
-            return ReminderLinkInfo(url: rawUrl, displayText: "Things", iconName: "checkmark.square", isUnverified: false)
-        case "obsidian":
-            return ReminderLinkInfo(url: rawUrl, displayText: "Obsidian", iconName: "doc.plaintext", isUnverified: false)
-        case "bear":
-            return ReminderLinkInfo(url: rawUrl, displayText: "Bear", iconName: "doc.text", isUnverified: false)
-        case "linear":
-            return ReminderLinkInfo(url: rawUrl, displayText: "Linear", iconName: "arrow.up.right.square", isUnverified: false)
-        case "figma":
-            return ReminderLinkInfo(url: rawUrl, displayText: "Figma", iconName: "pencil.and.outline", isUnverified: false)
-        case "x-apple-reminderkit":
-            return ReminderLinkInfo(url: rawUrl, displayText: isKo ? "미리알림" : "Reminders", iconName: "list.bullet", isUnverified: false)
-        default:
-            // 4단계: 관리 리스트에 없는 기타 외부 딥링크 -> '외부 앱 (스킴명)'으로 투명하게 표시
-            let label = isKo ? "외부 앱 (\(scheme))" : "App Link (\(scheme))"
-            return ReminderLinkInfo(url: rawUrl, displayText: label, iconName: "arrow.up.forward.app", isUnverified: true)
-        }
-    }
-}
-
-// MARK: - 5-3. 미리알림 상세 카드 (ReminderPopoverCardView)
+// MARK: - 5-2. 미리알림 상세 카드 (ReminderPopoverCardView)
 // 미리알림 완료 체크 및 세부 정보를 표시하는 카드
 private struct ReminderPopoverCardView: View {
     let reminder: ReminderItem

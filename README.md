@@ -277,7 +277,8 @@ NudgeLine/
 ## Localization
 
 NudgeLine supports:
-- English (Default)
+- System Default (Follows macOS system language)
+- English
 - Korean (한국어)
 
 You can change the language in **Settings > General > Language**.

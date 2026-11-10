@@ -66,6 +66,10 @@ struct LocalizationTests {
         #expect(L10n.tr(.githubRepo, lang: .ko) == "GitHub 저장소 ↗")
         #expect(L10n.tr(.githubRepo, lang: .en) == "GitHub Repository ↗")
 
+        // 시스템 설정 섹션 헤더
+        #expect(L10n.tr(.systemPreferencesSection, lang: .ko) == "시스템 설정")
+        #expect(L10n.tr(.systemPreferencesSection, lang: .en) == "System Settings")
+
         // 인앱 업데이트 및 옵션 라벨
         #expect(L10n.tr(.updateNowInApp, lang: .ko) == "지금 업데이트")
         #expect(L10n.tr(.updateNowInApp, lang: .en) == "Update Now")
@@ -91,6 +95,8 @@ struct LocalizationTests {
         #expect(L10n.tr(.reminderRangeAllDay, lang: .en) == "All Day")
         #expect(L10n.tr(.reminderMarkerGlowLabel, lang: .ko) == "마커 네온 효과 및 테두리 강조")
         #expect(L10n.tr(.reminderMarkerGlowLabel, lang: .en) == "Marker neon glow & border accent")
+        #expect(L10n.tr(.clearPastReminderMarkersLabel, lang: .ko) == "마감 지난 마커 숨기기")
+        #expect(L10n.tr(.clearPastReminderMarkersLabel, lang: .en) == "Hide past due markers")
 
         // 펫 일시 숨김(스누즈) 다국어 키
         #expect(L10n.tr(.petSnoozeLabel, lang: .ko) == "클릭 시 펫 일시 숨김:")
@@ -101,16 +107,16 @@ struct LocalizationTests {
 
     @Test("종일 일정 및 초과 일정 포맷 다국어 검증")
     func testAllDayAndNoticeFormatLocalization() {
-        #expect(L10n.tr(.allDayNotice("전사 휴무"), lang: .ko) == "하루 종일: 전사 휴무")
+        #expect(L10n.tr(.allDayNotice("전사 휴무"), lang: .ko) == "종일: 전사 휴무")
         #expect(L10n.tr(.allDayNotice("Company Holiday"), lang: .en) == "All Day: Company Holiday")
-        #expect(L10n.tr(.allDayNoticeWithCount("전사 휴무", 2), lang: .ko) == "하루 종일: 전사 휴무 외 2건")
+        #expect(L10n.tr(.allDayNoticeWithCount("전사 휴무", 2), lang: .ko) == "종일: 전사 휴무 외 2건")
         #expect(L10n.tr(.allDayNoticeWithCount("Company Holiday", 2), lang: .en) == "All Day: Company Holiday +2")
         #expect(L10n.tr(.noTimedEventsWithAllDayCard("연차"), lang: .ko) == "시간 일정 없음 · 종일: 연차")
         #expect(L10n.tr(.noTimedEventsWithAllDayCard("Vacation"), lang: .en) == "No timed events · All-Day: Vacation")
-        #expect(L10n.tr(.outOfRangeSingleCard("21:00", "회의"), lang: .ko) == "표시 범위 외 1건 (21:00 회의)")
-        #expect(L10n.tr(.outOfRangeSingleCard("21:00", "Meeting"), lang: .en) == "1 event outside range (21:00 Meeting)")
-        #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .ko) == "범위 외 2건 (21:00)")
-        #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .en) == "Outside range: 2 (21:00)")
+        #expect(L10n.tr(.outOfRangeSingleCard("21:00", "회의"), lang: .ko) == "타임라인 외 1건 (21:00 회의)")
+        #expect(L10n.tr(.outOfRangeSingleCard("21:00", "Meeting"), lang: .en) == "1 event outside timeline (21:00 Meeting)")
+        #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .ko) == "타임라인 외 2건 (21:00)")
+        #expect(L10n.tr(.outOfRangeSimple(2, "21:00"), lang: .en) == "2 outside timeline (21:00)")
     }
 
     @Test("신규 표준 다국어 키 (업데이트창, 확인버튼, 프레임, 미리알림 기본목록) 검증")
