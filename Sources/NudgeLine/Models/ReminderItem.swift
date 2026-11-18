@@ -96,6 +96,7 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
         self.recurrenceRule = recurrenceRule
     }
 
+    /// [Core Computation Engine] 미리알림 반복 규칙 문자열을 다국어 표기(매일, Weekly 등)로 변환
     public func recurrenceText(isKorean: Bool) -> String? {
         guard let rule = recurrenceRule else { return nil }
         switch rule {
@@ -107,8 +108,9 @@ public struct ReminderItem: Identifiable, Hashable, Sendable {
         }
     }
 
-    // 타임라인 바 간섭 차단: isAllDay 항목 가시 범위 판정에서 제외 (바 위 마커 노출 억제)
-    // 다가오는 미래 접근 구간(0 <= diffMinutes <= proximityMinutes)에만 심볼/펫 먹이로 팝업 노출
+    /// [Core Computation Engine] 타임라인 바 근접 감지 시간(윈도우) 내에 위치하는지 판정
+    /// 타임라인 바 간섭 차단: isAllDay 항목 가시 범위 판정에서 제외 (바 위 마커 노출 억제)
+    /// 다가오는 미래 접근 구간(0 <= diffMinutes <= proximityMinutes)에만 심볼/펫 먹이로 팝업 노출
     public func isWithinVisibilityWindow(
         currentTime: Date,
         proximityMinutes: Int

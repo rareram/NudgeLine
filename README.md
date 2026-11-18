@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <strong>English</strong> | <a href="README_KR.md">한국어</a>
+  <strong>English</strong> | <a href="README_KR.md">한국어</a> | <a href="README_JP.md">日本語</a> | <a href="README_CN.md">简体中文</a> | <a href="README_TW.md">繁體中文</a> | <a href="README_RU.md">Русский</a> | <a href="README_NL.md">Nederlands</a> | <a href="README_FR.md">Français</a> | <a href="README_DE.md">Deutsch</a> | <a href="README_ES.md">Español</a>
 </p>
 
 <p align="center">
@@ -22,36 +22,31 @@
 
 ---
 
-## Overview
+## Why NudgeLine?
 
-NudgeLine displays your daily schedule as a thin bar along the edge of your screen (Left, Right, or Bottom).
+Back in the 32-bit macOS era, the developer personally loved and relied on a classic utility called [PixelScheduler](https://pixelscheduler.art-mixture.com/). After macOS transitioned to 64-bit, its development unfortunately ceased. NudgeLine was born out of that longing—crafted as a modern, native successor for today's macOS.
+
+It inherits the original's minimal screen-edge timeline concept, but reimagines it with playful animated mascots that dodge your cursor, rich event start effects, and seamless integrations for modern video conferences and Apple Reminders:
+
+- **Ambient & Zero Interference**: A slim 1–10px bar along your screen bezel keeps you aware of your day without opening a calendar window. Mouse clicks and scrolls pass right through outside the bar, so your active workspace (browsers, IDEs, editors) remains 100% uninterrupted.
+- **1-Click Productivity Bridge**: Instantly join meetings across 11 platforms (Google Meet, Zoom, Teams, FaceTime, etc.), automatically unwrap corporate security links (SafeLinks), and jump directly to task URLs (Notion, Slack, Things, Obsidian) with clean native badges.
+- **Calm Sensory Feedback**: Get a gentle bar pulse 5–20 minutes before a meeting starts. Enjoy subtle micro-mascots (Calico Cat, Jindo Dog, White Tiger) that playfully hide behind your screen bezel whenever your cursor approaches.
+- **100% Native & Private**: Zero external dependencies, pure SwiftUI/AppKit/EventKit architecture, under 25MB memory footprint, and absolutely zero external network telemetry. All your data stays strictly on your Mac.
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/a3380d76-9313-4f39-83aa-e25fc015ea8e" width="85%" controls></video>
 </div>
 
-Key Features:
-
-- **Mouse Passthrough**: Clicks and scrolls pass through outside the bar area.
-- **Timeline Bar**: Background track, event boundary lines, and 4 indicator styles.
-- **Overlapping Events**: Alternating color transitions for concurrent events.
-- **Mascots**: 3 built-in animated pets with 6 hide motions, and custom pet support.
-- **Apple Reminders**: Pinpoint markers on the timeline for today's reminders with two-track styles (SF Symbols & pet treats).
-- **Meeting & Map Integration**: 1-click launch for 10 meeting platforms, automatic unwrapping of corporate SafeLinks/Redirects, and preferred map shortcuts (Apple, Google, Naver, Kakao).
-- **Privacy**: Option to hide the bar during screen sharing/recording or in full-screen spaces.
-- **One-Click In-App Update**: Automatic update notifications and seamless in-app download/relaunch from the menu bar.
-- **Native Implementation**: Built with SwiftUI, AppKit, and EventKit with no external dependencies.
-
 <p align="center">
   <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="Hide - Tail Wag" alt="Hide - Tail Wag" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="Hide - Head Peek" alt="Hide - Head Peek" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="Disappear - Pop" alt="Disappear - Pop" style="margin: 0 18px;" /><br>
-  <em>Mascots hide behind the bezel or disappear upon cursor proximity (6 motions supported).</em>
+  <em>Animated mascots quietly accompany your day and hide behind the bezel upon cursor proximity (6 motions supported).</em>
 </p>
 
 ---
 
-## Installation
+## Installation & Setup
 
 ### 1. via Homebrew (Recommended)
 
@@ -59,110 +54,113 @@ Key Features:
 brew install rareram/tap/nudgeline
 ```
 
+To update to the latest version:
+```bash
+brew upgrade rareram/tap/nudgeline
+```
+
 ---
 
 ### 2. Direct Download (.dmg)
 
-1. Download `NudgeLine.dmg` from [GitHub Releases](https://github.com/rareram/NudgeLine/releases) and move `NudgeLine.app` to `/Applications`. Subsequent updates can be installed with a single click via the menu bar.
-2. **Gatekeeper Notice (First launch only)**:
-   - Since this is an unsigned open-source app, macOS may prompt a security confirmation on first open.
-   - Right-click (Control + Click) `NudgeLine.app` > select **Open**, or run:
-     ```bash
-     xattr -cr /Applications/NudgeLine.app
-     ```
+1. Download `NudgeLine.dmg` from [GitHub Releases](https://github.com/rareram/NudgeLine/releases) and drag `NudgeLine.app` to your `/Applications` folder.
+2. Subsequent updates can be installed with a single click via the menu bar icon (**Check for Updates**).
 
 ---
 
-## Features
+### 3. Important Permissions & Security Notice
 
-### 1. Screen-Edge Timeline
-- **Position**: Left, Right, or Bottom screen edge.
-- **Multi-Monitor**: Show on the primary display or across all connected screens.
-- **Thickness**: Adjustable from 1px to 10px, with optional expansion on hover.
-- **Overlaps**: Alternating transitions between concurrent events.
-- **Past Event Dimming**: Completed events dim to 35% opacity and saturation, restoring to original colors on hover.
+Because NudgeLine is an open-source project and not yet distributed through the Mac App Store, macOS requires standard system permissions on first launch:
 
-### 2. Time Indicators
-- **Styles**: Triangle Tick, Round Dome, Protruding Block, and Point Ring.
-- **Visual Effects**: Indicator color customization, rim highlight, and neon glow toggles.
-- **Shortest Event Focus**: Prioritizes the shortest event when hovering over overlapping meetings.
+1. **Gatekeeper Security Confirmation (First launch only)**:
+   - macOS may display an unidentified developer warning.
+   - Right-click (or Control + Click) `NudgeLine.app` in `/Applications` > select **Open**, or run:
+     ```bash
+     xattr -cr /Applications/NudgeLine.app
+     ```
+2. **Calendar & Reminders Access (TCC)**:
+   - When prompted, grant access to **Calendars** and **Reminders** so NudgeLine can display your schedule.
+   - You can review these permissions anytime in **System Settings > Privacy & Security > Calendars / Reminders**.
+3. **Apple Events Permission**:
+   - When clicking an event to open Apple Calendar at that specific date, macOS may ask for Apple Events permission.
+4. **Zero-Telemetry Guarantee**:
+   - NudgeLine contains **zero analytics, tracking, or network telemetry**. Your calendar events and reminders are processed entirely in memory on your Mac.
 
-### 3. Event Alerts & Effects
-- **Pre-Event Alert**: 3-second bar pulse animation 5, 10, 15, or 20 minutes before a meeting starts.
-- **Event Start Effects**: Visual alert effects (Cherry Blossom, Neon Thunder, Maple Leaf, Snow Flurry).
-- **On the Hour Notification**: Optional visual alert triggered at :00 every hour.
-- **Trigger Control**: Triggers once when an event starts (3-minute cooldown).
+---
 
-### 4. Mascot Indicators & Custom Pets
-- **Built-in Pets**: Calico Cat, White Jindo Dog, and White Tiger.
-- **6 Hide Motions**:
-  - `tailPeek`: Hides behind the bezel with tail visible.
+## Core Features
+
+### 1. Screen-Edge Timeline Bar
+- **Flexible Placement**: Anchor the bar along the Left, Right, or Bottom screen edge.
+- **Multi-Display**: Show on your primary display or mirror across all connected screens.
+- **Customizable Thickness**: Default thickness from 1px to 10px, with optional expansion on hover.
+- **Past Event Dimming**: Completed events dim to 35% opacity and saturation, cleanly restoring to full color on mouse hover.
+- **Overlapping Schedules**: Alternating breathing cross-fade transitions for concurrent events.
+- **Time Indicators**: Triangle Tick, Round Dome, Protruding Block, or Point Ring shapes with optional neon glow.
+
+### 2. Interactive Popovers & Instant Actions
+- **Action Cards**: Hover over any event segment to view title, time, location, notes, and 1-click meeting join buttons.
+- **Fast Response**: Zero unnecessary view wrapping ensures instant, stutter-free hover rendering.
+- **Theme-Adaptive High Contrast**: Automatically adjusts contrast for buttons and text in Light and Dark modes.
+- **Smart Outside-Timeline Counter**: Neatly summarizes all-day events and schedules falling outside your configured display window (e.g., `3 outside timeline (21:00)`).
+
+### 3. Animated Mascots & Physical Interactions
+- **3 Built-in Mascots**: Calico Cat, White Jindo Dog, and White Tiger (16-frame handcrafted pixel animations).
+- **6 Smooth Hide Motions**:
+  - `tailPeek`: Hides body behind the bezel with tail wagging.
   - `headPeek`: Hides body with head peeking out.
-  - `pop`: Shrinks and disappears.
-  - `vortex`: Rotates and disappears.
-  - `squish`: Squishes and disappears.
-  - `smoke`: Blurs and disappears.
-  - **Custom Pets**: Import PNG frame sequences, adjust FPS, configure hide offsets with live preview.
-- **Pet Snooze**: Click the current time indicator or tooltip bubble to temporarily snooze the mascot. The indicator shows a subtle breathing animation, and the tooltip displays a live wave gauge with the remaining snooze countdown.
+  - `pop`: Shrinks and disappears with a pop effect.
+  - `vortex`: Rotates into a vortex.
+  - `squish`: Squishes flat against the bezel.
+  - `smoke`: Blurs away softly into smoke.
+- **Custom Pets**: Import your own PNG frame sequences with FPS controls and live hide-offset tuning.
+- **Pet Snooze**: Click the current time indicator or tooltip to temporarily hide the mascot. Displays a subtle breathing glow and a live liquid wave countdown.
 
-### 5. Event Popovers
-- **Action Card**: Schedule details, 1-click meeting join with automatic SafeLinks/Redirect unwrapping, preferred map routing (Apple, Google, OpenStreetMap, Naver, Kakao), and Apple Calendar shortcut.
-- **Simple Tooltip**: Compact tooltip showing title and time.
-- **Card Themes**: Supports System Adaptive, Dark, and Light themes with contrast adjustment for buttons and links on light backgrounds.
-- **All-day Events**: Displays all-day events alongside timed schedules in popovers.
-- **Empty Track Guidance**: Displays a status tooltip when hovering over empty timeline gaps.
-
-### 6. Apple Reminders Integration
-- **Timeline Markers**: Pinpoint markers indicating due times for today's reminders on the timeline.
-- **Two-Track Marker Styles**:
-  - SF Symbols: Flag, Diamond, Heart, and Star (retains reminder list color).
-  - Pet Treats: Full-color food items matching the active pet (Meat for White Tiger, Bone for Jindo Dog, Fish for Calico Cat, Star for Custom Pets).
-- **Visibility Window**: Configurable display range (1, 2, 3, 4, 12 hours, or All Day).
-- **Interactive Popovers**: View reminder details, toggle completion status directly from the popover, and open the Apple Reminders app.
-- **Smart App Deep-Linking**: Securely recognizes task URLs and displays dedicated badges for productivity tools (Notion, Slack, Things 3, Obsidian, etc.) with 3-tier security filtering.
-
-### 7. Shortcuts & Menu Controls
-- **Menu Bar Controls**: Quick access to Settings, Instant Refresh, Check for Updates, App Info (About NudgeLine), and Quit directly from the menu bar status icon.
-- **Native About Window**: A compact 320pt window displaying app identity, release highlights with markdown emphasis, and direct repository/feedback links.
-- **Instant Refresh**: Re-fetch today's calendar events via the timeline bar context menu or menu bar [Refresh] item.
-- **AppIntents Integration**:
-  - `Refresh Schedule` / `NudgeLine 새로고침`: Refetch today's calendar events.
-  - `Toggle Pet` / `NudgeLine 펫 토글`: Toggle pet visibility on the timeline bar.
-
-### 8. Settings Window
-- **Timeline**: Position, thickness, hover expand, border and neon highlights, past event dimming, background style (Auto, Dark, Light, Custom), and opacity.
-- **Appearance**: Card style/theme/opacity, indicator shape/color, pre-event alert, event start effects, hourly alert, pet selection and hide motions, custom pet manager.
-- **Schedule**: 24-hour mode, work hours, visible calendars with color pickers, System Settings deep link.
-- **Reminders**: Enable/disable timeline markers, marker style (SF Symbols or Pet Treats), visibility window, and reminder list filter.
-- **General**: Language (System, Korean, English), preferred map service, launch at login (`SMAppService`), multi-display, hide on screen share, hide in full screen, app info.
+### 4. Apple Reminders on Timeline
+- **Pinpoint Markers**: Displays today's due-time reminders directly on the timeline bar.
+- **Two Marker Styles**:
+  - **SF Symbols**: Flag, Diamond, Heart, or Star icons matching your reminder list color.
+  - **Pet Treats**: Food items tailored to your mascot (Fish for Cat, Bone for Dog, Meat for Tiger).
+- **Interactive Checklist**: Check off completed reminders directly from the popover without opening the Reminders app.
 
 ---
 
 ## Supported Integrations
 
-NudgeLine integrates with your daily workflow tools to provide a seamless, distraction-free experience.
+NudgeLine connects directly to the tools you already use every day:
 
 ### 1. Video Meeting Platforms (11 Platforms)
+1-click launch from the event popover:
 - **Global & Enterprise**: Google Meet, Zoom, Microsoft Teams, Apple FaceTime, Cisco Webex, Amazon Chime.
-- **Team Collaboration & Community**: Discord, Lark, Whereby, Jitsi Meet.
+- **Collaboration & Communities**: Discord, Lark, Whereby, Jitsi Meet.
 - **Regional**: Naver Whale ON.
-- **Security & Native Launch**:
-  - Automatically unwraps obfuscated URLs (Microsoft Defender SafeLinks, Google Redirects) to reveal clean destinations.
-  - 1-click launch into native macOS clients for Microsoft Teams (`msteams://`) and FaceTime (`facetime://`).
+- **SafeLinks & Deep Launch**: Automatically strips Microsoft Defender SafeLinks and Google Redirect wrappers to open clean destinations, with direct scheme launch for Teams (`msteams://`) and FaceTime (`facetime://`).
 
-### 2. Productivity & Deep Links (10 Apps + Web)
-- **Task & Productivity Tools**: Notion (`notion://`), Slack (`slack://`), Things 3 (`things://`), Obsidian (`obsidian://`), Bear (`bear://`), Linear (`linear://`), Figma (`figma://`).
+### 2. Productivity Apps & Smart Deep Links (10 Apps + Web)
+Dedicated badges for task and project URLs in reminders and notes:
+- **Productivity & Notes**: Notion (`notion://`), Slack (`slack://`), Things 3 (`things://`), Obsidian (`obsidian://`), Bear (`bear://`), Linear (`linear://`), Figma (`figma://`).
 - **Apple System Apps**: Apple Mail (`message://`), Apple Notes (`notes://`), Apple Reminders (`x-apple-reminderkit://`).
-- **Smart Web Badges**: Clean domain hostname badges for standard URLs (e.g., `github.com`, `docs.google.com`).
-- **3-Tier Safe Scheme Parser**: Blocks dangerous local file execution and script injection schemes (`file`, `javascript`, `applescript`, etc.).
+- **Web Destinations**: Clean domain hostname badges for standard URLs (e.g., `github.com`, `docs.google.com`).
+- **3-Tier Security Filter**: Blocks unsafe local file execution and script injection schemes (`file`, `javascript`, etc.).
 
-### 3. Location & Map Routing (5 Services)
-- **Supported Services**: Apple Maps, Google Maps, OpenStreetMap, Naver Map, Kakao Map.
-- **Configurable in Settings**: Choose your preferred map service in **Settings > General**. Korean localized environments provide Naver and Kakao options alongside global providers.
+### 3. Maps & Directions (5 Services)
+Open event locations in your favorite map service:
+- **Supported Maps**: Apple Maps, Google Maps, OpenStreetMap, Naver Map, Kakao Map.
+- **Configurable**: Choose your default provider in **Settings > General > Preferred Map Service**.
 
 ---
 
-## Requirements & Build
+## Shortcuts & Menu Bar Controls
+
+- **Menu Bar Controls**: Quick access to Settings, Instant Refresh, Check for Updates, and About NudgeLine.
+- **Native About Window**: A compact 320pt window displaying version identity, release highlights, and direct repository links.
+- **macOS Shortcuts (AppIntents)**:
+  - `Refresh Schedule`: Re-query EventKit and update timeline events.
+  - `Toggle Mascot`: Toggle mascot visibility on the timeline bar.
+
+---
+
+## Requirements & Building
 
 ### Requirements
 - macOS 15.0+ (Sequoia)
@@ -175,113 +173,57 @@ NudgeLine integrates with your daily workflow tools to provide a seamless, distr
 git clone https://github.com/rareram/NudgeLine.git
 cd NudgeLine
 
-# 2. Local development build (Isolated NudgeLine (Dev).app)
+# 2. Build local debug application
 ./scripts/build_app.sh
 open "build/NudgeLine (Dev).app"
 
-# Or production release build
+# Or build production release bundle
 ./scripts/build_app.sh --release
 open "build/NudgeLine.app"
 ```
 
-### Running Unit Tests (Manual Testing)
+### Running Unit Tests
 
-You can manually run the unit test suite to verify the localization dictionary (L10n), default configuration models (AppSettings), and calendar event model integrity:
+Run the full automated test suite (54 tests across 8 suites) covering localization, reminder parsing, event segmentation, and security filters:
 
 ```bash
-# Run local unit tests
 ./scripts/run_tests.sh
-
-# Or directly via Swift Package Manager (Xcode environment)
-swift test
 ```
 
 ---
 
-## Project Structure
+## Project Architecture
 
 ```
 NudgeLine/
-├── Package.swift                         # SPM Manifest (macOS 15+)
-├── docs/
-│   └── images/                           # README screenshots and icon assets
-├── Resources/
-│   ├── Info.plist                        # LSUIElement and calendar usage descriptions
-│   └── AppIcon.icns                      # App icon
-├── Sources/
-│   └── NudgeLine/
-│       ├── AppDelegate.swift             # App lifecycle and screen change observers
-│       ├── main.swift                    # Entry point & single instance guard
-│       ├── Models/
-│       │   ├── AppSettings.swift         # Settings persistence via UserDefaults
-│       │   ├── CalendarEvent.swift       # Event model, meeting parser, safe indexing
-│       │   └── ReminderItem.swift        # Apple Reminders model & visibility calculator
-│       ├── Services/
-│       │   ├── CalendarService.swift     # EventKit background query service
-│       │   ├── CustomPetService.swift    # Thread-safe custom pet file manager
-│       │   ├── LaunchAtLoginHelper.swift # SMAppService login item wrapper
-│       │   ├── Localization.swift        # English/Korean L10n dictionary
-│       │   ├── NudgeLineShortcuts.swift  # AppIntents for Shortcuts & Siri automation
-│       │   ├── ReminderService.swift     # Apple Reminders fetch & toggle service
-│       │   └── UpdateService.swift       # In-app update checker and download coordinator
-│       └── Views/
-│           ├── About/                    # Native About window & singleton controller
-│           │   └── AboutView.swift
-│           ├── OverlayPanel.swift        # Edge floating NSPanel with mouse passthrough
-│           ├── PopoverPanel.swift        # Floating popover panel with .common runloop timer & empty tooltip
-│           ├── TimelineBarView.swift     # Main timeline rendering & gesture coordinator
-│           ├── HangingPetIndicatorView.swift # Mascot renderer & orbit physics
-│           ├── HoverRenderers.swift      # Popover renderer protocol
-│           ├── EventPopoverView.swift    # Action card popover (timed & all-day multi-stack)
-│           ├── SimpleInfoPopoverView.swift # Simple tooltip bubble
-│           ├── CustomPetEditorSheet.swift# Custom pet drag-and-drop modal
-│           ├── SettingsView.swift        # Preferences tab container
-│           ├── SettingsWindowController.swift # Dedicated settings window lifecycle manager
-│           ├── Settings/                 # Modular settings tabs
-│           │   ├── TimelineTab.swift
-│           │   ├── AppearanceTab.swift
-│           │   ├── ScheduleTab.swift
-│           │   ├── RemindersTab.swift
-│           │   └── GeneralTab.swift
-│           ├── Effects/                  # 16-frame 1.0s micro event alert effects
-│           │   ├── EventTriggerEffectView.swift
-│           │   ├── CherryBlossomEffectAsset.swift
-│           │   ├── ThunderEffectAsset.swift
-│           │   ├── AutumnLeavesEffectAsset.swift
-│           │   └── WinterSnowEffectAsset.swift
-│           └── Pets/                     # Built-in 16-frame Base64 pet assets & interaction
-│               ├── PetProtocol.swift
-│               ├── InteractivePetView.swift
-│               ├── InteractiveCustomPetView.swift
-│               ├── CatPetAsset.swift
-│               ├── JindoDogPetAsset.swift
-│               └── WhiteTigerPetAsset.swift
-├── Tests/
-│   └── NudgeLineTests/                   # Swift Testing unit test suite
-└── scripts/
-    ├── hooks/                            # Local Git pre-push automated verification hooks
-    │   ├── install_hook.sh
-    │   ├── pre-push.sh
-    │   └── uninstall_hook.sh
-    ├── build_app.sh                      # Local Dev & Release bundle packager
-    ├── create_dmg.sh                     # Release DMG packaging script
-    ├── run_tests.sh                      # Local unit test runner
-    ├── generate_dev_icon.swift           # DEV icon badging script
-    ├── generate_app_icon.sh              # Production icon generator script
-    ├── generate_custom_pet.py            # CLI sprite generator for Swift models
-    └── check_security.sh                 # Static secret scan script
+├── Sources/NudgeLine/
+│   ├── Models/         # CalendarEvent, ReminderItem, AppSettings
+│   ├── Services/       # CalendarService, ReminderService, Localization, UpdateService
+│   └── Views/          # OverlayPanel, PopoverPanel, TimelineBarView, Settings/
+├── Tests/NudgeLineTests/ # Swift Testing unit test suite
+└── scripts/            # Packaging, DMG builder, test runners, git hooks
 ```
 
 ---
 
 ## Localization
 
-NudgeLine supports:
-- System Default (Follows macOS system language)
-- English
-- Korean (한국어)
+NudgeLine natively supports 10 languages adhering strictly to Apple macOS HIG standards:
+- **System Default** (matches your macOS language)
+- **English**
+- **Korean** (한국어)
+- **Japanese** (日本語)
+- **Simplified Chinese** (简体中文)
+- **Traditional Chinese** (繁體中文)
+- **Russian** (Русский)
+- **Dutch** (Nederlands)
+- **French** (Français)
+- **German** (Deutsch)
+- **Spanish** (Español)
 
-You can change the language in **Settings > General > Language**.
+Plus a secret hidden language waiting to be discovered on special occasions or through subtle interactions.
+
+Change your language preference anytime in **Settings > General > Language**.
 
 ---
 
@@ -290,4 +232,3 @@ You can change the language in **Settings > General > Language**.
 - Inspired by the concept of PixelScheduler (2014-2015) by Andreas Katzian & ARTMIXTURE.
 - License: [MIT License](LICENSE).
 - Copyright: (c) 2026 rareram. All rights reserved.
-

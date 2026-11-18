@@ -669,6 +669,7 @@ public struct TimelineSegment: Identifiable {
 
 // MARK: - 5. 일정 중첩 분석 및 시간 구간 슬라이싱 알고리즘
 extension CalendarEvent {
+    /// [Core Computation Engine] 겹치는 일정들을 수평 슬라이스로 분할하여 타임라인 세그먼트 생성
     public static func buildSegments(from rawEvents: [CalendarEvent], dayStart: Date, dayEnd: Date) -> [TimelineSegment] {
         let timedEvents = filterAndSortEvents(rawEvents, dayStart: dayStart, dayEnd: dayEnd)
         guard !timedEvents.isEmpty else { return [] }
@@ -850,6 +851,7 @@ public enum MeetingAppLauncher {
         NSWorkspace.shared.open(meeting.url)
     }
 
+    /// [Deep Link Parser] 웹 화상회의 URL을 Zoom/Teams 데스크톱 전용 스킴(zoommtg:// 등)으로 변환
     public static func nativeSchemeUrl(for meeting: MeetingInfo) -> URL? {
         let url = meeting.url
         switch meeting.platform {

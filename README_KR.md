@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md">English</a> | <strong>한국어</strong>
+  <a href="README.md">English</a> | <strong>한국어</strong> | <a href="README_JP.md">日本語</a> | <a href="README_CN.md">简体中文</a> | <a href="README_TW.md">繁體中文</a> | <a href="README_RU.md">Русский</a> | <a href="README_NL.md">Nederlands</a> | <a href="README_FR.md">Français</a> | <a href="README_DE.md">Deutsch</a> | <a href="README_ES.md">Español</a>
 </p>
 
 <p align="center">
@@ -22,275 +22,215 @@
 
 ---
 
-## 소개
+## 왜 NudgeLine인가요?
 
-NudgeLine은 화면 테두리(좌측, 우측, 하단)에 얇은 선 형태로 오늘 일정을 표시하는 macOS 유틸리티입니다.
+과거 32-bit macOS 시절 개인적으로 매우 유용하게 쓰던 [PixelScheduler](https://pixelscheduler.art-mixture.com/)라는 앱이 있었습니다. 하지만 macOS가 64-bit로 전환되면서 더 이상 개발이 이어지지 않아 늘 아쉬움이 남았습니다. NudgeLine은 그 아쉬움을 달래고자 현대적인 macOS 환경에 맞추어 직접 만든 대안입니다.
+
+원작의 미니멀한 화면 테두리 스케줄 바 콘셉트를 계승하되, 마우스가 다가오면 화면 뒤로 숨는 귀여운 마스코트 펫과 다채로운 시작 이펙트, 그리고 최신 화상회의 및 Apple 미리알림 연동을 더해 한층 풍성하고 실용적인 경험으로 재탄생시켰습니다:
+
+- **무간섭 앰비언트 타임라인 (Zero Interference)**: 화면 베젤을 따라 1~10px의 얇은 선 형태로 상주하여, 캘린더 창을 열지 않고도 오늘 하루의 시간 흐름을 자연스럽게 인지할 수 있습니다. 바 바깥 영역의 마우스 클릭과 스크롤은 100% 뒤쪽 창(브라우저, 개발 도구 등)으로 통과되어 현재 작업 흐름을 전혀 방해하지 않습니다.
+- **원클릭 생산성 연결 (1-Click Productivity Bridge)**: Google Meet, Zoom, Teams, FaceTime 등 11개 화상회의에 한 번의 클릭으로 즉시 입장할 수 있으며, 사내 보안 링크(Microsoft Defender SafeLinks, Google Redirects)는 깨끗한 원본 주소로 자동 복원합니다. 또한 미리알림 메모에 포함된 Notion, Slack, Things, Obsidian 등 10대 생산성 앱 딥링크를 전용 배지로 즉시 연결합니다.
+- **은은한 감각 피드백 (Calm Sensory Feedback)**: 회의 시작 5~20분 전 부드러운 바 펄스 애니메이션으로 집중을 깨지 않고 다가오는 일정을 리마인드합니다. 마우스 커서가 다가오면 화면 베젤 뒤로 쏙 숨는 귀여운 마스코트 펫(삼색고양이, 진도백구, 백호)이 함께 머물며, 필요할 땐 언제든 스누즈할 수 있습니다.
+- **100% 순정 네이티브 & 프라이버시 (Zero Overhead & Absolute Privacy)**: 외부 서드파티 라이브러리 없이 순수 SwiftUI/AppKit/EventKit으로 구현되어 유휴 상태 메모리 25MB 미만의 극저전력으로 동작합니다. 외부 서버 통신은 0%이며, 모든 일정과 미리알림 데이터는 Mac 로컬 메모리에서만 안전하게 처리됩니다.
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/63386ef2-a62a-44bb-a629-badb966f11a5" width="85%" controls></video>
 </div>
 
-주요 특징:
-
-- **마우스 패스스루**: 바 영역 외 클릭/스크롤이 통과되어 뒤쪽 창 조작 유지
-- **타임라인 표시**: 배경 트랙, 이벤트 구분선, 4종 인디케이터 지원
-- **일정 중복 처리**: 동시간대 중복 일정 간 색상 교차 전환
-- **마스코트 펫**: 마우스 접근 시 회피 동작을 지원하는 펫 3종 및 커스텀 펫 등록
-- **Apple 미리알림 연동**: 오늘 마감/지정 시간 미리알림 핀포인트 마커 표시 및 투 트랙 마커 스타일(SF 심볼 & 펫 먹이 아이템)
-- **화상회의 및 지도 연동**: 10개 화상회의 플랫폼 1클릭 입장, 사내 보안 링크(SafeLinks 등) 원본 자동 복원, 4대 지도 바로가기
-- **화면 공유 및 전체 화면 대응**: 화면 공유/녹화 시 자동 숨김 및 전체 화면 전환 시 간섭 배제
-- **원클릭 인앱 업데이트**: 초기 설치 후 메뉴바에서 최신 버전 자동 감지 및 무중단 인앱 갱신
-- **순정 프레임워크 구현**: 외부 라이브러리 없이 SwiftUI, AppKit, EventKit으로 구현
-
 <p align="center">
   <img src="docs/images/pet_hide_tail_peek.gif" width="130" height="167" title="숨기 (꼬리 살랑)" alt="숨기 (꼬리 살랑)" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/images/pet_hide_head_peek.gif" width="130" height="167" title="숨기 (머리 빼꼼)" alt="숨기 (머리 빼꼼)" style="margin: 0 18px;" />&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="docs/images/pet_hide_pop.gif" width="130" height="167" title="사라지기 (퐁!)" alt="사라지기 (퐁!)" style="margin: 0 18px;" /><br>
-  <em>마우스 커서 접근 시 베젤 뒤로 회피하거나 사라지는 동작을 지원합니다 (6종).</em>
+  <em>마우스 커서 접근 시 베젤 뒤로 회피하거나 사라지는 마스코트 펫이 함께합니다 (6종 숨김 모션 지원).</em>
 </p>
 
 ---
 
-## 설치 방법
+## 설치 및 최초 설정 안내
 
 ### 1. Homebrew 설치 (권장)
 
-터미널에서 한 줄로 간편하게 설치하고 업데이트할 수 있습니다:
+터미널에서 명령어 한 줄로 간편하게 설치할 수 있습니다:
 
 ```bash
 brew install rareram/tap/nudgeline
+```
+
+최신 버전으로 업데이트할 때:
+```bash
+brew upgrade rareram/tap/nudgeline
 ```
 
 ---
 
 ### 2. DMG 파일 직접 다운로드
 
-1. [GitHub Releases](https://github.com/rareram/NudgeLine/releases)에서 `NudgeLine.dmg`를 다운로드하여 설치합니다. (이후 최신 버전은 상단 메뉴바의 [새 버전 업데이트] 항목에서 원클릭 인앱 업데이트를 지원합니다.)
-2. **보안 확인 메시지 발생 시 (최초 1회)**:
+1. [GitHub Releases](https://github.com/rareram/NudgeLine/releases)에서 `NudgeLine.dmg`를 다운로드하여 `NudgeLine.app`을 `/Applications` 폴더로 드래그합니다.
+2. 이후 배포되는 최신 버전은 메뉴바 아이콘의 **[새 버전 업데이트]** 메뉴를 통해 원클릭으로 간편하게 인앱 업데이트할 수 있습니다.
+
+---
+
+### 3. 유의점: 시스템 권한 및 보안 설정 안내
+
+NudgeLine은 현재 Mac App Store 등록 전 단계의 오픈소스 유틸리티이므로, 최초 실행 시 macOS 표준 보안 권한 설정이 필요합니다:
+
+1. **Gatekeeper 보안 확인 (최초 1회 실행 시)**:
    - 개발자 인증서 미포함 오픈소스 앱이므로 최초 실행 시 확인 메시지가 표시될 수 있습니다.
-   - **해결 방법**: `NudgeLine.app`을 **우클릭(Control+클릭) > [열기]**를 선택하거나, 터미널에서 다음 명령어를 실행합니다:
+   - 응용 프로그램 폴더의 `NudgeLine.app`을 **우클릭(Control+클릭) > [열기]**를 선택하거나, 터미널에서 다음 명령어를 실행합니다:
      ```bash
      xattr -cr /Applications/NudgeLine.app
      ```
+2. **캘린더 및 미리알림 접근 권한 (TCC)**:
+   - 앱 실행 시 일정과 미리알림을 표시하기 위한 접근 권한 확인 창이 나타납니다.
+   - 시스템 설정 > 개인정보 보호 및 보안 > **캘린더** 및 **미리알림**에서 언제든 권한 상태를 확인하고 변경할 수 있습니다.
+3. **Apple Events 권한 안내**:
+   - 팝오버에서 캘린더 바로가기를 클릭하여 Apple 공식 캘린더의 해당 날짜로 이동할 때 시스템이 Apple Events 허용을 요청할 수 있습니다.
+4. **무통신 프라이버시 보증**:
+   - NudgeLine은 사용자의 개인정보나 일정을 수집·분석·외부 전송하는 코드가 전혀 포함되어 있지 않습니다. 모든 데이터는 오직 사용자의 Mac 내부에서만 안전하게 동작합니다.
 
 ---
 
-## 기능 상세
+## 주요 기능 상세
 
 ### 1. 화면 테두리 타임라인 바
-- **위치**: 화면 좌측, 우측, 하단
-- **다중 디스플레이**: 주 모니터 전용 또는 전체 모니터 동시 표시
-- **두께 조절**: 기본 두께(1~10px) 및 마우스 호버 시 확장 두께 설정
-- **겹침 처리**: 동시간대 중복 일정 교차 전환
-- **지난 일정 흐리게**: 종료된 일정은 불투명도와 채도를 낮추어(35%) 표시하며, 호버 시 원래 색상으로 복원
+- **자유로운 위치 배치**: 화면 좌측, 우측, 하단 모서리 중 원하는 위치 선택.
+- **다중 디스플레이 지원**: 주 모니터 전용 또는 연결된 전체 모니터 동시 표시.
+- **두께 및 호버 확장**: 기본 두께(1~10px)를 조절할 수 있으며, 마우스 호버 시 자연스럽게 두께가 확장되도록 설정 가능.
+- **지난 일정 흐리게 표시**: 종료된 일정은 불투명도와 채도를 낮추어(35%) 표시하여 남은 일정에 집중할 수 있게 하며, 마우스를 올리면 원래 색상으로 즉각 복원.
+- **중복 일정 교차 페이드**: 동시간대 중복 일정은 사선 줄무늬 대신 부드러운 크로스페이드 애니메이션으로 세련되게 표현.
+- **시간 인디케이터**: 삼각 틱, 라운드 돔, 돌출 블록, 포인트 링 4종 모양과 네온 글로우 지원.
 
-### 2. 시간 표시자 (인디케이터)
-- **표시자 모양**: 삼각 틱, 라운드 돔, 돌출 블록, 포인트 링
-- **시각 효과**: 색상 변경, 테두리 강조, 네온 효과 토글
-- **단기 일정 우선 포커스**: 중복 일정 구간 호버 시 소요 시간이 짧은 일정 우선 강조
+### 2. 인터랙티브 팝오버 및 즉각 액션
+- **액션 카드 팝오버**: 세그먼트에 마우스를 올리면 일정 제목, 시간, 장소, 메모와 함께 1클릭 회의 참여 버튼을 즉시 표시.
+- **0ms 즉각 반응성**: 불필요한 중간 뷰 래핑을 배제하여 렉이나 지터 없는 쾌적한 호버 반응성 제공.
+- **라이트/다크 적응형 고대비**: 라이트 모드와 다크 모드 각각에서 WCAG 규격을 준수하는 선명한 가독성 보장.
+- **타임라인 외 일정 스마트 요약**: 종일 일정 및 현재 표시 시간 범위 바깥의 일정을 명확하게 요약 (예: `종일: 워크샵 · 타임라인 외 2건 (21:00)`).
 
-### 3. 일정 시작 전 알림 및 시작 효과
-- **일정 시작 전 알림**: 회의 시작 5/10/15/20분 전 바 펄스 애니메이션(3초)으로 사전 알림
-- **일정 시작 알림 효과**: 체리 블라섬, 네온 썬더, 메이플 리프, 스노우 플러리 4종 효과 지원
-- **정각 알림**: 매시간 00분 정각 알림 효과 토글
-- **발동 제어**: 일정 시작 시점에 1회 발동 (3분 쿨다운)
+### 3. 마스코트 펫과 물리 인터랙션
+- **기본 내장 펫 3종**: 삼색고양이, 진도백구, 백호 (각 16프레임 핸드크래프트 픽셀 아트 애니메이션).
+- **6가지 베젤 회피 모션**:
+  - `tailPeek`: 상체는 베젤 뒤로 숨고 꼬리만 살랑살랑 흔들림.
+  - `headPeek`: 몸통은 숨고 머리와 눈만 쏙 빼꼼 노출.
+  - `pop`: 작아지며 톡 터지듯 사라짐.
+  - `vortex`: 소용돌이 속으로 회전하며 소멸.
+  - `squish`: 젤리처럼 납작하게 찌그러지며 회피.
+  - `smoke`: 부드럽게 연기처럼 블러되며 소멸.
+- **커스텀 펫 등록**: 나만의 PNG 시퀀스 이미지를 드래그하여 등록하고 FPS 및 오프셋을 실시간 프리뷰로 튜닝 가능.
+- **펫 일시 숨김 (스누즈)**: 시간 인디케이터나 툴팁을 클릭하면 펫이 부드럽게 숨겨지며, 은은한 브리딩 효과와 액체 파동 카운트다운 게이지 표시.
 
-### 4. 마스코트 펫과 숨김 모션
-- **기본 펫 3종**: 삼색고양이, 진도백구, 백호
-- **6가지 숨김 동작**:
-  - `tailPeek`: 베젤 뒤로 숨고 꼬리만 표시
-  - `headPeek`: 몸은 숨고 머리만 표시
-  - `pop`: 축소되며 사라짐
-  - `vortex`: 회전하며 사라짐
-  - `squish`: 납작해지며 사라짐
-  - `smoke`: 흐려지며 사라짐
-- **커스텀 펫 편집기**: PNG 프레임 등록, 속도(FPS), 좌/우 숨김 오프셋 설정 및 미리보기 지원
-- **펫 일시 숨김(스누즈)**: 시간 표시자나 시간 툴팁 말풍선을 클릭하여 펫을 지정 시간 동안 숨김 상태로 고정. 스누즈 중에는 표시자가 은은한 브리딩 애니메이션으로 전환되며, 툴팁 호버 시 실시간 잔여 시간 파동 게이지 표시.
-
-### 5. 팝오버 카드
-- **상세 액션 카드**: 일정 상세 정보, 1클릭 회의 참여(SafeLinks 및 Google Redirect 원본 복원 지원), 5대 지도 서비스(Apple/Google/OpenStreetMap/네이버/카카오) 바로가기, 캘린더 앱 열기
-- **심플 툴팁**: 제목과 시간 중심의 간결한 툴팁
-- **카드 테마**: 시스템 설정 연동(Adaptive), 다크, 라이트 테마 지원 (라이트 모드 배경에 맞춘 버튼/링크 명암 보정 적용)
-- **종일 일정 표시**: 시간 지정 일정과 함께 당일 종일 일정 표시
-- **빈 바 호버 안내**: 일정이 없는 구간 호버 시 일정 상태 안내 툴팁 표시
-
-### 6. Apple 미리알림 연동
-- **타임라인 마커**: 오늘 마감 또는 특정 시간으로 설정된 미리알림을 타임라인 바 위에 핀포인트 마커로 표시
+### 4. 타임라인 위 Apple 미리알림 (Reminders)
+- **핀포인트 마커**: 오늘 마감/지정 시간 미리알림을 타임라인 바 위에 정밀하게 표시.
 - **투 트랙 마커 스타일**:
-  - SF 심볼: 깃발, 다이아몬드, 하트, 별 (미리알림 목록 고유 색상 유지)
-  - 펫 먹이·간식: 선택된 펫에 맞춰 바뀌는 풀컬러 먹이 아이템 (백호: 고기, 백구: 뼈다귀, 삼색고양이: 생선, 커스텀: 별)
-- **표시 범위 설정**: 마감 시간 기준 표시 범위 필터 (1/2/3/4/12시간 또는 하루 전체)
-- **인터랙티브 팝오버**: 팝오버 카드에서 미리알림 내용 확인, 완료/미완료 즉시 토글, 미리알림 앱 바로가기 지원
-- **스마트 딥링크 지원**: 할 일 메모에 포함된 노션, 슬랙, 시스템 메모, 메일 및 일반 웹 링크를 인식하여 전용 앱 배지로 원클릭 즉시 실행 (3단계 안전 파서 적용)
-
-### 7. 메뉴바 및 단축어(Shortcuts) 연동
-- **메뉴바 조작**: 상단 메뉴바 상태 아이콘을 통해 환경설정, 즉시 새로 고침, 업데이트 확인, NudgeLine 정보, 앱 종료를 간편하게 조작
-- **네이티브 정보 창**: 밋밋한 시스템 표준 패널을 대체하는 320pt 정보 창으로, 버전/빌드 번호, 브랜드 카피, 마크다운 강조 릴리스 요약, GitHub 저장소 및 피드백 문의 링크 제공
-- **즉시 새로 고침**: 타임라인 우클릭 메뉴 또는 상단 메뉴바의 [새로 고침]으로 오늘 캘린더 즉시 재동기화
-- **AppIntents 지원**:
-  - `NudgeLine 새로고침`: 오늘 일정 즉시 재동기화
-  - `NudgeLine 펫 토글`: 타임라인 펫 마스코트 표시/숨김 전환
-
-### 8. 환경설정
-- **타임라인**: 바 위치, 두께, 호버 확장, 블록 테두리 및 네온 강조, 지난 일정 흐리게 토글, 배경 스타일(자동/다크/라이트/커스텀) 및 투명도
-- **표시 및 효과**: 일정 카드 스타일/테마/투명도, 시간 표시자 모양/색상, 일정 시작 전 알림, 일정 시작 효과, 정각 알림, 펫 선택 및 숨김 동작, 커스텀 펫 관리
-- **시간 및 캘린더**: 24시간 모드, 업무 시간 범위 설정, 표시할 캘린더 선택 및 색상 지정, 시스템 설정 딥링크
-- **미리알림**: 타임라인 마커 표시 여부, 마커 스타일(SF 심볼 또는 펫 먹이 아이템), 표시 범위 필터, 표시할 미리알림 목록 선택
-- **일반**: 언어 설정(시스템 기본/한국어/영어), 선호 지도 서비스(Apple/Google/OpenStreetMap/네이버/카카오), 로그인 시 자동 실행, 다중 모니터 표시, 화면 공유 시 숨김, 전체 화면 시 숨김, 앱 정보
+  - **SF 심볼**: 깃발, 다이아몬드, 하트, 별 모양 (미리알림 목록 고유 색상 유지).
+  - **펫 먹이 아이템**: 펫 캐릭터에 어울리는 간식 아이템 (고양이 생선, 강아지 뼈다귀, 호랑이 고기).
+- **인터랙티브 체크리스트**: 미리알림 앱을 직접 띄우지 않고도 팝오버에서 할 일을 즉시 완료 처리.
 
 ---
 
-## 지원 연동 생태계
+## 지원 연동 목록 (Supported Integrations)
 
-NudgeLine은 매일 사용하는 업무 도구들과 긴밀하게 연동되어 방해 없는 연속적인 워크플로를 제공합니다.
+NudgeLine은 매일 사용하는 업무 도구들과 긴밀하게 연동됩니다:
 
-### 1. 화상회의 플랫폼 (11종)
-- **글로벌 및 엔터프라이즈**: Google Meet, Zoom, Microsoft Teams, Apple FaceTime, Cisco Webex, Amazon Chime
-- **팀 협업 및 커뮤니티**: Discord, Lark, Whereby, Jitsi Meet
-- **국내 특화**: Naver Whale ON
-- **보안 및 네이티브 앱 실행**:
-  - 기업용 Microsoft Defender SafeLinks 및 Google Redirect 난독화 URL의 원본 타깃을 자동 복원
-  - Microsoft Teams(`msteams://`) 및 FaceTime(`facetime://`)의 macOS 네이티브 앱 1클릭 즉시 실행 변환
+### 1. 화상회의 플랫폼 11종 (1-Click Launch)
+일정 상세 카드에서 한 번의 클릭으로 즉시 회의실에 입장합니다:
+- **글로벌 & 엔터프라이즈**: Google Meet, Zoom, Microsoft Teams, Apple FaceTime, Cisco Webex, Amazon Chime.
+- **협업 툴 & 커뮤니티**: Discord, Lark, Whereby, Jitsi Meet.
+- **국내 서비스**: 네이버 웨일온 (Whale ON).
+- **보안 링크 자동 복원 & 네이티브 실행**: 사내 메일 보안 솔루션이 래핑한 URL(Microsoft Defender SafeLinks, Google Redirects)을 분석하여 순수 목적지 URL을 자동 복원하며, Teams(`msteams://`) 및 FaceTime(`facetime://`)의 네이티브 앱 스킴 직결 지원.
 
-### 2. 생산성 및 시스템 딥링크 (10종 + 웹)
-- **생산성 및 업무 툴**: Notion(`notion://`), Slack(`slack://`), Things 3(`things://`), Obsidian(`obsidian://`), Bear(`bear://`), Linear(`linear://`), Figma(`figma://`)
-- **Apple 시스템 기본 앱**: Apple Mail(`message://`), Apple Notes(`notes://`), Apple Reminders(`x-apple-reminderkit://`)
-- **스마트 웹 배지**: 일반 웹 링크의 도메인 호스트명을 깔끔한 배지로 자동 추출 (예: `github.com`, `docs.google.com`)
-- **3단계 보안 검증 파서**: 로컬 파일 임의 실행 및 시스템 스크립트 인젝션 위험 스킴(`file`, `javascript`, `applescript` 등) 원천 차단
+### 2. 생산성 앱 및 스마트 딥링크 10종 + 웹
+미리알림과 캘린더 메모에 적힌 업무 링크를 자동으로 감지하여 전용 배지로 연결합니다:
+- **생산성 & 노트 도구**: Notion (`notion://`), Slack (`slack://`), Things 3 (`things://`), Obsidian (`obsidian://`), Bear (`bear://`), Linear (`linear://`), Figma (`figma://`).
+- **Apple 순정 앱**: Apple Mail (`message://`), Apple Notes (`notes://`), Apple Reminders (`x-apple-reminderkit://`).
+- **일반 웹 링크**: 깔끔한 도메인 호스트명 배지 표시 (예: `github.com`, `docs.google.com`).
+- **3단계 안전 파서**: 악성 로컬 파일 실행이나 스크립트 주입 스킴(`file`, `javascript` 등)을 철저히 차단.
 
-### 3. 위치 및 지도 서비스 (5종)
-- **지원 지도 서비스**: Apple 지도 (Apple Maps), Google 지도 (Google Maps), OpenStreetMap, 네이버 지도 (Naver Map), 카카오맵 (Kakao Map)
-- **환경설정 제공**: **설정 > 일반**에서 선호하는 지도 서비스를 선택할 수 있으며, 한국어 환경에서는 네이버와 카카오가 함께 노출됩니다.
+### 3. 지도 및 길찾기 서비스 5종
+일정에 입력된 장소를 선호하는 지도 서비스로 원클릭 조회합니다:
+- **지원 지도**: Apple 지도, Google 지도, OpenStreetMap, 네이버 지도, 카카오맵.
+- **설정 방법**: **설정 > 일반 > 선호하는 지도 서비스**에서 기본 서비스를 자유롭게 선택할 수 있습니다.
 
 ---
 
-## 요구 사양 및 빌드
+## 단축어 및 메뉴바 제어
 
-### 요구 사양
+- **메뉴바 상시 제어**: 설정 열기, 일정 즉시 새로고침, 업데이트 확인, NudgeLine 정보 창 열기 지원.
+- **네이티브 정보 창**: 버전 정보, 빌드별 주요 변경 사항 및 공식 GitHub/피드백 링크를 한눈에 볼 수 있는 320pt 컴팩트 창 제공.
+- **macOS 단축어 (AppIntents) 지원**:
+  - `NudgeLine 새로고침`: 오늘 일정을 백그라운드에서 즉시 재조회.
+  - `NudgeLine 펫 토글`: 타임라인 바 위의 펫 표시 여부를 단축어로 전환.
+
+---
+
+## 빌드 및 테스트 방법
+
+### 시스템 요구 사양
 - macOS 15.0+ (Sequoia)
-- Apple Silicon (M1~M4) 또는 Intel Mac
+- Apple Silicon 또는 Intel Mac
 
-### 소스코드에서 빌드하기
+### 소스코드 빌드
 
 ```bash
-# 1. 저장소 복제
+# 1. 저장소 클론
 git clone https://github.com/rareram/NudgeLine.git
 cd NudgeLine
 
-# 2. 로컬 개발 빌드 (격리된 NudgeLine (Dev).app)
+# 2. 로컬 개발용 빌드 (독립된 NudgeLine (Dev).app 생성)
 ./scripts/build_app.sh
 open "build/NudgeLine (Dev).app"
 
-# 또는 정식 배포용 빌드
+# 또는 프로덕션 배포용 빌드
 ./scripts/build_app.sh --release
 open "build/NudgeLine.app"
 ```
 
-### 단위 테스트 실행 (수동 테스트)
+### 단위 테스트 실행
 
-NudgeLine의 다국어 사전(L10n), 환경설정 기본값(AppSettings), 캘린더 이벤트 모델 정합성을 검증하는 단위 테스트를 직접 수동으로 실행할 수 있습니다:
+현지화 사전, 미리알림 파서, 일정 분할 알고리즘 및 보안 필터를 포괄하는 자동화 단위 테스트(8개 스위트 54개 테스트)를 직접 실행할 수 있습니다:
 
 ```bash
-# 로컬 단위 테스트 스위트 실행
 ./scripts/run_tests.sh
-
-# 또는 Swift Package Manager 직접 실행 (Xcode 환경)
-swift test
 ```
 
 ---
 
-## 프로젝트 구조
+## 프로젝트 아키텍처
 
 ```
 NudgeLine/
-├── Package.swift                         # SPM 매니페스트 (macOS 15+)
-├── docs/
-│   └── images/                           # README 스크린샷 및 아이콘 에셋
-├── Resources/
-│   ├── Info.plist                        # LSUIElement 및 캘린더 접근 권한 설명
-│   └── AppIcon.icns                      # 앱 아이콘
-├── Sources/
-│   └── NudgeLine/
-│       ├── AppDelegate.swift             # 앱 수명주기 및 화면 변경 옵저버
-│       ├── main.swift                    # 진입점 및 단일 인스턴스 중복 실행 방지
-│       ├── Models/
-│       │   ├── AppSettings.swift         # UserDefaults 기반 환경설정 영속화
-│       │   ├── CalendarEvent.swift       # 이벤트 모델, 회의 링크 파서, 안전한 인덱싱
-│       │   └── ReminderItem.swift        # Apple 미리알림 모델 및 가시성 연산
-│       ├── Services/
-│       │   ├── CalendarService.swift     # EventKit 백그라운드 캘린더 조회 서비스
-│       │   ├── CustomPetService.swift    # 스레드 안전한 사용자 설정 펫 파일 매니저
-│       │   ├── LaunchAtLoginHelper.swift # SMAppService 로그인 시 자동 실행 래퍼
-│       │   ├── Localization.swift        # 한국어/영어 다국어 L10n 사전
-│       │   ├── NudgeLineShortcuts.swift  # 단축어 및 Siri 자동화를 위한 AppIntents
-│       │   ├── ReminderService.swift     # Apple 미리알림 비동기 조회 및 완료 토글 서비스
-│       │   └── UpdateService.swift       # 인앱 업데이트 확인 및 백그라운드 다운로드 코디네이터
-│       └── Views/
-│           ├── About/                    # 네이티브 정보 창 및 싱글톤 윈도우 컨트롤러
-│           │   └── AboutView.swift
-│           ├── OverlayPanel.swift        # 마우스 패스스루 지원 화면 테두리 플로팅 NSPanel
-│           ├── PopoverPanel.swift        # .common 런루프 타이머 기반 팝오버 패널 및 빈 바 툴팁
-│           ├── TimelineBarView.swift     # 메인 타임라인 렌더링 및 제스처 코디네이터
-│           ├── HangingPetIndicatorView.swift # 마스코트 렌더러 및 궤도 물리 엔진
-│           ├── HoverRenderers.swift      # 팝오버 렌더러 프로토콜
-│           ├── EventPopoverView.swift    # 액션 카드 팝오버 (시간 지정 및 종일 일정 멀티 스택)
-│           ├── SimpleInfoPopoverView.swift # 심플 툴팁 말풍선
-│           ├── CustomPetEditorSheet.swift# 사용자 설정 펫 드래그 앤 드롭 모달
-│           ├── SettingsView.swift        # 환경설정 탭 컨테이너
-│           ├── SettingsWindowController.swift # 전용 환경설정 윈도우 수명주기 관리자
-│           ├── Settings/                 # 모듈형 환경설정 탭
-│           │   ├── TimelineTab.swift
-│           │   ├── AppearanceTab.swift
-│           │   ├── ScheduleTab.swift
-│           │   ├── RemindersTab.swift
-│           │   └── GeneralTab.swift
-│           ├── Effects/                  # 16프레임 1.0초 마이크로 이벤트 시작 알림 효과
-│           │   ├── EventTriggerEffectView.swift
-│           │   ├── CherryBlossomEffectAsset.swift
-│           │   ├── ThunderEffectAsset.swift
-│           │   ├── AutumnLeavesEffectAsset.swift
-│           │   └── WinterSnowEffectAsset.swift
-│           └── Pets/                     # 내장 16프레임 Base64 펫 에셋 및 상호작용
-│               ├── PetProtocol.swift
-│               ├── InteractivePetView.swift
-│               ├── InteractiveCustomPetView.swift
-│               ├── CatPetAsset.swift
-│               ├── JindoDogPetAsset.swift
-│               └── WhiteTigerPetAsset.swift
-├── Tests/
-│   └── NudgeLineTests/                   # Swift Testing 단위 테스트 스위트
-└── scripts/
-    ├── hooks/                            # 로컬 Git 사전 푸시 자동 검증 훅
-    │   ├── install_hook.sh
-    │   ├── pre-push.sh
-    │   └── uninstall_hook.sh
-    ├── build_app.sh                      # 로컬 개발용(Dev) 및 정식 배포용 번들 빌드 스크립트
-    ├── create_dmg.sh                     # 배포용 DMG 패키징 스크립트
-    ├── run_tests.sh                      # 로컬 단위 테스트 러너
-    ├── generate_dev_icon.swift           # DEV 아이콘 뱃징 스크립트
-    ├── generate_app_icon.sh              # 정식 앱 아이콘 생성 스크립트
-    ├── generate_custom_pet.py            # Swift 모델용 CLI 스프라이트 생성기
-    └── check_security.sh                 # 정적 시크릿 스캔 스크립트
+├── Sources/NudgeLine/
+│   ├── Models/         # CalendarEvent, ReminderItem, AppSettings
+│   ├── Services/       # CalendarService, ReminderService, Localization, UpdateService
+│   └── Views/          # OverlayPanel, PopoverPanel, TimelineBarView, Settings/
+├── Tests/NudgeLineTests/ # Swift Testing 단위 테스트 스위트
+└── scripts/            # 패키징, DMG 빌더, 테스트 러너, Git 훅
 ```
-
 
 ---
 
 ## 다국어 지원
 
-- 시스템 기본값 (macOS 시스템 언어 자동 연동)
-- 한국어 (Korean)
-- 영어 (English)
+NudgeLine은 Apple macOS HIG 공식 표준 용어를 준수하여 10개 언어를 기본 지원합니다:
+- **시스템 기본값** (macOS 시스템 언어 자동 추종)
+- **한국어**
+- **영어** (English)
+- **일본어** (日本語)
+- **중국어 간체** (简体中文)
+- **중국어 번체** (繁體中文)
+- **러시아어** (Русский)
+- **네덜란드어** (Nederlands)
+- **프랑스어** (Français)
+- **독일어** (Deutsch)
+- **스페인어** (Español)
 
-**설정 > 일반 > 언어**에서 언제든 바꿀 수 있습니다.
+또한 특별한 순간이나 숨겨진 인터랙션을 통해 발견할 수 있는 비밀 언어가 숨겨져 있습니다.
+
+언어 설정은 **설정 > 일반 > 언어**에서 언제든 변경할 수 있습니다.
 
 ---
 
 ## 크레딧 및 라이선스
 
-- 원작 컨셉: Andreas Katzian & ARTMIXTURE의 PixelScheduler (2014-2015)
+- 본 프로젝트는 Andreas Katzian & ARTMIXTURE의 PixelScheduler(2014-2015) 콘셉트에서 영감을 받아 현대적인 macOS 기술로 재해석되었습니다.
 - 라이선스: [MIT License](LICENSE)
 - 저작권: (c) 2026 rareram. All rights reserved.
-
-

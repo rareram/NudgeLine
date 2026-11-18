@@ -9,7 +9,7 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
     public static let releasesURL = URL(string: "https://github.com/rareram/NudgeLine/releases")!
     public static let latestReleaseAPI = URL(string: "https://api.github.com/repos/rareram/NudgeLine/releases/latest")!
 
-    // GitHub 공식 릴리스 및 에셋 다운로드 호스트 화이트리스트 검증 (사용자 콘텐츠 호스트 배제한 정확 호스트 매칭)
+    /// [Security Verification Guard] GitHub 공식 릴리스 및 에셋 다운로드 호스트 화이트리스트 검증 (사용자 콘텐츠 호스트 배제한 정확 호스트 매칭)
     public static func isTrustedDownloadHost(_ url: URL) -> Bool {
         guard let host = url.host?.lowercased() else { return false }
         return host == "github.com" ||

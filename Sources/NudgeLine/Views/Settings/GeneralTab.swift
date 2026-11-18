@@ -1,5 +1,6 @@
 // 환경설정 탭 4: 일반 설정 (언어, 로그인 시 자동 실행, 모든 화면 표시, 앱 정보)
 import AppKit
+import Combine
 import SwiftUI
 
 struct GeneralTab: View {
@@ -11,6 +12,10 @@ struct GeneralTab: View {
     @State private var showPawPrints: Bool = false
     @State private var logoBounce: Bool = false
     @State private var pawPrints: [PawPrintItem] = []
+    @State private var sessionToast: String? = nil
+    @State private var isSpecialBadgeGlowing: Bool = false
+    @State private var now: Date = Date()
+    private let periodicTimer = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 12) {
@@ -56,6 +61,17 @@ struct GeneralTab: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 2)
                     .padding(.bottom, 6)
+
+                if let toast = sessionToast {
+                    Text(toast)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(AppSettings.specialGoldText)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(AppSettings.specialGoldPrimary.opacity(0.15))
+                        .clipShape(Capsule())
+                        .transition(.scale.combined(with: .opacity))
+                }
             }
             .padding(.top, 4)
 
@@ -63,15 +79,43 @@ struct GeneralTab: View {
             Form {
                 Section(header: Text(L10n.tr(.systemPreferencesSection, lang: settings.language)).fontWeight(.semibold)) {
                     LabeledContent(L10n.tr(.languageLabel, lang: settings.language)) {
-                        HStack {
+                        HStack(spacing: 8) {
                             Picker("", selection: $settings.language) {
-                                ForEach(AppLanguage.allCases, id: \.self) { lang in
+                                ForEach(settings.availableLanguages(on: now), id: \.self) { lang in
                                     Text(lang.title).tag(lang)
                                 }
                             }
                             .labelsHidden()
                             .pickerStyle(.menu)
                             .fixedSize()
+
+                            if settings.language.isHidden {
+                                Button(action: handleSpecialBadgeClick) {
+                                    HStack(spacing: 4) {
+                                        Circle()
+                                            .strokeBorder(AppSettings.specialGoldPrimary, lineWidth: 2)
+                                            .frame(width: 10, height: 10)
+                                            .shadow(color: (isSpecialBadgeGlowing ? AppSettings.specialGlowOrange : AppSettings.specialGoldPrimary).opacity(isSpecialBadgeGlowing ? 1.0 : 0.35), radius: isSpecialBadgeGlowing ? 6 : 2)
+                                            .scaleEffect(isSpecialBadgeGlowing ? 1.2 : 0.95)
+                                        Text(L10n.tr(.oneRingBadgeTitle, lang: settings.language))
+                                            .font(.system(size: 10, weight: .semibold))
+                                            .foregroundStyle(AppSettings.specialGoldText)
+                                    }
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(AppSettings.specialGoldPrimary.opacity(isSpecialBadgeGlowing ? 0.22 : 0.08))
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                }
+                                .buttonStyle(.plain)
+                                .help(L10n.tr(.oneRingBadgeHelp, lang: settings.language))
+                                .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: isSpecialBadgeGlowing)
+                                .onAppear {
+                                    withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
+                                        isSpecialBadgeGlowing = true
+                                    }
+                                }
+                            }
+
                             Spacer()
                         }
                     }
@@ -105,6 +149,36 @@ struct GeneralTab: View {
             .formStyle(.columns)
             .padding(.horizontal, 16)
             .padding(.vertical, 4)
+
+            // 특정 조건 만족 시 노출되는 상태 안내 카드
+            if settings.isSpecialNoticeVisible(on: now) {
+                VStack(spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "moon.stars.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.cyan)
+                        Text(L10n.tr(.specialNoticeRunes, lang: settings.language))
+                            .font(.system(size: 11, weight: .medium, design: .serif))
+                            .italic()
+                            .foregroundStyle(Color.primary.opacity(0.85))
+                    }
+                    Text(L10n.tr(.moriaGateDaytimeNotice, lang: settings.language))
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.cyan.opacity(0.35), lineWidth: 1)
+                        )
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 2)
+            }
 
             // 하단 크레딧 및 종료
             VStack(spacing: 6) {
@@ -145,6 +219,20 @@ struct GeneralTab: View {
                 }
                 .allowsHitTesting(false)
                 .transition(.opacity)
+            }
+        }
+        .onReceive(periodicTimer) { input in
+            self.now = input
+            settings.checkSpecialExpiration(on: input)
+        }
+        .onChange(of: settings.language) { _, newLang in
+            if newLang.isHidden {
+                isSpecialBadgeGlowing = false
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
+                        isSpecialBadgeGlowing = true
+                    }
+                }
             }
         }
     }
@@ -260,6 +348,7 @@ extension GeneralTab {
 
         if logoClickCount >= 7 {
             logoClickCount = 0
+            settings.isSpecialSessionUnlocked = true
             pawPrints = generatePawPrints()
             NotificationCenter.default.post(name: .previewEventContactEffect, object: nil)
 
@@ -273,6 +362,19 @@ extension GeneralTab {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                     logoBounce = false
                 }
+            }
+        }
+    }
+
+    // 세션 상태 초기화 및 기본 언어 복귀
+    private func handleSpecialBadgeClick() {
+        settings.resetSpecialSession()
+        withAnimation {
+            sessionToast = L10n.tr(.ringDestroyedToast, lang: settings.language)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+            withAnimation {
+                sessionToast = nil
             }
         }
     }

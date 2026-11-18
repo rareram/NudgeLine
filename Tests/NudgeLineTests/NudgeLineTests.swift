@@ -132,6 +132,260 @@ struct LocalizationTests {
         #expect(L10n.tr(.reminderDefaultListTitle, lang: .ko) == "미리알림")
         #expect(L10n.tr(.reminderDefaultListTitle, lang: .en) == "Reminders")
     }
+
+    @Test("일본어, 중국어 간체, 중국어 번체(CJK) 다국어 정합성 검증")
+    func testCJKLocalization() {
+        // 1. 지원 언어 메타데이터 검증
+        #expect(AppLanguage.ja.title == "日本語")
+        #expect(AppLanguage.ja.resolvedCode == "ja")
+        #expect(AppLanguage.zhHans.title == "简体中文")
+        #expect(AppLanguage.zhHans.resolvedCode == "zh-Hans")
+        #expect(AppLanguage.zhHant.title == "繁體中文")
+        #expect(AppLanguage.zhHant.resolvedCode == "zh-Hant")
+
+        // 2. 5대 핵심 탭 타이틀 검증 (Apple HIG 네이티브 용어)
+        #expect(SettingsTab.timeline.title(lang: .ja) == "タイムライン")
+        #expect(SettingsTab.timeline.title(lang: .zhHans) == "时间线")
+        #expect(SettingsTab.timeline.title(lang: .zhHant) == "時間線")
+
+        #expect(SettingsTab.reminders.title(lang: .ja) == "リマインダー")
+        #expect(SettingsTab.reminders.title(lang: .zhHans) == "提醒事项")
+        #expect(SettingsTab.reminders.title(lang: .zhHant) == "提醒事項")
+
+        #expect(SettingsTab.general.title(lang: .ja) == "一般")
+        #expect(SettingsTab.general.title(lang: .zhHans) == "通用")
+        #expect(SettingsTab.general.title(lang: .zhHant) == "一般")
+
+        // 3. 캘린더 및 빈 일정 상태 검증
+        #expect(L10n.tr(.noEventsToday, lang: .ja) == "今日の予定はありません。")
+        #expect(L10n.tr(.noEventsToday, lang: .zhHans) == "今日无日程安排。")
+        #expect(L10n.tr(.noEventsToday, lang: .zhHant) == "今日沒有排定行程。")
+
+        #expect(L10n.tr(.openCalendarApp, lang: .ja) == "カレンダーを開く")
+        #expect(L10n.tr(.openCalendarApp, lang: .zhHans) == "打开“日历”")
+        #expect(L10n.tr(.openCalendarApp, lang: .zhHant) == "打開「行事曆」")
+
+        // 4. 미리알림 마커 및 앱 열기 검증
+        #expect(L10n.tr(.openRemindersApp, lang: .ja) == "リマインダーを開く")
+        #expect(L10n.tr(.openRemindersApp, lang: .zhHans) == "打开“提醒事项”")
+        #expect(L10n.tr(.openRemindersApp, lang: .zhHant) == "打開「提醒事項」")
+
+        // 5. 버튼 및 상태 텍스트 검증
+        #expect(L10n.tr(.okButton, lang: .ja) == "OK")
+        #expect(L10n.tr(.okButton, lang: .zhHans) == "好")
+        #expect(L10n.tr(.okButton, lang: .zhHant) == "好")
+
+        #expect(L10n.tr(.cancelButton, lang: .ja) == "キャンセル")
+        #expect(L10n.tr(.cancelButton, lang: .zhHans) == "取消")
+        #expect(L10n.tr(.cancelButton, lang: .zhHant) == "取消")
+
+        // 6. 릴리스 하이라이트 타이틀 검증
+        #expect(L10n.tr(.releaseHighlightsTitle, lang: .ja) == "主な変更点")
+        #expect(L10n.tr(.releaseHighlightsTitle, lang: .zhHans) == "主要更新")
+        #expect(L10n.tr(.releaseHighlightsTitle, lang: .zhHant) == "主要更新")
+
+        // 7. 미리알림 상세 레이블 및 스타일 (원어민 자연스러운 번역 검증)
+        #expect(L10n.tr(.reminderProximityLabel, lang: .ja) == "表示する期間:")
+        #expect(L10n.tr(.reminderStyleFlag, lang: .ja) == "フラグ")
+        #expect(L10n.tr(.reminderStyleDiamond, lang: .ja) == "ダイヤ")
+        #expect(L10n.tr(.reminderStyleHeart, lang: .ja) == "ハート")
+        #expect(L10n.tr(.reminderStyleStar, lang: .ja) == "スター")
+        #expect(L10n.tr(.reminderStylePetItem, lang: .ja) == "ペットのおやつ")
+        #expect(L10n.tr(.reminderMarkerGlowLabel, lang: .ja) == "ネオングロー効果")
+        #expect(L10n.tr(.clearPastReminderMarkersLabel, lang: .ja) == "期限切れを非表示")
+
+        // 8. 캘린더 상태 및 시스템 설정 네이티브 용어 검증
+        #expect(L10n.tr(.enableSegmentRimLabel, lang: .ja) == "枠線の強調")
+        #expect(L10n.tr(.enableSegmentRimLabel, lang: .zhHans) == "高光边框")
+        #expect(L10n.tr(.enableSegmentRimLabel, lang: .zhHant) == "高光邊框")
+        #expect(L10n.tr(.eventStatusDeclined, lang: .zhHant) == "已拒絕")
+        #expect(L10n.tr(.declinedMeeting, lang: .ja) == "辞退した予定")
+    }
+
+    @Test("유럽 언어권 및 히든 로케일 다국어 정합성 검증")
+    func testEuropeAndSpecialLocalization() {
+        // 1. 지원 언어 메타데이터 검증
+        #expect(AppLanguage.ru.title == "Русский")
+        #expect(AppLanguage.ru.resolvedCode == "ru")
+        #expect(AppLanguage.nl.title == "Nederlands")
+        #expect(AppLanguage.nl.resolvedCode == "nl")
+        #expect(AppLanguage.fr.title == "Français")
+        #expect(AppLanguage.fr.resolvedCode == "fr")
+        #expect(AppLanguage.de.title == "Deutsch")
+        #expect(AppLanguage.de.resolvedCode == "de")
+        #expect(AppLanguage.es.title == "Español")
+        #expect(AppLanguage.es.resolvedCode == "es")
+        #expect(AppLanguage.sindarin.title == "Sindarin (Elvish)")
+        #expect(AppLanguage.sindarin.resolvedCode == "sindarin")
+        #expect(AppLanguage.sindarin.isHidden == true)
+        #expect(AppLanguage.ru.isHidden == false)
+        #expect(AppLanguage.fr.isHidden == false)
+        #expect(AppLanguage.de.isHidden == false)
+        #expect(AppLanguage.es.isHidden == false)
+
+        // 2. 5대 핵심 탭 타이틀 검증 (Apple HIG 네이티브 및 신다린 명칭)
+        #expect(SettingsTab.timeline.title(lang: .ru) == "Шкала")
+        #expect(SettingsTab.timeline.title(lang: .nl) == "Tijdlijn")
+        #expect(SettingsTab.timeline.title(lang: .fr) == "Chronologie")
+        #expect(SettingsTab.timeline.title(lang: .de) == "Zeitleiste")
+        #expect(SettingsTab.timeline.title(lang: .es) == "Línea de tiempo")
+        #expect(SettingsTab.timeline.title(lang: .sindarin) == "Lû-râd")
+
+        #expect(SettingsTab.reminders.title(lang: .ru) == "Напоминания")
+        #expect(SettingsTab.reminders.title(lang: .nl) == "Herinneringen")
+        #expect(SettingsTab.reminders.title(lang: .fr) == "Rappels")
+        #expect(SettingsTab.reminders.title(lang: .de) == "Erinnerungen")
+        #expect(SettingsTab.reminders.title(lang: .es) == "Recordatorios")
+        #expect(SettingsTab.reminders.title(lang: .sindarin) == "Rennas")
+
+        #expect(SettingsTab.general.title(lang: .ru) == "Основные")
+        #expect(SettingsTab.general.title(lang: .nl) == "Algemeen")
+        #expect(SettingsTab.general.title(lang: .fr) == "Général")
+        #expect(SettingsTab.general.title(lang: .de) == "Allgemein")
+        #expect(SettingsTab.general.title(lang: .es) == "General")
+        #expect(SettingsTab.general.title(lang: .sindarin) == "Pân")
+
+        // 3. 캘린더 및 빈 일정 상태 검증
+        #expect(L10n.tr(.noEventsToday, lang: .ru) == "На сегодня событий нет.")
+        #expect(L10n.tr(.noEventsToday, lang: .nl) == "Geen activiteiten gepland voor vandaag.")
+        #expect(L10n.tr(.noEventsToday, lang: .sindarin) == "Ú-aur sí (No events today)")
+
+        #expect(L10n.tr(.openCalendarApp, lang: .ru) == "Открыть Календарь")
+        #expect(L10n.tr(.openCalendarApp, lang: .nl) == "Open Agenda")
+        #expect(L10n.tr(.openCalendarApp, lang: .sindarin) == "Edro Auriel (Open Calendar)")
+
+        // 4. 미리알림 마커 및 앱 열기 검증
+        #expect(L10n.tr(.openRemindersApp, lang: .ru) == "Открыть Напоминания")
+        #expect(L10n.tr(.openRemindersApp, lang: .nl) == "Open Herinneringen")
+        #expect(L10n.tr(.openRemindersApp, lang: .sindarin) == "Edro Rennas")
+
+        // 5. 버튼 및 상태 텍스트 검증
+        #expect(L10n.tr(.okButton, lang: .ru) == "ОК")
+        #expect(L10n.tr(.okButton, lang: .nl) == "OK")
+        #expect(L10n.tr(.okButton, lang: .sindarin) == "Mae (OK)")
+
+        #expect(L10n.tr(.cancelButton, lang: .ru) == "Отмена")
+        #expect(L10n.tr(.cancelButton, lang: .nl) == "Annuleer")
+        #expect(L10n.tr(.cancelButton, lang: .sindarin) == "Bando (Cancel)")
+
+        // 6. 스케줄 기반 특수 이벤트 모듈화 검증
+        let settings = AppSettings.shared
+        let calendar = Calendar.current
+
+        // 3/25 야간 이벤트 (19:00 ~ 익일 07:00)
+        var springNightComponents = DateComponents()
+        springNightComponents.year = 2026
+        springNightComponents.month = 3
+        springNightComponents.day = 25
+        springNightComponents.hour = 21 // 밤 9시
+        if let springNight = calendar.date(from: springNightComponents) {
+            settings.isSpecialSessionDismissedTonight = false
+            #expect(settings.isSpecialLanguageAvailable(on: springNight) == true)
+            #expect(settings.isSpecialNoticeVisible(on: springNight) == false)
+
+            // 세션 리셋 시 비활성화 검증
+            settings.resetSpecialSession()
+            #expect(settings.isSpecialSessionDismissedTonight == true)
+            #expect(settings.isSpecialLanguageAvailable(on: springNight) == false)
+            settings.isSpecialSessionDismissedTonight = false
+        }
+
+        // 3/25 낮 시간대 (대기 안내 카드 노출)
+        var springDayComponents = DateComponents()
+        springDayComponents.year = 2026
+        springDayComponents.month = 3
+        springDayComponents.day = 25
+        springDayComponents.hour = 14 // 낮 2시
+        if let springDay = calendar.date(from: springDayComponents) {
+            #expect(settings.isSpecialLanguageAvailable(on: springDay) == false)
+            #expect(settings.isSpecialNoticeVisible(on: springDay) == true)
+
+            // 낮 시간대 자동 언어 복귀 검증
+            settings.language = .sindarin
+            settings.checkSpecialExpiration(on: springDay)
+            #expect(settings.language == .system)
+        }
+
+        // 9/22 종일 이벤트 (00:00:00 ~ 23:59:59)
+        var hobbitDayComponents = DateComponents()
+        hobbitDayComponents.year = 2026
+        hobbitDayComponents.month = 9
+        hobbitDayComponents.day = 22
+        hobbitDayComponents.hour = 12
+        if let hobbitDay = calendar.date(from: hobbitDayComponents) {
+            #expect(settings.isSpecialLanguageAvailable(on: hobbitDay) == true)
+            #expect(settings.isSpecialNoticeVisible(on: hobbitDay) == false)
+        }
+
+        // 7. 일반 날짜 (이벤트 미지정일) 비활성화 검증
+        var normalNightComponents = DateComponents()
+        normalNightComponents.year = 2026
+        normalNightComponents.month = 5
+        normalNightComponents.day = 10
+        normalNightComponents.hour = 21
+        if let normalNight = calendar.date(from: normalNightComponents) {
+            #expect(settings.isSpecialLanguageAvailable(on: normalNight) == false)
+            #expect(settings.isSpecialNoticeVisible(on: normalNight) == false)
+        }
+
+        // SpecialEventManager cross-year dateRange 스케줄 판정 검증
+        let crossYearWindow = SpecialEventScheduleWindow.dateRange(startMonth: 12, startDay: 25, endMonth: 1, endDay: 5)
+        var dec26 = DateComponents(); dec26.year = 2026; dec26.month = 12; dec26.day = 26
+        var jan3 = DateComponents(); jan3.year = 2027; jan3.month = 1; jan3.day = 3
+        var feb1 = DateComponents(); feb1.year = 2027; feb1.month = 2; feb1.day = 1
+        if let d1 = calendar.date(from: dec26), let d2 = calendar.date(from: jan3), let d3 = calendar.date(from: feb1) {
+            #expect(crossYearWindow.isActive(at: d1, calendar: calendar) == true)
+            #expect(crossYearWindow.isActive(at: d2, calendar: calendar) == true)
+            #expect(crossYearWindow.isActive(at: d3, calendar: calendar) == false)
+        }
+
+        // 다국어 키 및 특수 텍스트 검증
+        #expect(L10n.tr(.specialNoticeRunes, lang: .ko) == "Ennyn Durin Aran Moria: pedo mellon a minno.")
+        #expect(L10n.tr(.specialNoticeRunes, lang: .sindarin) == "Ennyn Durin Aran Moria: pedo mellon a minno.")
+        #expect(AppSettings.specialGoldPrimary != Color.clear)
+        #expect(AppSettings.specialGoldText != Color.clear)
+        #expect(AppSettings.specialGlowOrange != Color.clear)
+
+        // SpecialEventManager 이벤트 묶음(Bundle) 구조 및 넛지 시리즈 공유 스냅샷 검증
+        let eventManager = SpecialEventManager.shared
+        #expect(eventManager.registeredEvents.count == 1)
+        #expect(eventManager.registeredEvents.first?.id == "special_event_1")
+        #expect(eventManager.registeredEvents.first?.schedules.count == 3)
+
+        // 넛지 시리즈 공유 상태 스냅샷 및 Codable 인코딩 검증
+        let snapshot = eventManager.createSharedSnapshot(
+            at: Date(),
+            isSpecialSessionUnlocked: true,
+            isSessionDismissed: false
+        )
+        #expect(snapshot.isSpecialSessionUnlocked == true)
+        let encodedData = try? JSONEncoder().encode(snapshot)
+        #expect(encodedData != nil)
+        if let data = encodedData {
+            let decoded = try? JSONDecoder().decode(NudgeSeriesSharedEventState.self, from: data)
+            #expect(decoded == snapshot)
+        }
+
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .ko) == "절대반지")
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .en) == "The One Ring")
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .ja) == "一つの指輪")
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .zhHans) == "至尊魔戒")
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .zhHant) == "至尊魔戒")
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .ru) == "Единое Кольцо")
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .nl) == "De Ene Ring")
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .fr) == "L'Anneau Unique")
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .de) == "Der Eine Ring")
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .es) == "El Anillo Único")
+        #expect(L10n.tr(.oneRingBadgeTitle, lang: .sindarin) == "Ash Nazg")
+
+        #expect(L10n.tr(.ringDestroyedToast, lang: .ko) == "Cast it into the fire! 절대반지가 운명의 산 화염 속으로 사라졌습니다.")
+        #expect(L10n.tr(.ringDestroyedToast, lang: .en) == "Cast it into the fire! The One Ring has been destroyed in Mount Doom.")
+        #expect(L10n.tr(.ringDestroyedToast, lang: .fr) == "Cast it into the fire ! L'Anneau Unique a été détruit dans la Montagne du Destin.")
+        #expect(L10n.tr(.ringDestroyedToast, lang: .de) == "Cast it into the fire! Der Eine Ring wurde im Schicksalsberg vernichtet.")
+        #expect(L10n.tr(.ringDestroyedToast, lang: .es) == "¡Cast it into the fire! El Anillo Único ha sido destruido en el Monte del Destino.")
+        #expect(L10n.tr(.moriaGateDaytimeNotice, lang: .ko) == "달빛이 사라져 문이 잠들었습니다. 저녁 7시가 되면 다시 빛납니다.")
+        #expect(L10n.tr(.specialSessionRevealedToast, lang: .sindarin) == "Mellon! Lam Edhellen ad-thîla mi dhu.")
+    }
 }
 
 // MARK: - 2. 앱 전역 설정 및 색상 유틸리티 단위 테스트
@@ -1190,11 +1444,49 @@ struct ReminderIntegrationTests {
         #expect(L10n.tr(.releaseHighlightsTitle, lang: .ko) == "주요 변경 사항")
         #expect(L10n.tr(.releaseHighlightsTitle, lang: .en) == "Key Highlights")
 
-        #expect(L10n.tr(.releaseHighlights, lang: .ko).contains("**미리알림**:"))
-        #expect(L10n.tr(.releaseHighlights, lang: .ko).contains("**설정 > 일반**:"))
-        #expect(L10n.tr(.releaseHighlights, lang: .ko).contains("**정보 창**:"))
-        #expect(L10n.tr(.releaseHighlights, lang: .en).contains("**Reminders**:"))
-        #expect(L10n.tr(.releaseHighlights, lang: .en).contains("**Settings > General**:"))
-        #expect(L10n.tr(.releaseHighlights, lang: .en).contains("**About Window**:"))
+        #expect(L10n.tr(.releaseHighlights, lang: .ko).contains("**다국어 추가**:"))
+        #expect(L10n.tr(.releaseHighlights, lang: .ko).contains("**안정성 개선**:"))
+        #expect(L10n.tr(.releaseHighlights, lang: .en).contains("**Languages**:"))
+        #expect(L10n.tr(.releaseHighlights, lang: .en).contains("**Stability**:"))
+    }
+}
+
+// MARK: - 9. 넛지 시리즈 패밀리 앱(NudgeSaver 등) 공유 IPC 계약 검증
+@Suite("NudgeSeries Shared IPC Contract Tests")
+struct NudgeSeriesSharedIPCContractTests {
+    @Test("NudgeSeriesBridge 네임스페이스 및 특수 이벤트 일자 판정 계약 검증")
+    func testNudgeSeriesBridgeEventDayContract() {
+        let settings = AppSettings.shared
+        let calendar = Calendar.current
+
+        // 1) 3/25 야간 스케줄에 대한 seriesBridge 계약 검증
+        var springNightComps = DateComponents()
+        springNightComps.year = 2026; springNightComps.month = 3; springNightComps.day = 25; springNightComps.hour = 21
+        if let springNight = calendar.date(from: springNightComps) {
+            #expect(settings.seriesBridge.isSpecialEventDay(on: springNight) == true)
+            // 하위 호환 포워딩 검증
+            #expect(settings.isSpecialEventDay(on: springNight) == true)
+        }
+
+        // 2) 비이벤트일에 대한 seriesBridge 계약 검증
+        var normalDayComps = DateComponents()
+        normalDayComps.year = 2026; normalDayComps.month = 5; normalDayComps.day = 10; normalDayComps.hour = 14
+        if let normalDay = calendar.date(from: normalDayComps) {
+            #expect(settings.seriesBridge.isSpecialEventDay(on: normalDay) == false)
+            #expect(settings.isSpecialEventDay(on: normalDay) == false)
+        }
+    }
+
+    @Test("NudgeSeriesBridge 공유 상태 스냅샷 및 동기화 파이프라인 계약 검증")
+    func testNudgeSeriesBridgeSnapshotAndSyncContract() {
+        let settings = AppSettings.shared
+
+        // 1) 스냅샷 생성 및 프로퍼티 계약 검증
+        let snapshot = settings.seriesBridge.currentSharedSnapshot()
+        #expect(snapshot.timestamp <= Date())
+
+        // 2) 동기화 파이프라인 무결성 검증 (크래시 및 예외 없는 안전한 브로드캐스트)
+        settings.seriesBridge.syncSharedEventState()
+        settings.syncSharedEventState()
     }
 }

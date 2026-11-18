@@ -1,4 +1,6 @@
-// 한국어/영어 1:1 매핑 다국어 지역화 사전
+// NudgeLine - 다국어 현지화(Localization) 코어 엔진 및 기본 언어셋(한국어, 영어)
+// CJK는 Localization+CJK.swift, 유럽권(ru, nl, fr, de, es)은 Localization+Europe.swift,
+// 히든 로케일은 Localization+Special.swift에 모듈화 분리되어 있습니다.
 import Foundation
 
 // MARK: - 1. 지원 언어 모델
@@ -6,36 +8,105 @@ public enum AppLanguage: String, Codable, CaseIterable, Sendable {
     case system = "system"
     case en = "en"
     case ko = "ko"
+    case ja = "ja"
+    case zhHans = "zh-Hans"
+    case zhHant = "zh-Hant"
+    case ru = "ru"
+    case nl = "nl"
+    case fr = "fr"
+    case de = "de"
+    case es = "es"
+    case sindarin = "sindarin"
 
     public var title: String {
         switch self {
         case .system:
-            let isKo = (Locale.preferredLanguages.first?.prefix(2).lowercased() == "ko")
-            return isKo ? "시스템 기본값" : "System Default"
+            // macOS 시스템의 선호 언어(Preferred Languages) 목록을 순차 탐색하여 지원 언어 중 최우선 언어 매칭
+            for preferred in Locale.preferredLanguages {
+                let lower = preferred.lowercased()
+                if lower.hasPrefix("ko") { return "시스템 기본값" }
+                if lower.hasPrefix("ja") { return "システムデフォルト" }
+                if lower.hasPrefix("zh-hans") || lower.hasPrefix("zh-cn") || lower.hasPrefix("zh-sg") { return "系统默认" }
+                if lower.hasPrefix("zh-hant") || lower.hasPrefix("zh-tw") || lower.hasPrefix("zh-hk") { return "系統預設" }
+                if lower.hasPrefix("ru") { return "По умолчанию" }
+                if lower.hasPrefix("nl") { return "Systeemstandaard" }
+                if lower.hasPrefix("fr") { return "Système par défaut" }
+                if lower.hasPrefix("de") { return "Systemstandard" }
+                if lower.hasPrefix("es") { return "Predeterminado del sistema" }
+                if lower.hasPrefix("en") { return "System Default" }
+            }
+            return "System Default"
         case .en: return "English"
         case .ko: return "한국어"
+        case .ja: return "日本語"
+        case .zhHans: return "简体中文"
+        case .zhHant: return "繁體中文"
+        case .ru: return "Русский"
+        case .nl: return "Nederlands"
+        case .fr: return "Français"
+        case .de: return "Deutsch"
+        case .es: return "Español"
+        case .sindarin: return "Sindarin (Elvish)"
         }
     }
 
     public var resolvedCode: String {
         switch self {
         case .system:
-            let preferred = Locale.preferredLanguages.first?.prefix(2).lowercased() ?? "en"
-            return preferred == "ko" ? "ko" : "en"
+            // macOS 시스템의 선호 언어(Preferred Languages) 목록을 순차 탐색하여 지원 언어 중 최우선 언어 매칭
+            for preferred in Locale.preferredLanguages {
+                let lower = preferred.lowercased()
+                if lower.hasPrefix("ko") { return "ko" }
+                if lower.hasPrefix("ja") { return "ja" }
+                if lower.hasPrefix("zh-hans") || lower.hasPrefix("zh-cn") || lower.hasPrefix("zh-sg") { return "zh-Hans" }
+                if lower.hasPrefix("zh-hant") || lower.hasPrefix("zh-tw") || lower.hasPrefix("zh-hk") { return "zh-Hant" }
+                if lower.hasPrefix("ru") { return "ru" }
+                if lower.hasPrefix("nl") { return "nl" }
+                if lower.hasPrefix("fr") { return "fr" }
+                if lower.hasPrefix("de") { return "de" }
+                if lower.hasPrefix("es") { return "es" }
+                if lower.hasPrefix("en") { return "en" }
+            }
+            return "en"
         case .en: return "en"
         case .ko: return "ko"
+        case .ja: return "ja"
+        case .zhHans: return "zh-Hans"
+        case .zhHant: return "zh-Hant"
+        case .ru: return "ru"
+        case .nl: return "nl"
+        case .fr: return "fr"
+        case .de: return "de"
+        case .es: return "es"
+        case .sindarin: return "sindarin"
         }
     }
 
     public var isKorean: Bool {
         return resolvedCode == "ko"
     }
+
+    public var isHidden: Bool {
+        return self == .sindarin
+    }
 }
 
 // MARK: - 2. 다국어 엔진 및 번역 키 정의
 public struct L10n {
     public static func tr(_ key: Key, lang: AppLanguage = AppSettings.shared.language) -> String {
-        return lang.isKorean ? key.ko : key.en
+        switch lang.resolvedCode {
+        case "ko": return key.ko
+        case "ja": return key.ja
+        case "zh-Hans": return key.zhHans
+        case "zh-Hant": return key.zhHant
+        case "ru": return key.ru
+        case "nl": return key.nl
+        case "fr": return key.fr
+        case "de": return key.de
+        case "es": return key.es
+        case "sindarin": return key.sindarin
+        default: return key.en
+        }
     }
 
     public enum Key: Sendable {
@@ -268,6 +339,15 @@ public struct L10n {
         case aboutFeedback
         case releaseHighlightsTitle
         case releaseHighlights
+
+        // 18. 특정 상태 알림 및 안내 텍스트
+        case oneRingBadgeTitle
+        case oneRingBadgeHelp
+        case moriaGateDaytimeNotice
+        case specialSessionRevealedToast
+        case moriaGateLockedToast
+        case ringDestroyedToast
+        case specialNoticeRunes
     }
 }
 
@@ -487,7 +567,16 @@ extension L10n.Key {
         case .aboutFeedback: return "피드백 및 문의"
         case .releaseHighlightsTitle: return "주요 변경 사항"
         case .releaseHighlights:
-            return "• **미리알림**: 노션·슬랙·메모 딥링크 및 전용 앱 배지 지원\n• **설정 > 일반**: 지도 서비스에 OpenStreetMap 추가 (5종 순서 정렬)\n• **캘린더 연동**: 날짜 이동 시 Apple Events 권한 충돌 방어 및 보안 강화\n• **정보 창**: 빌드별 주요 변경 사항 및 공식 링크 제공"
+            return "• **다국어 추가**: 일본어, 중국어(간체/번체), 독일어, 프랑스어, 스페인어, 네덜란드어, 러시아어\n• **안정성 개선**: 펫 스누즈 자동 복구 및 백그라운드 상태 관리 보강"
+
+        // 18. 특정 상태 알림 및 안내 텍스트
+        case .oneRingBadgeTitle: return "절대반지"
+        case .oneRingBadgeHelp: return "클릭하면 절대반지를 운명의 산 불길 속으로 던져 파괴합니다."
+        case .moriaGateDaytimeNotice: return "달빛이 사라져 문이 잠들었습니다. 저녁 7시가 되면 다시 빛납니다."
+        case .specialSessionRevealedToast: return "Mellon! 신비로운 신다린(요정어)이 모습을 드러냅니다."
+        case .moriaGateLockedToast: return "Mellon! 달빛이 비추지 않는 낮에는 문이 굳게 닫혀 있습니다."
+        case .ringDestroyedToast: return "Cast it into the fire! 절대반지가 운명의 산 화염 속으로 사라졌습니다."
+        case .specialNoticeRunes: return "Ennyn Durin Aran Moria: pedo mellon a minno."
         }
     }
 }
@@ -708,7 +797,16 @@ extension L10n.Key {
         case .aboutFeedback: return "Feedback & Support"
         case .releaseHighlightsTitle: return "Key Highlights"
         case .releaseHighlights:
-            return "• **Reminders**: Deep links & dedicated app badges for Notion, Slack, and Notes\n• **Settings > General**: Added OpenStreetMap option (5 services ordered)\n• **Calendar Integration**: Prevented date navigation Apple Events permission crashes\n• **About Window**: Release highlights and direct official links"
+            return "• **Languages**: Japanese, Chinese (Simplified/Traditional), German, French, Spanish, Dutch, and Russian added\n• **Stability**: Enhanced automatic pet snooze recovery and background state management"
+
+        // 18. 특정 상태 알림 및 안내 텍스트
+        case .oneRingBadgeTitle: return "The One Ring"
+        case .oneRingBadgeHelp: return "Click to cast the One Ring into the fire and destroy it."
+        case .moriaGateDaytimeNotice: return "The moonlight has faded and the doors are shut. They will shine again at 7 PM."
+        case .specialSessionRevealedToast: return "Mellon! The secret Sindarin tongue has revealed itself."
+        case .moriaGateLockedToast: return "Mellon! The doors remain shut in the absence of moonlight."
+        case .ringDestroyedToast: return "Cast it into the fire! The One Ring has been destroyed in Mount Doom."
+        case .specialNoticeRunes: return "Ennyn Durin Aran Moria: pedo mellon a minno."
         }
     }
 }

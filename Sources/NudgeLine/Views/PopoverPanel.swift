@@ -460,6 +460,7 @@ extension PopoverPanel {
         )
     }
 
+    /// [System Permission Flow] 캘린더/미리알림 권한 거부 시 시스템 환경설정 바로가기 툴팁 팝오버 노출
     public func showPermissionNotice(
         cursorOffset: CGFloat,
         isHorizontal: Bool,

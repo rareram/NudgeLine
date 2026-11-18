@@ -17,7 +17,7 @@ public final class LaunchAtLoginHelper: ObservableObject {
         self.isEnabled = (SMAppService.mainApp.status == .enabled)
     }
 
-    // 로그인 시 자동 실행 등록/해제 (동일 상태 요청 시 조기 탈출)
+    /// [macOS System Service] SMAppService를 통한 로그인 항목 자동 실행 등록 및 해제 (동일 상태 요청 시 조기 탈출)
     public func setEnabled(_ enable: Bool) {
         guard enable != (SMAppService.mainApp.status == .enabled) else { return }
 

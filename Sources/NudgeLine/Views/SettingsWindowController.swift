@@ -134,6 +134,7 @@ public final class SettingsWindowController: NSWindowController {
 
 // MARK: - 3. 공개 표시 인터페이스 (Public Interface)
 extension SettingsWindowController {
+    /// [Window Lifecycle Entrypoint] 특정 탭을 지정하여 설정창을 활성화하고 최상단으로 표시
     public func showSettings(tab: SettingsTab? = nil) {
         guard let window = self.window else { return }
         CalendarService.shared.checkAuthorizationStatus()

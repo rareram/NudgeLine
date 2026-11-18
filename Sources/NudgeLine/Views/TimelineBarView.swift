@@ -136,6 +136,7 @@ public struct TimelineBarView: View {
 
             // 스누즈 만료 자동 확인
             settings.checkSnoozeExpiration(at: input)
+            settings.checkSpecialExpiration(on: input)
 
             // 마우스 호버 중이 아닐 때는 15초마다 시간을 갱신해 유휴 상태의 렌더링 부하를 줄입니다.
             let isHovered = isBarHovered || panelState.isPetProximityHovered || settings.isPetSnoozed

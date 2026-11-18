@@ -37,12 +37,21 @@ while read -r local_ref local_oid remote_ref remote_oid; do
             " 2>/dev/null || echo "")
 
             if [[ -n "${EXPECTED_VERSION}" && "${CLEAN_TAG}" != "${EXPECTED_VERSION}" ]]; then
-                echo "❌ [오류] 태그 버전(${TAG_NAME})이 version.json (${EXPECTED_VERSION})과 일치하지 않습니다!"
+                echo "[오류] 태그 버전(${TAG_NAME})이 version.json (${EXPECTED_VERSION})과 일치하지 않습니다!"
                 echo "   GitHub Actions 릴리즈 배포(release.yml)가 즉시 실패하므로 푸시를 차단합니다."
                 echo "   해결 방법: version.json의 build 번호를 확인하거나 올바른 태그로 다시 생성하세요."
                 exit 1
             fi
             echo "   • 태그 버전 정합성 검증 통과: ${TAG_NAME} == version.json (${EXPECTED_VERSION})"
+
+            echo "--------------------------------------------------------"
+            echo ">> [릴리스 체크리스트 리마인더]"
+            echo "   1. 인앱 정보창 릴리스 하이라이트 갱신 여부:"
+            echo "      - Sources/NudgeLine/Services/Localization.swift (.releaseHighlights)"
+            echo "      - Tests/NudgeLineTests/NudgeLineTests.swift 동기화 여부"
+            echo "   2. 배포 후 GitHub Releases 릴리스 노트 확인:"
+            echo "      - https://github.com/rareram/NudgeLine/releases/tag/${TAG_NAME}"
+            echo "--------------------------------------------------------"
         fi
     fi
 done
@@ -51,7 +60,7 @@ done
 echo ">> 단위 테스트(run_tests.sh) 자동 검증 중..."
 if ! ./scripts/run_tests.sh; then
     echo "========================================================"
-    echo "❌ [오류] 단위 테스트 검증에 실패하여 git push가 중단되었습니다."
+    echo "[오류] 단위 테스트 검증에 실패하여 git push가 중단되었습니다."
     echo "   코드를 수정한 후 다시 푸시하거나,"
     echo "   긴급 시 'git push --no-verify' 플래그를 사용하여 건너뛸 수 있습니다."
     echo "========================================================"

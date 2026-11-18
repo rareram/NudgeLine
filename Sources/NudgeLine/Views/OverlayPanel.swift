@@ -103,7 +103,7 @@ extension OverlayPanel {
 
 // MARK: - 4. 마우스 감지 및 클릭 통과 처리 (Mouse Proximity & Hit Testing)
 extension OverlayPanel {
-    // 마우스 위치 기반 바 호버 판정 및 펫 근접 숨김 연산
+    /// [Zero-Interference AppKit Handler] 마우스가 최상단 에지 바를 벗어나면 즉시 이벤트를 통과시켜 타 앱 간섭 방지
     public func handleMouseMoved(at mouseLoc: NSPoint) {
         // 전체화면 상태일 때는 마우스 이벤트를 완전히 통과시킵니다.
         if panelState.isOccludedByFullScreen {

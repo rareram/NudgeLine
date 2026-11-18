@@ -23,6 +23,7 @@ struct RemindersTab: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .padding(.leading, 18)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -42,7 +43,7 @@ struct RemindersTab: View {
                             }
                             .labelsHidden()
                             .pickerStyle(.menu)
-                            .frame(width: 150, alignment: .leading)
+                            .frame(width: 165, alignment: .leading)
                             Spacer()
                         }
                     }
@@ -56,7 +57,7 @@ struct RemindersTab: View {
                             }
                             .labelsHidden()
                             .pickerStyle(.menu)
-                            .frame(width: 150, alignment: .leading)
+                            .frame(width: 165, alignment: .leading)
 
                             Button(L10n.tr(.previewLabel, lang: settings.language)) {
                                 NotificationCenter.default.post(name: .previewReminderMarker, object: nil)
@@ -68,7 +69,7 @@ struct RemindersTab: View {
                         }
                     }
 
-                    HStack(spacing: 24) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Toggle(L10n.tr(.reminderMarkerGlowLabel, lang: settings.language), isOn: $settings.enableReminderMarkerGlow)
                             .toggleStyle(.checkbox)
                         Toggle(L10n.tr(.clearPastReminderMarkersLabel, lang: settings.language), isOn: $settings.clearPastReminderMarkers)
@@ -88,6 +89,7 @@ struct RemindersTab: View {
                             Text(L10n.tr(.enableRemindersDescription, lang: settings.language))
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(.vertical, 4)
                         .frame(height: 180, alignment: .topLeading)

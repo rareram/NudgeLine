@@ -542,6 +542,75 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(petSnoozeDurationMinutes, forKey: Keys.petSnoozeDurationMinutes) }
     }
 
+    @Published public var isSpecialSessionUnlocked: Bool = false {
+        didSet { syncSharedEventState() }
+    }
+    @Published public var isSpecialSessionDismissedTonight: Bool = false {
+        didSet { syncSharedEventState() }
+    }
+
+    // MARK: - 넛지 시리즈(NudgeSaver 등) 패밀리 앱 공유 인터페이스 (Series Bridge)
+    /// 넛지 시리즈 패밀리 앱 연동 전용 브릿지 네임스페이스입니다.
+    public var seriesBridge: NudgeSeriesBridge {
+        NudgeSeriesBridge(settings: self)
+    }
+
+    /// [NudgeSeries IPC Bridge]
+    /// 넛지 시리즈(NudgeSaver 등) 공유 상태 동기화 메서드입니다.
+    /// - Note: NudgeLine 내부 및 패밀리 앱 간 상태 공유를 위한 표준 규격 API입니다.
+    public func syncSharedEventState(at date: Date = Date()) {
+        seriesBridge.syncSharedEventState(at: date)
+    }
+
+    /// [NudgeSeries IPC Bridge]
+    /// NudgeSaver(화면보호기) 등 패밀리 앱에서 특정 일자의 특수 이벤트 활성화 여부를 질의하기 위한 공개 규격 API입니다.
+    /// - Note: NudgeLine 내부에서 직접 호출하지 않더라도 프로세스 간 연동 규격이므로 임의 삭제를 금지합니다.
+    public func isSpecialEventDay(on date: Date = Date()) -> Bool {
+        return seriesBridge.isSpecialEventDay(on: date)
+    }
+
+    /// 히든 로케일 활성화 가능 여부 (스케줄 기반 플러그인 연동)
+    public func isSpecialLanguageAvailable(on date: Date = Date()) -> Bool {
+        guard !isSpecialSessionDismissedTonight else { return false }
+        return SpecialEventManager.shared.isHiddenLanguageUnlocked(at: date)
+    }
+
+    /// 특정 상태 안내 카드 노출 여부 (당일 야간 이벤트 대기 중인 낮 시간대 07:00~19:00)
+    public func isSpecialNoticeVisible(on date: Date = Date()) -> Bool {
+        guard !isSpecialSessionDismissedTonight else { return false }
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: date)
+        guard hour >= 7 && hour < 19 else { return false }
+
+        let tonightDate = calendar.date(bySettingHour: 20, minute: 0, second: 0, of: date) ?? date
+        let isTonightEvent = SpecialEventManager.shared.isHiddenLanguageUnlocked(at: tonightDate, calendar: calendar)
+        let isNowEvent = SpecialEventManager.shared.isHiddenLanguageUnlocked(at: date, calendar: calendar)
+
+        return isTonightEvent && !isNowEvent
+    }
+
+    /// [Background Lifecycle Guard] 1초 타이머에서 호출되어 자정/만료 시 시스템 언어로 자동 복구
+    public func checkSpecialExpiration(on date: Date = Date()) {
+        if language.isHidden && !isSpecialLanguageAvailable(on: date) {
+            language = .system
+        }
+    }
+
+    /// 세션 상태 초기화 및 기본 언어 복귀
+    public func resetSpecialSession() {
+        isSpecialSessionDismissedTonight = true
+        language = .system
+    }
+
+    /// 현재 시점에 노출 가능한 언어 목록 반환
+    public func availableLanguages(on date: Date = Date()) -> [AppLanguage] {
+        if isSpecialLanguageAvailable(on: date) {
+            return AppLanguage.allCases
+        } else {
+            return AppLanguage.allCases.filter { !$0.isHidden }
+        }
+    }
+
     @Published public var snoozeUntil: Date? = nil
 
     public var isPetSnoozed: Bool {
@@ -556,6 +625,7 @@ public final class AppSettings: ObservableObject {
         return max(1, Int(ceil(remainingSec / 60.0)))
     }
 
+    /// [Background Lifecycle Guard] 스누즈 잔여 시간 비율 (0.0 ~ 1.0) 계산 (타임라인 바 원형 게이지용)
     public var remainingSnoozeRatio: Double {
         guard let until = snoozeUntil else { return 0.0 }
         let totalSec = Double(max(1, petSnoozeDurationMinutes)) * 60.0
@@ -573,6 +643,7 @@ public final class AppSettings: ObservableObject {
         }
     }
 
+    /// [Background Lifecycle Guard] 1초 타이머에서 호출되어 스누즈 만료 시 펫 상태 자동 복구
     public func checkSnoozeExpiration(at date: Date = Date()) {
         guard let until = snoozeUntil else { return }
         if date >= until {
@@ -697,6 +768,9 @@ public final class AppSettings: ObservableObject {
         self.enablePetSnooze = defaults.object(forKey: Keys.enablePetSnooze) != nil ? defaults.bool(forKey: Keys.enablePetSnooze) : true
         let savedSnoozeDuration = defaults.integer(forKey: Keys.petSnoozeDurationMinutes)
         self.petSnoozeDurationMinutes = savedSnoozeDuration > 0 ? savedSnoozeDuration : 10
+
+        self.isSpecialSessionUnlocked = false
+        self.isSpecialSessionDismissedTonight = false
     }
 }
 
@@ -737,6 +811,11 @@ extension AppSettings {
             ? Color(red: 0.35, green: 0.58, blue: 0.98) // 다크모드: 어두운 배경 위 고시인성 스카이블루
             : Color(red: 0.08, green: 0.42, blue: 0.92) // 라이트모드: 흰색/밝은 배경 위 고대비 딥 로열블루
     }
+
+    // MARK: - 시맨틱 특수 테마 색상 토큰 (Special Theme Tokens)
+    public static let specialGoldPrimary = Color(red: 1.0, green: 0.84, blue: 0.0)
+    public static let specialGoldText = Color(red: 0.85, green: 0.70, blue: 0.0)
+    public static let specialGlowOrange = Color(red: 1.0, green: 0.35, blue: 0.0)
 
     public func setCustomColor(for id: String, color: Color?) {
         if let color = color, let hex = color.toHex() {
@@ -829,5 +908,43 @@ public extension Color {
             // 라이트 모드: 흰 배경 위에서 날아가지 않도록 명도를 톤다운하고 채도 보존
             return Color(nsColor: NSColor(hue: h, saturation: min(1.0, s * 1.15), brightness: b * factor, alpha: a))
         }
+    }
+}
+
+// MARK: - 6. 넛지 시리즈 패밀리 앱 연동 브릿지 (NudgeSeriesBridge)
+/// NudgeLine(본체)과 NudgeSaver(화면보호기) 간의 상태 및 이벤트 공유를 캡슐화한 전용 네임스페이스입니다.
+/// NudgeLine 내부 뷰 코드와의 결합도를 낮추고 외부 프로세스 연동 API임을 명시하여 오진 및 임의 삭제를 방지합니다.
+public struct NudgeSeriesBridge {
+    private let settings: AppSettings
+
+    public init(settings: AppSettings) {
+        self.settings = settings
+    }
+
+    /// [NudgeSeries IPC Bridge]
+    /// 지정된 일자가 특수 이벤트 묶음에 등록된 활성 일자인지 검사합니다.
+    public func isSpecialEventDay(on date: Date = Date()) -> Bool {
+        SpecialEventManager.shared.isHiddenLanguageUnlocked(at: date)
+    }
+
+    /// [NudgeSeries IPC Bridge]
+    /// NudgeLine의 현재 세션 및 이벤트 상태를 App Group 공유 컨테이너에 기록하고 Darwin Notification으로 브로드캐스트합니다.
+    public func syncSharedEventState(at date: Date = Date()) {
+        let snapshot = SpecialEventManager.shared.createSharedSnapshot(
+            at: date,
+            isSpecialSessionUnlocked: settings.isSpecialSessionUnlocked,
+            isSessionDismissed: settings.isSpecialSessionDismissedTonight
+        )
+        SpecialEventManager.shared.broadcastSharedState(snapshot)
+    }
+
+    /// [NudgeSeries IPC Bridge]
+    /// 현재 공유 상태 스냅샷을 즉시 조회합니다.
+    public func currentSharedSnapshot(at date: Date = Date()) -> NudgeSeriesSharedEventState {
+        SpecialEventManager.shared.createSharedSnapshot(
+            at: date,
+            isSpecialSessionUnlocked: settings.isSpecialSessionUnlocked,
+            isSessionDismissed: settings.isSpecialSessionDismissedTonight
+        )
     }
 }
