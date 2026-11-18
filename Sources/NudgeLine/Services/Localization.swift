@@ -6,17 +6,17 @@ import Foundation
 // MARK: - 1. 지원 언어 모델
 public enum AppLanguage: String, Codable, CaseIterable, Sendable {
     case system = "system"
+    case sindarin = "sindarin"
+    case de = "de"
     case en = "en"
-    case ko = "ko"
+    case es = "es"
+    case fr = "fr"
+    case nl = "nl"
+    case ru = "ru"
     case ja = "ja"
     case zhHans = "zh-Hans"
     case zhHant = "zh-Hant"
-    case ru = "ru"
-    case nl = "nl"
-    case fr = "fr"
-    case de = "de"
-    case es = "es"
-    case sindarin = "sindarin"
+    case ko = "ko"
 
     public var title: String {
         switch self {
@@ -334,11 +334,10 @@ public struct L10n {
         case hideOnFullScreenLabel
         case appDescription
 
-        // 앱 정보(About) 및 릴리스 하이라이트
+        // 앱 정보(About)
         case aboutViewRepo
+        case aboutReleaseNotes
         case aboutFeedback
-        case releaseHighlightsTitle
-        case releaseHighlights
 
         // 18. 특정 상태 알림 및 안내 텍스트
         case oneRingBadgeTitle
@@ -564,10 +563,8 @@ extension L10n.Key {
         case .showDeclinedEventsLabel: return "거절/취소된 일정 로그 표시"
 
         case .aboutViewRepo: return "GitHub 저장소"
+        case .aboutReleaseNotes: return "릴리스 노트"
         case .aboutFeedback: return "피드백 및 문의"
-        case .releaseHighlightsTitle: return "주요 변경 사항"
-        case .releaseHighlights:
-            return "• **다국어 추가**: 일본어, 중국어(간체/번체), 독일어, 프랑스어, 스페인어, 네덜란드어, 러시아어\n• **안정성 개선**: 펫 스누즈 자동 복구 및 백그라운드 상태 관리 보강"
 
         // 18. 특정 상태 알림 및 안내 텍스트
         case .oneRingBadgeTitle: return "절대반지"
@@ -794,10 +791,8 @@ extension L10n.Key {
         case .showDeclinedEventsLabel: return "Show Declined/Canceled Events"
 
         case .aboutViewRepo: return "GitHub Repository"
+        case .aboutReleaseNotes: return "Release Notes"
         case .aboutFeedback: return "Feedback & Support"
-        case .releaseHighlightsTitle: return "Key Highlights"
-        case .releaseHighlights:
-            return "• **Languages**: Japanese, Chinese (Simplified/Traditional), German, French, Spanish, Dutch, and Russian added\n• **Stability**: Enhanced automatic pet snooze recovery and background state management"
 
         // 18. 특정 상태 알림 및 안내 텍스트
         case .oneRingBadgeTitle: return "The One Ring"

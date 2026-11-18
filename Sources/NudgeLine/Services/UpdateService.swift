@@ -19,7 +19,7 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
 
     public enum UpdateState: Equatable, Sendable {
         case idle
-        case remoteAvailable(version: String, url: URL, zipURL: URL?)
+        case remoteAvailable(version: String, url: URL, zipURL: URL?, releaseNotes: String? = nil)
         case downloading(version: String, progress: Double)
     }
 
@@ -29,11 +29,13 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         public let version: String
         public let url: URL
         public let zipURL: URL?
+        public let releaseNotes: String?
 
-        public init(version: String, url: URL, zipURL: URL? = nil) {
+        public init(version: String, url: URL, zipURL: URL? = nil, releaseNotes: String? = nil) {
             self.version = version
             self.url = url
             self.zipURL = zipURL
+            self.releaseNotes = releaseNotes
         }
     }
 
@@ -80,6 +82,7 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
 
             let version = tagName.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
             let releaseUrl = (json["html_url"] as? String).flatMap { URL(string: $0) } ?? Self.releasesURL
+            let releaseNotes = (json["body"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
 
             // Release Assets 중 .zip 확장자를 가진 바이너리 다운로드 URL 추출 (신뢰할 수 있는 GitHub 호스트 검증 적용)
             let zipDownloadURL = (json["assets"] as? [[String: Any]])?
@@ -92,12 +95,12 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
                 }
                 .first
 
-            let info = ReleaseInfo(version: version, url: releaseUrl, zipURL: zipDownloadURL)
+            let info = ReleaseInfo(version: version, url: releaseUrl, zipURL: zipDownloadURL, releaseNotes: releaseNotes)
             DispatchQueue.main.async {
                 let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
                 let currentBuild = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
                 if Self.isNewerVersion(latest: version, current: currentVersion, currentBuild: currentBuild) {
-                    self.updateState = .remoteAvailable(version: version, url: releaseUrl, zipURL: zipDownloadURL)
+                    self.updateState = .remoteAvailable(version: version, url: releaseUrl, zipURL: zipDownloadURL, releaseNotes: releaseNotes)
                 }
                 completion(.success(info))
             }

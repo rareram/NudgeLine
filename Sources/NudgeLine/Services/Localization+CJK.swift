@@ -233,10 +233,8 @@ extension L10n.Key {
 
         // 17. 네이티브 앱 정보 윈도우 및 빌드별 릴리스 하이라이트
         case .aboutViewRepo: return "GitHub リポジトリ"
+        case .aboutReleaseNotes: return "リリースノート"
         case .aboutFeedback: return "フィードバックとサポート"
-        case .releaseHighlightsTitle: return "主な変更点"
-        case .releaseHighlights:
-            return "• **多言語追加**: 日本語、中国語（簡体字/繁体字）、ドイツ語、フランス語、スペイン語、オランダ語、ロシア語\n• **安定性向上**: ペットスヌーズの自動復帰およびバックグラウンド状態管理の強化"
 
         case .oneRingBadgeTitle: return "一つの指輪"
         case .oneRingBadgeHelp: return "クリックして一つの指輪を滅びの山の火の中に投げ込み、破壊します。"
@@ -480,10 +478,8 @@ extension L10n.Key {
 
         // 17. 네이티브 앱 정보 윈도우 및 빌드별 릴리스 하이라이트
         case .aboutViewRepo: return "GitHub 仓库"
+        case .aboutReleaseNotes: return "发行说明"
         case .aboutFeedback: return "反馈与支持"
-        case .releaseHighlightsTitle: return "主要更新"
-        case .releaseHighlights:
-            return "• **新增语言**: 日语、中文（简体/繁体）、德语、法语、西班牙语、荷兰语、俄语\n• **稳定性提升**: 宠物暂停提醒自动恢复与后台状态管理强化"
 
         case .oneRingBadgeTitle: return "至尊魔戒"
         case .oneRingBadgeHelp: return "点击将至尊魔戒投入末日烈焰中彻底摧毁。"
@@ -727,10 +723,8 @@ extension L10n.Key {
 
         // 17. 네이티브 앱 정보 윈도우 및 빌드별 릴리스 하이라이트
         case .aboutViewRepo: return "GitHub 儲存庫"
+        case .aboutReleaseNotes: return "版本資訊"
         case .aboutFeedback: return "意見回饋與支援"
-        case .releaseHighlightsTitle: return "主要更新"
-        case .releaseHighlights:
-            return "• **新增語言**: 日語、中文（簡體/繁體）、德語、法語、西班牙語、荷蘭語、俄語\n• **穩定性提升**: 寵物暫停提醒自動恢復與後台狀態管理強化"
 
         case .oneRingBadgeTitle: return "至尊魔戒"
         case .oneRingBadgeHelp: return "點擊將至尊魔戒投入末日烈焰中徹底摧毀。"

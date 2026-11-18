@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup macOS Environment & Swift
         run: |
@@ -80,6 +82,26 @@ jobs:
           CLEAN_VERSION="${RAW_TAG#v}"
           echo "version=${CLEAN_VERSION}" >> "$GITHUB_OUTPUT"
 
+      - name: Extract Release Notes from Tag or Commit
+        id: release_notes
+        run: |
+          TAG_MSG="$(git tag -l --format='%(contents)' "${GITHUB_REF_NAME}" 2>/dev/null | sed '/^$/d' || true)"
+          if [[ -z "${TAG_MSG}" ]]; then
+            COMMIT_BODY="$(git log -1 --pretty=%b 2>/dev/null | sed '/^$/d' || true)"
+            if [[ -n "${COMMIT_BODY}" ]]; then
+              TAG_MSG="${COMMIT_BODY}"
+            else
+              TAG_MSG="$(git log -1 --pretty=%s 2>/dev/null || true)"
+            fi
+          fi
+          echo ">> Extracted Release Notes:"
+          echo "${TAG_MSG}"
+          {
+            echo "notes<<EOF"
+            echo "${TAG_MSG}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -87,7 +109,8 @@ jobs:
             dist/NudgeLine.dmg
             dist/NudgeLine.zip
             dist/SHA256SUMS.txt
-          generate_release_notes: true
+          body: ${{ steps.release_notes.outputs.notes }}
+          generate_release_notes: false
           draft: false
           prerelease: false
         env:

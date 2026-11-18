@@ -43,34 +43,25 @@ public struct AboutView: View {
 
             Divider()
                 .padding(.horizontal, 16)
-                .padding(.vertical, 2)
-
-            // 최신 빌드 핵심 변경 사항 하이라이트 박스 (고정 상시 노출)
-            VStack(alignment: .leading, spacing: 6) {
-                Text("v\(appVersion) (Build \(buildNumber)) \(L10n.tr(.releaseHighlightsTitle, lang: settings.language))")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.primary)
-
-                Text(LocalizedStringKey(L10n.tr(.releaseHighlights, lang: settings.language)))
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
-            .cornerRadius(8)
-            .padding(.horizontal, 22)
+                .padding(.vertical, 4)
 
             // 외부 액션 링크 버튼군
-            HStack(spacing: 8) {
-                Link(destination: UpdateService.repoURL) {
-                    Text(L10n.tr(.aboutViewRepo, lang: settings.language))
-                        .frame(maxWidth: .infinity)
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    Link(destination: UpdateService.repoURL) {
+                        Text(L10n.tr(.aboutViewRepo, lang: settings.language))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+
+                    Link(destination: UpdateService.releasesURL) {
+                        Text(L10n.tr(.aboutReleaseNotes, lang: settings.language))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
 
                 Link(destination: URL(string: "https://github.com/rareram/NudgeLine/issues")!) {
                     Text(L10n.tr(.aboutFeedback, lang: settings.language))
@@ -97,7 +88,7 @@ public final class AboutWindowController: NSWindowController {
     public static let shared = AboutWindowController()
 
     private static let windowWidth: CGFloat = 320
-    private static let windowHeight: CGFloat = 385
+    private static let windowHeight: CGFloat = 295
 
     private init() {
         let hostingController = NSHostingController(rootView: AboutView())

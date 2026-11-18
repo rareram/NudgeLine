@@ -233,10 +233,8 @@ extension L10n.Key {
 
         // 17. 네이티브 앱 정보 윈도우 및 빌드별 릴리스 하이라이트
         case .aboutViewRepo: return "Репозиторий GitHub"
+        case .aboutReleaseNotes: return "Заметки о выпуске"
         case .aboutFeedback: return "Отзывы и поддержка"
-        case .releaseHighlightsTitle: return "Главные изменения"
-        case .releaseHighlights:
-            return "• **Новые языки**: японский, китайский (упр./трад.), немецкий, французский, испанский, нидерландский, русский\n• **Стабильность**: улучшено автовосстановление сна питомца и управление фоновым состоянием"
 
         // 18. 특정 상태 알림 및 안내 텍스트
         case .oneRingBadgeTitle: return "Единое Кольцо"
@@ -481,10 +479,8 @@ extension L10n.Key {
 
         // 17. 네이티브 앱 정보 윈도우 및 빌드별 릴리스 하이라이트
         case .aboutViewRepo: return "GitHub-opslagstructuur"
+        case .aboutReleaseNotes: return "Versienotities"
         case .aboutFeedback: return "Feedback en ondersteuning"
-        case .releaseHighlightsTitle: return "Belangrijkste wijzigingen"
-        case .releaseHighlights:
-            return "• **Talen toegevoegd**: Japans, Chinees (Verenv./Trad.), Duits, Frans, Spaans, Nederlands en Russisch\n• **Stabiliteit**: Verbeterd automatisch herstel van huisdier-snooze en achtergrondstatusbeheer"
 
         // 18. 특정 상태 알림 및 안내 텍스트
         case .oneRingBadgeTitle: return "De Ene Ring"
@@ -729,10 +725,8 @@ extension L10n.Key {
 
         // 17. 네이티브 앱 정보 윈도우 및 빌드별 릴리스 하이라이트
         case .aboutViewRepo: return "Dépôt GitHub"
+        case .aboutReleaseNotes: return "Notes de version"
         case .aboutFeedback: return "Commentaires et support"
-        case .releaseHighlightsTitle: return "Principales nouveautés"
-        case .releaseHighlights:
-            return "• **Nouvelles langues** : japonais, chinois (simplifié/traditionnel), allemand, français, espagnol, néerlandais et russe\n• **Stabilité** : amélioration de la reprise automatique du rappel d'animal et de la gestion en arrière-plan"
 
         // 18. 특정 상태 알림 및 안내 텍스트
         case .oneRingBadgeTitle: return "L'Anneau Unique"
@@ -977,10 +971,8 @@ extension L10n.Key {
 
         // 17. 네이티브 앱 정보 윈도우 및 빌드별 릴리스 하이라이트
         case .aboutViewRepo: return "GitHub-Repository"
+        case .aboutReleaseNotes: return "Versionshinweise"
         case .aboutFeedback: return "Feedback & Support"
-        case .releaseHighlightsTitle: return "Wichtigste Änderungen"
-        case .releaseHighlights:
-            return "• **Neue Sprachen**: Japanisch, Chinesisch (vereinfacht/traditionell), Deutsch, Französisch, Spanisch, Niederländisch und Russisch\n• **Stabilität**: Verbesserte automatische Wiederaufnahme des Haustier-Schlummerns und Hintergrundstatusverwaltung"
 
         // 18. 특정 상태 알림 및 안내 텍스트
         case .oneRingBadgeTitle: return "Der Eine Ring"
@@ -1225,10 +1217,8 @@ extension L10n.Key {
 
         // 17. 네이티브 앱 정보 윈도우 및 빌드별 릴리스 하이라이트
         case .aboutViewRepo: return "Repositorio de GitHub"
+        case .aboutReleaseNotes: return "Notas de la versión"
         case .aboutFeedback: return "Comentarios y soporte"
-        case .releaseHighlightsTitle: return "Novedades principales"
-        case .releaseHighlights:
-            return "• **Idiomas añadidos**: japonés, chino (simplificado/tradicional), alemán, francés, español, neerlandés y ruso\n• **Estabilidad**: recuperación automática del snooze de mascota y gestión del estado en segundo plano mejoradas"
 
         // 18. 특정 상태 알림 및 안내 텍스트
         case .oneRingBadgeTitle: return "El Anillo Único"

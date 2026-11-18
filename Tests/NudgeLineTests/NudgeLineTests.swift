@@ -179,10 +179,10 @@ struct LocalizationTests {
         #expect(L10n.tr(.cancelButton, lang: .zhHans) == "取消")
         #expect(L10n.tr(.cancelButton, lang: .zhHant) == "取消")
 
-        // 6. 릴리스 하이라이트 타이틀 검증
-        #expect(L10n.tr(.releaseHighlightsTitle, lang: .ja) == "主な変更点")
-        #expect(L10n.tr(.releaseHighlightsTitle, lang: .zhHans) == "主要更新")
-        #expect(L10n.tr(.releaseHighlightsTitle, lang: .zhHant) == "主要更新")
+        // 6. 릴리스 노트 레이블 검증
+        #expect(L10n.tr(.aboutReleaseNotes, lang: .ja) == "リリースノート")
+        #expect(L10n.tr(.aboutReleaseNotes, lang: .zhHans) == "发行说明")
+        #expect(L10n.tr(.aboutReleaseNotes, lang: .zhHant) == "版本資訊")
 
         // 7. 미리알림 상세 레이블 및 스타일 (원어민 자연스러운 번역 검증)
         #expect(L10n.tr(.reminderProximityLabel, lang: .ja) == "表示する期間:")
@@ -674,6 +674,15 @@ struct VersionComparisonTests {
             url: URL(string: "https://github.com/rareram/NudgeLine/releases/tag/v0.4.0")!
         )
         #expect(releaseWithoutZip.zipURL == nil)
+        #expect(releaseWithoutZip.releaseNotes == nil)
+
+        let releaseWithNotes = UpdateService.ReleaseInfo(
+            version: "0.4.500",
+            url: URL(string: "https://github.com/rareram/NudgeLine/releases/tag/v0.4.500")!,
+            zipURL: URL(string: "https://github.com/rareram/NudgeLine/releases/download/v0.4.500/NudgeLine.zip")!,
+            releaseNotes: "• 신규 기능 추가"
+        )
+        #expect(releaseWithNotes.releaseNotes == "• 신규 기능 추가")
     }
 
     @Test("버전 비교 엣지 케이스 및 세 자릿수 빌드 정밀 판별 검증")
@@ -1441,13 +1450,8 @@ struct ReminderIntegrationTests {
         #expect(L10n.tr(.aboutFeedback, lang: .ko) == "피드백 및 문의")
         #expect(L10n.tr(.aboutFeedback, lang: .en) == "Feedback & Support")
 
-        #expect(L10n.tr(.releaseHighlightsTitle, lang: .ko) == "주요 변경 사항")
-        #expect(L10n.tr(.releaseHighlightsTitle, lang: .en) == "Key Highlights")
-
-        #expect(L10n.tr(.releaseHighlights, lang: .ko).contains("**다국어 추가**:"))
-        #expect(L10n.tr(.releaseHighlights, lang: .ko).contains("**안정성 개선**:"))
-        #expect(L10n.tr(.releaseHighlights, lang: .en).contains("**Languages**:"))
-        #expect(L10n.tr(.releaseHighlights, lang: .en).contains("**Stability**:"))
+        #expect(L10n.tr(.aboutReleaseNotes, lang: .ko) == "릴리스 노트")
+        #expect(L10n.tr(.aboutReleaseNotes, lang: .en) == "Release Notes")
     }
 }
 

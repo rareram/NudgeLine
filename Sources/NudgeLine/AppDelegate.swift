@@ -80,7 +80,7 @@ extension AppDelegate {
         #if !APP_STORE
         let hasUpdate: Bool
         let updateVersion: String?
-        if case .remoteAvailable(let version, _, _) = UpdateService.shared.updateState {
+        if case .remoteAvailable(let version, _, _, _) = UpdateService.shared.updateState {
             hasUpdate = true
             updateVersion = version
         } else {
@@ -121,7 +121,7 @@ extension AppDelegate {
         menu.addItem(NSMenuItem.separator())
 
         // 3. 업데이트 섹션
-        if case .remoteAvailable(let version, _, _) = UpdateService.shared.updateState {
+        if case .remoteAvailable(let version, _, _, _) = UpdateService.shared.updateState {
             let updateTitle = L10n.tr(.newVersionAvailableMenu(version), lang: settings.language)
             let updateItem = NSMenuItem(title: updateTitle, action: #selector(handleUpdateAction), keyEquivalent: "")
             menu.addItem(updateItem)
@@ -395,14 +395,35 @@ extension AppDelegate {
     #if !APP_STORE
     // 새 버전 릴리스 웹페이지 오픈 또는 인앱 다운로드 실행
     @objc public func handleUpdateAction() {
-        if case .remoteAvailable(let version, let url, let zipURL) = UpdateService.shared.updateState {
-            let release = UpdateService.ReleaseInfo(version: version, url: url, zipURL: zipURL)
+        if case .remoteAvailable(let version, let url, let zipURL, let notes) = UpdateService.shared.updateState {
+            let release = UpdateService.ReleaseInfo(version: version, url: url, zipURL: zipURL, releaseNotes: notes)
             if release.zipURL != nil {
                 let alert = NSAlert()
                 alert.messageText = "NudgeLine"
                 let newVersionMsg = L10n.tr(.newVersionAvailable(release.version), lang: settings.language)
-                let highlights = L10n.tr(.releaseHighlights, lang: settings.language).replacingOccurrences(of: "**", with: "")
-                alert.informativeText = "\(newVersionMsg)\n\n\(highlights)"
+
+                var details = ""
+                if let rawNotes = release.releaseNotes, !rawNotes.isEmpty {
+                    let langTag = settings.language.isKorean ? "[ko]" : "[en]"
+                    if rawNotes.contains(langTag) {
+                        let sections = rawNotes.components(separatedBy: "### ")
+                        if let matched = sections.first(where: { $0.hasPrefix(langTag) }) {
+                            details = matched.replacingOccurrences(of: langTag, with: "")
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                        }
+                    }
+                    if details.isEmpty {
+                        details = rawNotes
+                    }
+                    details = details.replacingOccurrences(of: "**", with: "")
+                }
+
+                if details.isEmpty {
+                    alert.informativeText = newVersionMsg
+                } else {
+                    alert.informativeText = "\(newVersionMsg)\n\n\(details)"
+                }
+
                 alert.alertStyle = .informational
                 alert.addButton(withTitle: L10n.tr(.updateNowInApp, lang: settings.language))
                 alert.addButton(withTitle: L10n.tr(.viewRelease, lang: settings.language))

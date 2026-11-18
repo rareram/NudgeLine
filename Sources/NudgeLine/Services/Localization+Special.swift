@@ -233,10 +233,8 @@ extension L10n.Key {
 
         // 17. 네이티브 앱 정보 윈도우 및 빌드별 릴리스 하이라이트
         case .aboutViewRepo: return "GitHub Mîr"
+        case .aboutReleaseNotes: return "In-Aur Cîr"
         case .aboutFeedback: return "Estel a Galu (Support)"
-        case .releaseHighlightsTitle: return "In-Aur Cîr (Highlights)"
-        case .releaseHighlights:
-            return "• **Rennas**: Notion, Slack a Notes linc vi galu\n• **Pân**: OpenStreetMap vi Nôr (5 nôr)\n• **Auriel**: Apple Events varn vi aur-lû\n• **NudgeLine**: Mîr cîr a linc erin aur"
 
         case .oneRingBadgeTitle: return "Ash Nazg"
         case .oneRingBadgeHelp: return "Tolo, dartho i-Gorf na nûr Orodruin."
